@@ -83,6 +83,8 @@
 .lc-new { flex: 0 0 96px; width: 96px; height: 96px; object-fit: cover; border: 2px solid var(--ink); background: #fff; }
 .lc-text { min-width: 0; }
 .lc-text small { display: block; font-family: var(--font-mono); font-size: 11.5px; color: var(--dim); }
+/* TIKTOK TO CHECK and a partner row's TikTok account: OPEN ON TIKTOK and the account link in the site's link colour */
+.lc-text small a, .p-row small a { color: var(--hivis); font-weight: 700; }
 /* a partner row's live logo, and the one in LOGOS TO CHECK */
 .p-logo { width: 40px; height: 40px; object-fit: cover; border: 2px solid var(--ink); background: #fff; vertical-align: middle; margin-right: 8px; }
 /* APPLICATIONS: the logo sent with an application */

@@ -1,7 +1,11 @@
 // GET /p/<slug> -> public page for an active partner: who they are and their approved cleanups.
-// With a live logo (functions/_lib/logos.js) it stands next to the name. The link preview uses the first after
-// photo; a crew without a receipt yet gets its logo there instead, so sharing its page shows the crew's own picture,
-// and a crew with neither the broom, as /crews and /missions (since 2026-11-17; a share showed no picture before).
+// With a live logo (functions/_lib/logos.js) it stands next to the name. The link preview (og:image, which X also
+// reads, having no twitter:image of its own) is the crew's live logo with a small square card (twitter:card summary),
+// so sharing a crew's page shows the crew's own picture (Marcus asked on 2026-11-19); a crew without a logo gets its
+// first after photo with a large card, and a crew with neither the broom, as /crews and /missions (since 2026-11-17).
+// The logo is the JPEG square the crew page made (320 px), served by /media/<key> while it is live, at an absolute
+// address on this origin. With a live TikTok account (functions/_lib/tiktok.js) the line under the name links it, next
+// to the website (docs/upload-flow.md, Crew TikTok accounts).
 // NEXT UP (between the numbers and THE RECEIPTS) lists the crew's open and funded missions on sapu.earth, the same rule
 // as the list of crews (crewMissions in functions/_lib/crews.js), each with its first photo of the spot, and ALL CREWS
 // at the foot links that list, /crews. No script. The description (also the link preview's text) gives the crew's
@@ -12,6 +16,7 @@
 // receipt row its own count, both only above 0; never in the description or the preview, where a count would go stale.
 import { approvedEvents } from "../_lib/events.js";
 import { liveLogoKey, logoUrl } from "../_lib/logos.js";
+import { liveTiktok, tiktokUrl } from "../_lib/tiktok.js";
 import { PAGE_HEADERS, crewMissions, fmtDay } from "../_lib/crews.js";
 import { SLUG_RE, absUrl, amountText, esc, fmtNum, headOf } from "../_lib/util.js";
 import { ASSET_V } from "../_lib/asset-version.js"; // written by scripts/build-site.sh on every build
@@ -21,13 +26,14 @@ const notFound = () => new Response("Not found", { status: 404, headers: { "cont
 export async function onRequestGet({ request, env, params }) {
   const slug = params.slug;
   if (typeof slug !== "string" || !SLUG_RE.test(slug) || !env.DB) return notFound();
-  let partner, events, logoKey, next;
+  let partner, events, logoKey, next, tiktok;
   try {
     partner = await env.DB.prepare("SELECT id, slug, name, url, country FROM partners WHERE slug = ? AND active = 1").bind(slug).first();
     if (!partner) return notFound();
     events = await approvedEvents(env, { partnerId: partner.id, limit: 500 });
     logoKey = await liveLogoKey(env, partner.id);
     next = await crewMissions(env, partner.id);
+    tiktok = await liveTiktok(env, partner.id);
   } catch (e) {
     console.error(e);
     return notFound();
@@ -45,9 +51,12 @@ export async function onRequestGet({ request, env, params }) {
   const desc = events.length
     ? `${events.length} cleanup${events.length === 1 ? "" : "s"}, ${amount} by ${partner.name}. Every receipt public on sapu.earth.`
     : `${partner.name}, a local cleanup crew on sapu.earth. No published cleanups yet.`;
-  const preview = cover
-    ? `<meta property="og:image" content="${esc(absUrl(origin, cover))}">\n<meta name="twitter:card" content="summary_large_image">`
-    : logo ? `<meta property="og:image" content="${esc(absUrl(origin, logo))}">\n<meta name="twitter:card" content="summary">`
+  const preview = logo
+    ? `<meta property="og:image" content="${esc(absUrl(origin, logo))}">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:alt" content="${esc(`The logo of ${partner.name}`)}">
+<meta name="twitter:card" content="summary">`
+    : cover ? `<meta property="og:image" content="${esc(absUrl(origin, cover))}">\n<meta name="twitter:card" content="summary_large_image">`
     : `<meta property="og:image" content="${esc(origin + "/site/social/sapu-earth-mark.png")}">
 <meta property="og:image:width" content="1024">
 <meta property="og:image:height" content="1024">
@@ -104,7 +113,7 @@ ${preview}
 </header>
 <main class="fp-main">
   ${logo ? `<div class="ph-hero"><img class="ph-logo" src="${esc(logo)}" alt="" width="96" height="96">${h1}</div>` : h1}
-  <p class="sub">// cleanup partner${partner.country ? " · " + esc(partner.country) : ""}${safeSite ? ` · <a href="${esc(safeSite)}" rel="noopener nofollow ugc" target="_blank">${esc(new URL(safeSite).host)} ↗</a>` : ""}</p>${events.length ? `
+  <p class="sub">// cleanup partner${partner.country ? " · " + esc(partner.country) : ""}${safeSite ? ` · <a href="${esc(safeSite)}" rel="noopener nofollow ugc" target="_blank">${esc(new URL(safeSite).host)} ↗</a>` : ""}${tiktok ? ` · <a class="p-tiktok" href="${esc(tiktokUrl(tiktok))}" rel="noopener noreferrer nofollow ugc" target="_blank">tiktok.com/@${esc(tiktok)} ↗</a>` : ""}</p>${events.length ? `
   <div class="stats fp-stats">
     <div class="stat"><strong>${esc(fmtNum(totalKg))}</strong><span>kg removed</span></div>
     <div class="stat"><strong>${events.length}</strong><span>cleanups</span></div>

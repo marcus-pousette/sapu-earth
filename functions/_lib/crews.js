@@ -8,10 +8,12 @@
 // published less than MISSION_LIMITS.expireDays days ago (PUBLIC_MISSION, the rule of GET /api/missions), shows its
 // totals, its newest receipt and its missions; so does a crew that ever had a mission published (missions.published_at,
 // kept when the mission expires, is withdrawn or cancelled), with "no cleanups yet" and nothing else, since its first
-// mission did come; every other active crew is under JUST JOINED (justJoined) with its name, live logo and country only.
+// mission did come; every other active crew is under JUST JOINED (justJoined) with its name, live logo, country and live
+// TikTok account only.
 // NEXT UP on /p/<slug> uses the same mission rule, so the two never disagree. Everything the
 // list shows is already public on the receipts, the missions or /p/<slug>: the name, the live logo, the country, the
-// totals of the approved receipts (their thanks too), the newest receipt's day and place, the open and funded missions.
+// live TikTok account (_lib/tiktok.js), the totals of the approved receipts (their thanks too), the newest receipt's day
+// and place, the open and funded missions.
 // Never contact details or anything from the application, the partner id, the join date (it only orders JUST JOINED),
 // a waiting or declined logo, or the website (that stays on /p/<slug>).
 // Before migration 0004 (no missions table) only an approved cleanup takes a crew out of JUST JOINED; before 0006 there
@@ -21,6 +23,7 @@ import { MISSION_LIMITS, nowMediaFor, nowParts, withMissions } from "./missions.
 import { logoUrl, withLogos } from "./logos.js";
 import { LIVE_LOGO } from "./events.js";
 import { thanksByCrew } from "./social.js";
+import { tiktokByCrew } from "./tiktok.js";
 import { lastDay, spotList, withSpots } from "./spots.js";
 
 // The public missions, as SQL over missions m: funded, or open and published within the last expireDays days. ?1 is
@@ -36,14 +39,16 @@ const FUNDED_FIRST = "ORDER BY CASE m.status WHEN 'funded' THEN 0 ELSE 1 END, m.
 // then by name, and after them the crews that only ever had a mission published, by name. Then JUST JOINED, every other
 // active crew (justJoined), the newest first by partners.created_at (the day
 // Marcus created it with NEW PARTNER or APPROVE AND CREATE PARTNER; only the order, never shown), then by name. Never by
-// kilograms, sacks, money or thanks. Four reads, at once:
+// kilograms, sacks, money or thanks. Five reads, at once:
 // (a) every active crew with the totals of its approved receipts and its live logo;
 // (b) the public missions of active crews, funded first, then the soonest day;
 // (c) each active crew's newest approved receipt;
-// (d) each crew's standing thanks on its approved receipts (thanksByCrew in _lib/social.js; none before migration 0007).
+// (d) each crew's standing thanks on its approved receipts (thanksByCrew in _lib/social.js; none before migration 0007);
+// (e) each crew's live TikTok account (tiktokByCrew in _lib/tiktok.js; none before migration 0009).
 // A JUST JOINED crew has nothing in (b), (c) or (d) by the rule itself, so its totals are 0, last null and missions [].
-// Returns [{ slug, name, country, justJoined, cleanups, kg, sacks, paid_eur, thanks, logo, last: { id, place_name,
-// cleanup_date } or null, missions: [{ no, status, place_name, plan_date }] }], never the partner id or the join date.
+// Returns [{ slug, name, country, justJoined, cleanups, kg, sacks, paid_eur, thanks, logo, tiktok (the account's name or
+// null), last: { id, place_name, cleanup_date } or null, missions: [{ no, status, place_name, plan_date }] }], never the
+// partner id or the join date.
 export async function listedCrews(env) {
   const cutoff = since();
   const crews = withMissions((missions) => withLogos((logos) => {
@@ -82,7 +87,7 @@ export async function listedCrews(env) {
                ORDER BY x.cleanup_date DESC, x.created_at DESC LIMIT 1)
        FROM partners p WHERE p.active = 1)`
   ).all();
-  const [a, b, c, d] = await Promise.all([crews, missions, lasts, thanksByCrew(env)]);
+  const [a, b, c, d, e] = await Promise.all([crews, missions, lasts, thanksByCrew(env), tiktokByCrew(env)]);
   const thanks = new Map((d.results || []).map((r) => [r.partner_id, Number(r.n) || 0]));
 
   const byId = new Map();
@@ -98,6 +103,7 @@ export async function listedCrews(env) {
       paid_eur: Number(p.paid_eur) || 0,
       thanks: thanks.get(p.id) || 0,
       logo: logoUrl(p.logo),
+      tiktok: e.get(p.id) || null,
       last: null,
       missions: [],
     });

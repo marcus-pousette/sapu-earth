@@ -1,10 +1,13 @@
 // POST /api/admin/partners/deactivate {id} -> the upload link stops working and /p/<slug> disappears.
-// Answers {id, active: false, missions_removed, funded_removed: [{no, advance_eur}], logos_removed, post_links_removed}.
+// Answers {id, active: false, missions_removed, funded_removed: [{no, advance_eur}], logos_removed, post_links_removed,
+// tiktok_removed}.
 // Their approved cleanups stay on the globe.
 // Their live and waiting logos are gone, files deleted (logos_removed: how many). The receipts stay, without it.
 // The links to their own posts on Instagram or TikTok come off their receipts (post_links_removed: how many receipts);
 // Sapu Earth's own post links stay (docs/upload-flow.md, Post links and thanks). Their thanks stay with their receipts,
 // which take no new ones (countThanks counts only for an active crew).
+// Their TikTok account, live and waiting, is deleted (tiktok_removed: 1 when they had one, else 0; docs/upload-flow.md,
+// Crew TikTok accounts). /p/<slug> and /crews show only active crews, so it is off sapu.earth at once anyway.
 // The personal details of the application that created the partner are wiped in the same step
 // (contact, about, links, how they heard of us). The crew name, country and area stay.
 // Their missions in review, open and funded are removed ('deactivated') with their now photos, and
@@ -16,6 +19,7 @@ import { dropDecidedPhotos, noApplicationsTable } from "../../../_lib/applicatio
 import { WIPE_PRIVATE, deleteMissionPhotos, noMissionsTable } from "../../../_lib/missions.js";
 import { dropCrewLogos } from "../../../_lib/logos.js";
 import { dropCrewPostLinks } from "../../../_lib/social.js";
+import { dropCrewTiktok } from "../../../_lib/tiktok.js";
 
 // The line for the review note, from the row before the UPDATE (SQLite evaluates every SET
 // expression on the old row, so status is still the old one here).
@@ -89,5 +93,13 @@ export const onRequestPost = handle(async ({ request, env }) => {
   } catch (e) {
     console.error("deactivate post links", b.id, e);
   }
-  return json({ id: b.id, active: false, missions_removed, funded_removed, logos_removed, post_links_removed });
+  // The crew's TikTok account, the same way: logged, never thrown; the housekeeping's TikTok sweep deletes the row of an
+  // inactive crew as well. 0 before migration 0009.
+  let tiktok_removed = 0;
+  try {
+    tiktok_removed = await dropCrewTiktok(env, b.id);
+  } catch (e) {
+    console.error("deactivate tiktok", b.id, e);
+  }
+  return json({ id: b.id, active: false, missions_removed, funded_removed, logos_removed, post_links_removed, tiktok_removed });
 });

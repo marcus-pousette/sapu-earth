@@ -1,5 +1,5 @@
-// GET /api/partner?k=TOKEN -> {name, slug, country, page_url, submissions, missions, missions_enabled, logo, listed,
-// post_links_enabled, thanks_total} for an active partner, 404 otherwise.
+// GET /api/partner?k=TOKEN -> {name, slug, country, page_url, submissions, missions, missions_enabled, logo, tiktok,
+// listed, post_links_enabled, thanks_total} for an active partner, 404 otherwise.
 // submissions: the last 10 cleanups this partner sent, with a share link once published, and a published one with its
 // standing thanks (thanks, a whole number; never on a pending or rejected one, and not before migration 0007).
 // missions: every mission of this partner in review, open or funded (any age, so a funded one never
@@ -13,6 +13,9 @@
 // hides POST A MISSION and the mission cards.
 // logo: the crew's logo for YOUR LOGO on the crew page, {enabled, live, review, declined, initials}
 // (logoStateFor in _lib/logos.js); enabled false before migration 0006, and the page then hides the panel.
+// tiktok: the crew's own TikTok account for YOUR TIKTOK on the crew page, {enabled, live, review, declined}
+// (tiktokStateFor in _lib/tiktok.js; docs/upload-flow.md, Crew TikTok accounts); enabled false before migration 0009,
+// and the page then hides the panel.
 // listed: whether the crew is in the list of crews at /crews, so the crew page shows YOUR PUBLIC PAGE and SEE ALL CREWS
 // by the rule of /crews. Every active crew is on it from the day Sapu Earth starts working with it (under JUST JOINED
 // until it has a mission or a cleanup on sapu.earth; listedCrews in _lib/crews.js), and only active crews get this far
@@ -22,11 +25,12 @@
 // field for the link to the crew's own post (docs/upload-flow.md, Post links and thanks); false before it.
 // thanks_total: every standing thanks on the crew's approved receipts (crewThanks), for the line under YOUR CLEANUPS
 // (docs/upload-flow.md, Thanks); only once migration 0007 is in.
-// Additive (logo, listed, post_links_enabled, thanks and thanks_total): a page from before them ignores them.
+// Additive (logo, tiktok, listed, post_links_enabled, thanks and thanks_total): a page from before them ignores them.
 // review_note and private_note stay internal.
 import { SITE, handle, json, noBindings, requirePartner } from "../_lib/util.js";
 import { PUBLIC_MISSION_STATES, missionShareUrl, noMissionsTable } from "../_lib/missions.js";
 import { logoStateFor } from "../_lib/logos.js";
+import { tiktokStateFor } from "../_lib/tiktok.js";
 import { crewThanks } from "../_lib/social.js";
 import { spotList, withSpots } from "../_lib/spots.js";
 
@@ -104,6 +108,7 @@ export const onRequestGet = handle(async ({ request, env }) => {
     missions: missions || [],
     missions_enabled: missions !== null,
     logo: await logoStateFor(env, p.id, p.name),
+    tiktok: await tiktokStateFor(env, p.id),
     listed: true,
     post_links_enabled: ct !== null,
     ...(ct ? { thanks_total: ct.total } : {}),

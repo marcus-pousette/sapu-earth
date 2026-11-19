@@ -475,6 +475,17 @@ details.cp-removed summary:focus-visible { outline: 3px solid var(--hivis); outl
    the stored link, which has no spaces, so it may break anywhere on a narrow phone. */
 #f-post .hint { margin: 0 0 6px; }
 #f-post .echo { overflow-wrap: anywhere; }
+/* upload page: YOUR TIKTOK, the crew's own TikTok account (docs/upload-flow.md, Crew TikTok accounts), laid out like the
+   post link field: the hint between the label and the input, and the line under it carries the link, which has no
+   spaces. On /crews a card's TIKTOK row keeps the account's own lower case letters, and on /p/<slug> the link in the
+   line under the name may break anywhere on a narrow phone. */
+.cp-tiktok .cl-line { margin-top: 10px; }
+.cp-tiktok .field .hint { margin: 0 0 6px; }
+.cp-tiktok .echo { overflow-wrap: anywhere; }
+.cp-tiktok .field + .hint { margin-top: 10px; }
+#ttMsg { margin-top: 10px; }
+.cx-tt a > span { text-transform: none; overflow-wrap: anywhere; }
+.sub .p-tiktok { overflow-wrap: anywhere; }
 /* Thanks (docs/upload-flow.md, Thanks): on /p/<slug> the line under the numbers, closer to them than the next panel; on
    the crew page the total above YOUR CLEANUPS in the green of a published cleanup, and the line under the list on what
    the button is. */

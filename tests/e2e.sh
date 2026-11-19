@@ -18,6 +18,8 @@
 # Then crew logos, and the list of crews at /crews: who is on it (every active crew: those with an approved cleanup or a
 # mission that is funded or open on sapu.earth on top, the others under JUST JOINED), its numbers against the receipts,
 # the country chips, the order, NEXT UP on /p/<slug>, the links to it, and that nothing private ever shows there. And
+# crew TikTok accounts: a crew's own account sent from its crew page, checked in /admin/ (TIKTOK TO CHECK), linked on
+# /p/<slug> and /crews, every way it comes off, and the link preview of /p/<slug> (the logo before a receipt photo). And
 # the list of missions at /missions: its open and funded missions against /api/missions, its cleaned ones against the
 # receipts, the state chips and filters, the order, the 28 days of an open mission, and that nothing private shows there
 # either; and that the page Functions answer HEAD as GET, without the page. Then post links: a crew's link to its own
@@ -61,6 +63,7 @@ SRENAMED=
 LRENAMED=
 PRENAMED=
 PSRENAMED=
+TRENAMED=
 finish() {
   # Never leave the local database without its applications, missions or logos table, or uploads without its
   # stage column, even after Ctrl-C.
@@ -86,6 +89,10 @@ finish() {
   if [ -n "$PSRENAMED" ]; then
     d1 "ALTER TABLE missions RENAME COLUMN spots_e2e_off TO spots; ALTER TABLE submissions RENAME COLUMN spots_e2e_off TO spots; ALTER TABLE uploads RENAME COLUMN spot_e2e_off TO spot" >/dev/null \
       || echo "Could not rename the columns of migration 0008 (*_e2e_off) back in $STATE. Delete that folder." >&2
+  fi
+  if [ -n "$TRENAMED" ]; then
+    d1 "ALTER TABLE crew_tiktok_e2e_off RENAME TO crew_tiktok" >/dev/null \
+      || echo "Could not rename crew_tiktok_e2e_off back to crew_tiktok in $STATE. Delete that folder." >&2
   fi
   rm -rf "$T"
 }
@@ -1940,6 +1947,258 @@ check "applications with logos cleaned up" "$(lmine)" 0
 check "deactivate the daily limit crew, so its logo no longer waits -> 200" \
   "$(code -X POST $B/api/admin/partners/deactivate -H "$A" -H 'content-type: application/json' -d "{\"id\":\"$DPID\"}")" 200
 
+# ---------- Crew TikTok accounts (POST /api/tiktok, TIKTOK TO CHECK, /p/<slug>, /crews) ----------
+# A crew sends its own TikTok account from its crew page (YOUR TIKTOK, POST /api/tiktok): its name with the @, or a link
+# to its profile, read by the same block as the page's (tiktokAccount). It waits for Marcus, and APPROVE TIKTOK, DECLINE
+# and REMOVE TIKTOK decide it (POST /api/admin/tiktok/decide), each naming the account Marcus saw. The live account of an
+# active crew is linked on /p/<slug> and on its /crews card. And the link preview of /p/<slug>: the crew's logo first,
+# then its first after photo, then the broom. Crews of their own, so no count above or below moves
+# (docs/upload-flow.md, Crew TikTok accounts).
+TRUN=$RANDOM$RANDOM
+# tpost <token> <json>: POST /api/tiktok. Prints the status, the body goes to $T/t.json.
+tpost() { curl -s -o "$T/t.json" -w '%{http_code}' -X POST "$B/api/tiktok?k=$1" -H 'content-type: application/json' -d "$2"; }
+tj()    { jget "$1" < "$T/t.json"; }
+# tdec <partner id> <account> <action>: POST /api/admin/tiktok/decide. Prints the status, the body goes to $T/t.json.
+tdec()  { curl -s -o "$T/t.json" -w '%{http_code}' -X POST $B/api/admin/tiktok/decide -H "$A" -H 'content-type: application/json' \
+            -d "{\"partner_id\":\"$1\",\"account\":\"$2\",\"action\":\"$3\"}"; }
+# ptt <token> <expr>: a Python expression over the TikTok state (t) of that crew's GET /api/partner.
+ptt()   { curl -s "$B/api/partner?k=$1" | python3 -c "import json,sys;t=json.load(sys.stdin).get('tiktok');print(eval(sys.argv[1]))" "$2" 2>/dev/null; }
+# ttcard <slug>: that crew's card on /crews, or NO CARD.
+ttcard() { curl -s $B/crews | python3 -c "
+import re,sys
+m = re.search(r'<li class=\"cx-card[^\"]*\" data-slug=\"' + re.escape(sys.argv[1]) + r'\">(.*?)\n    </li>', sys.stdin.read(), re.S)
+print(m.group(1) if m else 'NO CARD')" "$1"; }
+
+TSLUG="teluk-$TRUN"
+TPJ=$(newp "Teluk Crew $TRUN" ID "$TSLUG"); TT=$(echo "$TPJ" | jget "d['token']"); TPID=$(echo "$TPJ" | jget "d['id']")
+check "GET /api/partner of a new crew: TikTok accounts on, none live or waiting, not declined" \
+  "$(ptt $TT "(t['enabled'], t['live'], t['review'], t['declined'])")" "(True, None, None, False)"
+st="$(tpost AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA '{"account":"@kru"}')"
+st="$st $(curl -s -o /dev/null -D "$T/t.h" -w '%{http_code}' "$B/api/tiktok?k=$TT") $(tr -d '\r' < "$T/t.h" | sed -n 's/^[Aa]llow: *//p')"
+st="$st $(tpost $TT '[1]') $(tpost $TT '{"account":5}') $(tj "d.get('code')")"
+st="$st $(tpost $TT '{"account":"https://vt.tiktok.com/ZSabc123/"}') $(tj "d.get('code')")"
+st="$st $(tpost $TT '{"account":"https://www.instagram.com/sapu.earth/"}') $(tj "d.get('code')")"
+st="$st $(tpost $TT '{"account":"kru.org"}') $(tj "d.get('code')")"
+st="$st $(tpost $TT "{\"account\":\"@$(printf 'a%.0s' $(seq 1 2100))\"}")"
+check "POST /api/tiktok refused: a link that is not valid, GET (Allow: POST), not an object, not text, a short link, another site, a name without its @, over 2 KB" \
+  "$st" "404 405 POST 400 400 tiktok 400 short 400 tiktok 400 tiktok 413"
+check "after the refusals nothing waits" "$(ptt $TT "(t['live'], t['review'])")" "(None, None)"
+
+TC0=$(plist "d['counts']['tiktok']")
+check "POST /api/tiktok with a profile link as the TikTok app copies it -> 200: the account waits, in lower case, nothing live, not declined" \
+  "$(tpost $TT '{"account":"https://www.tiktok.com/@Kru.Teluk_E2E?_t=ZS-8sXabc&_r=1"}') $(tj "(d['tiktok']['review'], d['tiktok']['live'], d['tiktok']['declined'])")" \
+  "200 ('kru.teluk_e2e', None, False)"
+check "GET /api/admin/partners: counts.tiktok one more, this crew's tiktok_review with when it was sent, nothing live" \
+  "$(plist "(d['counts']['tiktok'], p('$TSLUG')['tiktok_review']['account'], len(p('$TSLUG')['tiktok_review']['sent_at']), p('$TSLUG')['tiktok'])")" \
+  "($(add "$TC0" 1), 'kru.teluk_e2e', 24, None)"
+check "a waiting account shows nowhere: /p/<slug> and /crews name no TikTok of this crew" \
+  "$(curl -s $B/p/$TSLUG | grep -c 'tiktok\.com') $(ttcard $TSLUG | grep -c 'tiktok')" "0 0"
+check "decide: without a token 401, an unknown action 400, an account that is not a stored name 400, an unknown crew 404, another account 409 state" \
+  "$(code -X POST $B/api/admin/tiktok/decide -H 'content-type: application/json' -d "{\"partner_id\":\"$TPID\",\"account\":\"kru.teluk_e2e\",\"action\":\"approve\"}") $(tdec $TPID kru.teluk_e2e boost) $(tdec $TPID '@Kru.Teluk_E2E' approve) $(tdec aaaaaaaaaa kru.teluk_e2e approve) $(tdec $TPID kru.other approve) $(tj "d.get('code')")" \
+  "401 400 400 404 409 state"
+check "APPROVE TIKTOK -> 200 live; GET /api/partner: live, nothing waits, not declined; counts.tiktok back" \
+  "$(tdec $TPID kru.teluk_e2e approve) $(tj "(d['status'], d['account'])") $(ptt $TT "(t['live'], t['review'], t['declined'])") $(plist "d['counts']['tiktok']")" \
+  "200 ('live', 'kru.teluk_e2e') ('kru.teluk_e2e', None, False) $TC0"
+check "APPROVE TIKTOK again -> 409 state" "$(tdec $TPID kru.teluk_e2e approve) $(tj "d.get('code')")" "409 state"
+PG=$(curl -s $B/p/$TSLUG)
+echo "$PG" | grep -qF '<p class="sub">// cleanup partner · ID · <a href="https://example.org/" rel="noopener nofollow ugc" target="_blank">example.org ↗</a> · <a class="p-tiktok" href="https://www.tiktok.com/@kru.teluk_e2e" rel="noopener noreferrer nofollow ugc" target="_blank">tiktok.com/@kru.teluk_e2e ↗</a></p>' \
+  && [ "$(echo "$PG" | grep -c 'tiktok\.com')" = 1 ] \
+  && ok "/p/<slug>: the live account in the line under the name, after the website: tiktok.com/@..., a new tab, no referrer, nofollow ugc" \
+  || bad "/p/<slug> TikTok link" "$(echo "$PG" | grep -n 'tiktok')"
+TCX=$(ttcard $TSLUG)
+TCW='<small>Indonesia&nbsp;· first&nbsp;mission&nbsp;coming</small></span></a>
+      <p class="cx-last cx-tt"><a href="https://www.tiktok.com/@kru.teluk_e2e" rel="noopener noreferrer nofollow ugc" target="_blank"><b>TIKTOK</b><span>@kru.teluk_e2e</span>↗</a></p>'
+[[ "$TCX" == *"$TCW" ]] && [ "$(echo "$TCX" | grep -c 'tiktok\.com')" = 1 ] \
+  && ok "/crews: the crew's JUST JOINED card ends with its live account (TIKTOK @..., a new tab, no referrer, nofollow ugc)" || bad "/crews TikTok row" "$TCX"
+grep -qF '.cx-tt a > span { text-transform: none; overflow-wrap: anywhere; }' site/forms.css \
+  && ok "/crews keeps the account's own lower case letters in its upper case rows" || bad "/crews TikTok letters" ""
+
+check "a new account while one is live: it waits, the live one stays (the crew page: sapu.earth keeps linking it)" \
+  "$(tpost $TT '{"account":"@kru.baru"}') $(tj "(d['tiktok']['live'], d['tiktok']['review'])") $(curl -s $B/p/$TSLUG | grep -c 'tiktok.com/@kru.teluk_e2e ↗')" "200 ('kru.teluk_e2e', 'kru.baru') 1"
+TS1=$(plist "p('$TSLUG')['tiktok_review']['sent_at']")
+st="$(tpost $TT '{"account":"tiktok.com/@KRU.BARU"}')"; TS2=$(plist "p('$TSLUG')['tiktok_review']['sent_at']")
+check "the waiting account sent again keeps its place (sent_at); the live one sent again clears what waits" \
+  "$st $([ -n "$TS1" ] && [ "$TS1" = "$TS2" ] && echo kept) $(tpost $TT '{"account":"@kru.teluk_e2e"}') $(tj "(d['tiktok']['live'], d['tiktok']['review'], d['tiktok']['declined'])")" \
+  "200 kept 200 ('kru.teluk_e2e', None, False)"
+check "a video link names its account: it waits; DECLINE -> 200 declined, the live one stays, nothing waits, declined" \
+  "$(tpost $TT '{"account":"https://m.tiktok.com/@kru.baru/video/7312345678901234567?is_from_webapp=1"}') $(tj "d['tiktok']['review']") $(tdec $TPID kru.baru decline) $(tj "d['status']") $(ptt $TT "(t['live'], t['review'], t['declined'])")" \
+  "200 kru.baru 200 declined ('kru.teluk_e2e', None, True)"
+check "DECLINE again -> 409 state, and the declined account is not kept" \
+  "$(tdec $TPID kru.baru decline) $(tj "d.get('code')") $(plist "p('$TSLUG')['tiktok_review']")" "409 state None"
+[ -n "$STATE" ] && check "the crew's row keeps the live account and when Marcus declined, never the declined account" \
+  "$(d1 "SELECT live, review, sent_at, declined_at IS NOT NULL AS d FROM crew_tiktok WHERE partner_id = '$TPID'" | jget "[(r['live'], r['review'], r['sent_at'], r['d']) for r in d[0]['results']]")" \
+  "[('kru.teluk_e2e', None, None, 1)]"
+check "REMOVE TIKTOK -> 200 declined; GET /api/partner: nothing live, declined; /p/<slug> and /crews link no account" \
+  "$(tdec $TPID kru.teluk_e2e remove) $(tj "d['status']") $(ptt $TT "(t['live'], t['declined'])") $(curl -s $B/p/$TSLUG | grep -c 'tiktok\.com') $(ttcard $TSLUG | grep -c 'tiktok')" \
+  "200 declined (None, True) 0 0"
+check "REMOVE TIKTOK again -> 409 state" "$(tdec $TPID kru.teluk_e2e remove) $(tj "d.get('code')")" "409 state"
+check "the crew sends one again (no longer declined), it is approved, then the crew takes it off itself (an empty account): nothing live or waiting, not declined" \
+  "$(tpost $TT '{"account":"@kru.teluk_e2e"}') $(tj "d['tiktok']['declined']") $(tdec $TPID kru.teluk_e2e approve) $(tpost $TT '{"account":""}') $(tj "(d['tiktok']['live'], d['tiktok']['review'], d['tiktok']['declined'])")" \
+  "200 False 200 200 (None, None, False)"
+check "account null takes a waiting one off too" \
+  "$(tpost $TT '{"account":"@kru.satu"}') $(tpost $TT '{"account":null}') $(tj "(d['tiktok']['live'], d['tiktok']['review'])")" "200 200 (None, None)"
+[ -n "$STATE" ] && check "taking it off deletes the crew's row" "$(d1 "SELECT COUNT(*) AS n FROM crew_tiktok WHERE partner_id = '$TPID'" | jget "d[0]['results'][0]['n']")" 0
+check "a crew that changes its account while Marcus looks: APPROVE of the one he saw -> 409 state, the newer one still waits" \
+  "$(tpost $TT '{"account":"@kru.satu"}') $(tpost $TT '{"account":"@kru.dua"}') $(tdec $TPID kru.satu approve) $(tj "d.get('code')") $(ptt $TT "(t['live'], t['review'])")" \
+  "200 200 409 state (None, 'kru.dua')"
+st="$(tdec $TPID kru.dua approve) $(tpost $TT '{"account":"@kru.tiga"}')"
+st="$st $(curl -s -o "$T/t.json" -w '%{http_code}' -X POST $B/api/admin/partners/deactivate -H "$A" -H 'content-type: application/json' -d "{\"id\":\"$TPID\"}") $(tj "d.get('tiktok_removed')")"
+check "one live and one waiting, then DEACTIVATE -> 200, tiktok_removed 1" "$st" "200 200 200 1"
+check "after DEACTIVATE: the crew link -> 404, its row lists no TikTok, a decision -> 409 inactive" \
+  "$(tpost $TT '{"account":"@kru.empat"}') $(plist "(p('$TSLUG')['tiktok'], p('$TSLUG')['tiktok_review'])") $(tdec $TPID kru.dua remove) $(tj "d.get('code')")" \
+  "404 (None, None) 409 inactive"
+[ -n "$STATE" ] && check "DEACTIVATE deletes the crew's row" "$(d1 "SELECT COUNT(*) AS n FROM crew_tiktok WHERE partner_id = '$TPID'" | jget "d[0]['results'][0]['n']")" 0
+
+# The link preview of /p/<slug> (Marcus asked on 2026-11-19 for the crew's logo there): a crew with a receipt shows its
+# first after photo with a large card while it has no logo; once its logo is live, the logo with a small square card.
+VSLUG="cover-$TRUN"
+VPJ=$(newp "Cover Crew $TRUN" ID "$VSLUG"); VT2=$(echo "$VPJ" | jget "d['token']")
+VB=$(upk $VT2 before); VA=$(upk $VT2 after)
+st=$(msub $VT2 - "$VB,$VA"); VS=$(mj "d.get('id')"); st="$st $(sdec "{\"id\":\"${VS:-none}\",\"action\":\"approve\",\"paid_eur\":20}")"
+PG=$(curl -s $B/p/$VSLUG)
+[ "$st" = "200 approved" ] && echo "$PG" | grep -qF "<meta property=\"og:image\" content=\"$B/media/$VA\">" \
+  && echo "$PG" | grep -qF '<meta name="twitter:card" content="summary_large_image">' && [ "$(echo "$PG" | grep -c 'og:image')" = 1 ] \
+  && ok "/p/<slug> of a crew with a receipt and no logo: its first after photo is the link preview, absolute, with a large card" \
+  || bad "/p/<slug> preview without a logo" "$st $(echo "$PG" | grep -E 'og:image|twitter')"
+st=$(lpost $VT2 $T/logo.jpg); VK=$(lkey); st="$st $(ldec "$VK" approve)"
+PG=$(curl -s $B/p/$VSLUG)
+PGW="<meta property=\"og:image\" content=\"$B/media/$VK\">
+<meta property=\"og:image:type\" content=\"image/jpeg\">
+<meta property=\"og:image:alt\" content=\"The logo of Cover Crew $TRUN\">
+<meta name=\"twitter:card\" content=\"summary\">"
+[ "$st" = "201 200" ] && [[ "$PG" == *"$PGW"* ]] && [ "$(echo "$PG" | grep -c 'og:image')" = 3 ] && ! echo "$PG" | grep -q 'summary_large_image' \
+  && [ "$(curl -s -o /dev/null -w '%{http_code} %{content_type}' $B/media/$VK)" = "200 image/jpeg" ] \
+  && ok "/p/<slug> once the crew's logo is live: the logo is the link preview before its receipt photo (absolute, public, JPEG, its alt, twitter:card summary)" \
+  || bad "/p/<slug> preview with a logo" "$st $(echo "$PG" | grep -E 'og:image|twitter')"
+check "deactivate the cover crew -> 200" \
+  "$(code -X POST $B/api/admin/partners/deactivate -H "$A" -H 'content-type: application/json' -d "{\"id\":\"$(echo "$VPJ" | jget "d['id']")\"}")" 200
+
+# The TikTok account block (tiktokAccount), run in node: the same in upload.js (as served) and functions/_lib/tiktok.js
+# (leading spaces aside), and both copies read 45 typed or pasted values as they should: the account, a short link, or
+# nothing. accountOf takes a stored name back only as it was, and noTiktokTable knows D1's error for the table.
+curl -s $B/upload/upload.js > "$T/tt-u.js"
+TTN=$(node -e '
+const fs = require("fs");
+const u = fs.readFileSync(process.argv[1], "utf8"), lib = fs.readFileSync("functions/_lib/tiktok.js", "utf8");
+const cut = (s) => { const a = s.indexOf("// ---------- TikTok accounts: the same block"), b = s.indexOf("// ---------- end of the TikTok account block ----------");
+  if (a < 0 || b < a) throw new Error("no TikTok account block"); return s.slice(a, b); };
+const flat = (s) => s.split("\n").map((l) => l.replace(/^ +/, "")).join("\n");
+const bad = [];
+if (flat(cut(u)) !== flat(cut(lib))) bad.push("the two blocks differ");
+const load = (s) => new Function(cut(s) + "\nreturn { TIKTOK_MAX, tiktokAccount };")();
+const v = "https://www.tiktok.com/@sapu.earth/video/7312345678901234567";
+const cases = [
+  ["@sapu.earth", "sapu.earth"], ["  @Kru_Bersih  ", "kru_bersih"], ["@KRU.Bersih.2026", "kru.bersih.2026"], ["@" + "a".repeat(24), "a".repeat(24)],
+  ["https://www.tiktok.com/@sapu.earth", "sapu.earth"], ["https://www.tiktok.com/@sapu.earth/", "sapu.earth"],
+  ["https://www.tiktok.com/@Sapu.Earth?_t=ZS-8sXabc&_r=1", "sapu.earth"], ["https://m.tiktok.com/@kru_bersih", "kru_bersih"],
+  ["https://tiktok.com/@kru_bersih#top", "kru_bersih"], ["tiktok.com/@kru_bersih", "kru_bersih"], ["www.tiktok.com/@kru_bersih?lang=id", "kru_bersih"],
+  ["HTTPS://WWW.TIKTOK.COM/@KRU", "kru"], [v + "?is_from_webapp=1", "sapu.earth"], ["https://www.tiktok.com/@sapu.earth/photo/7312345678901234567", "sapu.earth"],
+  ["https://vt.tiktok.com/ZSabc123/", "short"], ["https://vm.tiktok.com/ZMabc123/", "short"], ["vt.tiktok.com/ZSabc123/", "short"],
+  ["https://www.tiktok.com/t/ZTabc123/", "short"],
+  ["sapu.earth", null], ["tiktok.com", null], ["kru.org", null], ["@a", null], ["@" + "a".repeat(25), null], ["@...", null], ["@kru-bersih", null],
+  ["@kru<script>", null], ["@@kru", null], ["http://www.tiktok.com/@sapu.earth", null], ["https://www.tiktok.com.evil.example/@sapu.earth", null],
+  ["https://evil.example/@sapu.earth", null], ["https://u:pw\x40www.tiktok.com/@sapu.earth", null], ["https://www.tiktok.com:444/@sapu.earth", null],
+  ["https://www.tiktok.com/sapu.earth", null], ["https://www.tiktok.com/@sapu earth", null], ["https://www.tiktok.com/@sapu.earth/live", null],
+  ["https://www.tiktok.com/@sapu.earth/video/abc", null], ["https://www.instagram.com/sapu.earth/", null], ["javascript:alert(1)", null],
+  ["https://www.tiktok.com/@%73apu", null], ["https://www.tiktok.com./@sapu.earth", null], ["//www.tiktok.com/@sapu.earth", null],
+  ["https://www.tiktok.com/@sapu.earth?x=" + "a".repeat(280), null], ["", null], [null, null], [5, null],
+];
+for (const [name, s] of [["upload.js", u], ["tiktok.js", lib]]) {
+  const P = load(s);
+  if (P.TIKTOK_MAX !== 300) bad.push(name + " TIKTOK_MAX");
+  for (const [inp, want] of cases) {
+    const r = P.tiktokAccount(inp), got = r === null ? null : r.short ? "short" : r.account;
+    if (got !== want) bad.push(name + " " + JSON.stringify(inp) + " -> " + JSON.stringify(got));
+    if (r && r.account && r.url !== "https://www.tiktok.com/@" + r.account) bad.push(name + " url " + r.url);
+  }
+}
+const L = new Function(lib.slice(lib.indexOf("// ---------- TikTok accounts: the same block"), lib.indexOf("// D1\x27s error when migration 0009")).replace(/^export \{.*$/gm, "").replace(/^export /gm, "") +
+  "\nreturn { accountOf, tiktokUrl };")();
+for (const [inp, want] of [["sapu.earth", "sapu.earth"], ["Sapu.Earth", null], ["@sapu.earth", null], ["sapu earth", null], ["a", null], ["", null], [null, null], [5, null]]) {
+  if (L.accountOf(inp) !== want) bad.push("accountOf " + JSON.stringify(inp));
+}
+if (L.tiktokUrl("sapu.earth") !== "https://www.tiktok.com/@sapu.earth") bad.push("tiktokUrl");
+const no = new Function(lib.slice(lib.indexOf("export function noTiktokTable"), lib.indexOf("// Runs fn(true)")).replace("export ", "") + "\nreturn noTiktokTable;")();
+if (!no(new Error("D1_ERROR: no such table: crew_tiktok: SQLITE_ERROR"))) bad.push("noTiktokTable");
+if (no(new Error("D1_ERROR: no such table: logos: SQLITE_ERROR")) || no(new Error("no such table: crew_tiktok_old"))) bad.push("noTiktokTable too wide");
+console.log(bad.length ? "wrong: " + bad.join("; ") : "ok " + cases.length);
+' "$T/tt-u.js" 2>&1)
+check "the TikTok account block is the same in upload.js and functions/_lib/tiktok.js and reads 45 values right in both; accountOf, tiktokUrl, noTiktokTable (node)" "$TTN" "ok 45"
+
+# The crew page: YOUR TIKTOK between YOUR LOGO and YOUR PUBLIC PAGE, hidden until the server says TikTok accounts are on,
+# its texts in both languages without dashes, and the upload notice says what is kept, shown and deleted.
+UPT=$(curl -s $B/upload/)
+[ "$(echo "$UPT" | grep -n 'id="logoBox"' | cut -d: -f1)" -lt "$(echo "$UPT" | grep -n 'id="ttBox"' | cut -d: -f1)" ] \
+  && [ "$(echo "$UPT" | grep -n 'id="ttBox"' | cut -d: -f1)" -lt "$(echo "$UPT" | grep -n 'id="pubPage"' | cut -d: -f1)" ] \
+  && echo "$UPT" | grep -qF '<section class="panel cp-tiktok" id="ttBox" hidden>' \
+  && echo "$UPT" | grep -qF '<input type="text" id="ttInput" inputmode="email" maxlength="300" autocomplete="off" autocapitalize="off" spellcheck="false" data-ph="tt_ph" placeholder="@yourcrew" aria-labelledby="ttLab" aria-describedby="ttHint ttRules ttEcho">' \
+  && grep -qF '    box.hidden = !(tt && tt.enabled === true);' "$T/tt-u.js" && grep -qF 'if (ttE !== ttEpoch) fresh.tiktok = ttLast;' "$T/tt-u.js" \
+  && grep -qF 'if (r && r.status === 503 && code === "migration") throw new Fatal("migration");' "$T/tt-u.js" \
+  && ok "the crew page: YOUR TIKTOK between YOUR LOGO and YOUR PUBLIC PAGE, hidden until GET /api/partner says tiktok.enabled, and a list asked for before a TikTok answer never brings the older state back" \
+  || bad "crew page YOUR TIKTOK" ""
+TTX=$(node -e '
+const s = require("fs").readFileSync(process.argv[1], "utf8"); const a = s.indexOf("  const T = {"), b = s.indexOf("\n  };", a);
+const T = new Function("return (" + s.slice(a + "  const T = ".length, b + 4) + ");")();
+const keys = ["tt_h", "tt_send", "tt_remove", "tt_ph", "tt_none", "tt_review", "tt_review_live", "tt_live", "tt_declined", "tt_declined_live", "tt_sending",
+  "tt_label", "tt_hint", "tt_rules", "tt_ok", "tt_remove_q", "e_tt", "e_tt_short", "e_tt_empty", "e_tt_send"];
+const bad = [];
+for (const l of ["en", "id"]) for (const k of keys) if (typeof T[l][k] !== "string" || !T[l][k]) bad.push(l + " " + k);
+for (const l of ["en", "id"]) for (const k of keys) if (/[\u2013\u2014]/.test(T[l][k] || "")) bad.push(l + " dash " + k);
+for (const l of ["en", "id"]) for (const k of ["tt_review", "tt_review_live", "tt_live"]) if (!(T[l][k] || "").includes("@{acct}")) bad.push(l + " acct " + k);
+for (const l of ["en", "id"]) for (const k of ["tt_review_live", "tt_declined_live"]) if (!(T[l][k] || "").includes("@{live}")) bad.push(l + " live " + k);
+if (T.en.tt_h !== "YOUR TIKTOK" || T.id.tt_h !== "TIKTOK KRU KAMU") bad.push("titles");
+const pv = { en: ["And your crew\x27s logo and TikTok account, if you add them.", "Once we approve your crew\x27s TikTok account, your crew\x27s public page and the list of crews link to it.",
+    "with its name, logo, country and TikTok account.", "Your crew\x27s TikTok account is deleted when you remove it or another one replaces it, when we do not use it, and when we stop working together."],
+  id: ["Juga logo dan akun TikTok kru kamu, kalau kamu menambahkannya.", "Setelah kami setujui juga, halaman publik kru kamu dan daftar kru menampilkan link ke akun TikTok kru kamu.",
+    "dengan nama, logo, negara, dan akun TikTok-nya.", "Akun TikTok kru kamu dihapus kalau kamu menghapusnya atau akun lain menggantikannya, kalau tidak kami pakai, atau kalau kerja sama kita berhenti."] };
+for (const l of ["en", "id"]) {
+  const all = [T[l].pv_what, T[l].pv_public, T[l].pv_long].join(" ");
+  for (const p of pv[l]) if (!all.includes(p)) bad.push(l + " notice: " + p.slice(0, 40));
+}
+console.log(bad.length ? "wrong: " + bad.join("; ") : "ok");
+' "$T/tt-u.js" 2>&1)
+check "YOUR TIKTOK's texts in EN and ID (no dashes, the account in each state line), and the upload notice's TikTok sentences in both languages (node)" "$TTX" ok
+[ "$(echo "$UPT" | grep -cF "And your crew's logo and TikTok account, if you add them.")" = 1 ] \
+  && [ "$(echo "$UPT" | grep -cF "Once we approve your crew's TikTok account, your crew's public page and the list of crews link to it.")" = 1 ] \
+  && [ "$(echo "$UPT" | grep -cF "Your crew's TikTok account is deleted when you remove it or another one replaces it, when we do not use it, and when we stop working together.")" = 1 ] \
+  && ok "the upload notice on the page (EN) says the TikTok account is sent, shown once approved, and deleted" || bad "upload notice TikTok on the page" ""
+AJT=$(curl -s $B/admin/admin.js)
+echo "$AJT" | grep -qF '"/api/admin/tiktok/decide", { partner_id: p.id, account, action: act === "tiktok-approve" ? "approve" : "decline" }' \
+  && echo "$AJT" | grep -qF '"/api/admin/tiktok/decide", { partner_id: p.id, account: tiktok, action: "remove" }' \
+  && echo "$AJT" | grep -qF 'drawTiktokCheck(partners);' && echo "$AJT" | grep -qF 'setPartnerCount(data.counts);' \
+  && echo "$AJT" | grep -qF 'if (tt > 0) parts.push(`${tt} TIKTOK`);' \
+  && echo "$AJT" | grep -qF '<a href="${esc(ttLink(account))}" target="_blank" rel="noopener noreferrer">OPEN ON TIKTOK ↗</a>' \
+  && echo "$AJT" | grep -qF '(p.tiktok || p.tiktok_review ? " Their TikTok account comes off sapu.earth too." : "") +' \
+  && ok "/admin/: TIKTOK TO CHECK (OPEN ON TIKTOK, APPROVE TIKTOK, DECLINE with the account shown), REMOVE TIKTOK, the tab count and DEACTIVATE's question" \
+  || bad "/admin/ TikTok" ""
+
+# Deploy order: before migration 0009 the site works as without TikTok accounts. The table is renamed for a moment
+# (finish() renames it back if the script stops in between). The housekeeping's answer without it is checked at the end
+# of the housekeeping part: its first POST there must be the one that runs the jobs.
+if [ -n "$STATE" ]; then
+  WPJ=$(newp "TikTok Before $TRUN" ID "tt-before-$TRUN"); WT=$(echo "$WPJ" | jget "d['token']"); WPID=$(echo "$WPJ" | jget "d['id']")
+  st="$(tpost $WT '{"account":"@kru.before"}') $(tdec $WPID kru.before approve)"
+  TRENAMED=1
+  if [ "$st" = "200 200" ] && d1 "ALTER TABLE crew_tiktok RENAME TO crew_tiktok_e2e_off" >/dev/null; then
+    T1="$(code "$B/api/partner?k=$WT") $(ptt $WT "(t['enabled'], t['live'], t['review'], t['declined'])")"
+    T2="$(tpost $WT '{"account":"@kru.lain"}') $(tj "d.get('code')") $(tdec $WPID kru.before remove) $(tj "d.get('code')")"
+    T3="$(curl -s -o "$T/e.json" -w '%{http_code}' $B/api/admin/partners -H "$A") $(jget "(d['counts']['tiktok'], all(p['tiktok'] is None and p['tiktok_review'] is None for p in d['partners']))" < "$T/e.json")"
+    T4="$(curl -s -o "$T/e.html" -w '%{http_code}' $B/p/tt-before-$TRUN) $(grep -c 'tiktok\.com' "$T/e.html") $(curl -s -o "$T/e.html" -w '%{http_code}' $B/crews) $(grep -c 'cx-tt' "$T/e.html")"
+    T5="$(curl -s -o "$T/t.json" -w '%{http_code}' -X POST $B/api/admin/partners/deactivate -H "$A" -H 'content-type: application/json' -d "{\"id\":\"$WPID\"}") $(tj "d.get('tiktok_removed')")"
+    d1 "ALTER TABLE crew_tiktok_e2e_off RENAME TO crew_tiktok" >/dev/null && TRENAMED=
+    check "without the crew_tiktok table: GET /api/partner -> 200, TikTok accounts off (the crew page hides YOUR TIKTOK)" "$T1" "200 (False, None, None, False)"
+    check "without the crew_tiktok table: POST /api/tiktok and a decision -> 503 migration" "$T2" "503 migration 503 migration"
+    check "without the crew_tiktok table: GET /api/admin/partners (the /admin/ login) -> 200, counts.tiktok 0, no accounts" "$T3" "200 (0, True)"
+    check "without the crew_tiktok table: /p/<slug> of a crew with a live account and /crews -> 200, no TikTok link" "$T4" "200 0 200 0"
+    check "without the crew_tiktok table: DEACTIVATE -> 200, tiktok_removed 0" "$T5" "200 0"
+    check "crew_tiktok back in place: that deactivated crew's row is still there, and the housekeeping's sweep will take it" \
+      "$(d1 "SELECT live FROM crew_tiktok WHERE partner_id = '$WPID'" | jget "[r['live'] for r in d[0]['results']]")" "['kru.before']"
+  else
+    TRENAMED=
+    bad "rename the crew_tiktok table in the local D1 in $STATE" "$st $(tail -3 "$T/d1.err")"
+  fi
+fi
+
 # ---------- The list of crews (/crews) ----------
 # /crews (functions/crews/index.js) lists every active crew (listedCrews in functions/_lib/crews.js): those with an
 # approved cleanup, or a mission that is funded or open on sapu.earth, newest activity first, with its logo or its
@@ -2105,10 +2364,10 @@ check "crew B's card: Indonesia, no cleanups yet, no LAST CLEANUP, its open miss
   "$(cxq "'<small>Indonesia&nbsp;· no cleanups yet</small>' in card('$CXBS')['html'] and 'cx-last' not in card('$CXBS')['html'] and '<li><a href=\"/m/$NB1\"><i class=\"mpin-tag\">#$NB1</i><span>open&nbsp;· $(ddnb "$PLAN")&nbsp;· Muara B1 $CXRUN</span></a></li>' in card('$CXBS')['html']")" True
 HOWX=$(sed -n '/<section class="panel cx-how">/,/<\/section>/p' "$T/cx.html")
 [ "$(echo "$HOWX" | grep -c '^      <li>')" = 6 ] \
-  && echo "$HOWX" | grep -qF "<li>A crew shows up here as soon as it works with Sapu Earth. Until it has a mission or a cleanup on sapu.earth, it is under JUST JOINED with its name, logo and country only. A crew Sapu Earth stops working with leaves the list; its receipts stay on the globe.</li>" \
+  && echo "$HOWX" | grep -qF "<li>A crew shows up here as soon as it works with Sapu Earth. Until it has a mission or a cleanup on sapu.earth, it is under JUST JOINED with its name, logo, country and TikTok only. A crew Sapu Earth stops working with leaves the list; its receipts stay on the globe.</li>" \
   && echo "$HOWX" | grep -qF "<li>The totals add up each crew's approved receipts. Crews count the sacks and weigh or estimate the kilograms themselves, and Sapu Earth checks the photos and numbers of every cleanup before it becomes a receipt.</li>" \
   && echo "$HOWX" | grep -qF "<li>An open mission is a spot a crew wants to clean, waiting for funding. A funded one is paid for by Sapu Earth, and the crew plans to clean it on the day shown.</li>" \
-  && echo "$HOWX" | grep -qF "<li>Crews send their own logos, and Sapu Earth checks each one before it shows.</li>" \
+  && echo "$HOWX" | grep -qF "<li>Crews send their own logos and TikTok accounts, and Sapu Earth checks each one before it shows.</li>" \
   && echo "$HOWX" | grep -qF "<li>Thanks are one tap under a receipt. Nobody signs in and nothing marks who tapped, so one person can thank more than once: read them as applause, not votes. They are never money.</li>" \
   && echo "$HOWX" | grep -qF "<li>Newest activity first, and under JUST JOINED the crews that joined most recently first. No crew is ranked by kilograms, money or thanks.</li>" \
   && [ "$(echo "$HOWX" | grep -n 'Thanks are one tap' | cut -d: -f1)" -lt "$(echo "$HOWX" | grep -n 'Newest activity first' | cut -d: -f1)" ] \
@@ -4017,15 +4276,15 @@ const want = { en: { crews_listed: "Your crew is also in the list of all crews o
   id: { crews_listed: "Kru kamu juga ada di daftar semua kru di sapu.earth.", crews_open: "LIHAT SEMUA KRU" } };
 const bad = [];
 for (const l of ["en", "id"]) for (const [k, v] of Object.entries(want[l])) if (T[l][k] !== v) bad.push(l + " " + k);
-const pv = { en: "Your crew is also in the list of crews at sapu.earth/crews from the day we start working together, with its name, logo and country. Its name there links to your crew\x27s public page on sapu.earth, which also shows your crew\x27s website. Once your crew has a receipt or a mission on sapu.earth, the list also shows the totals of its receipts (cleanups, kilograms, sacks and what Sapu Earth paid), its newest receipt and its open and funded missions. It leaves the list when we stop working together.",
-  id: "Kru kamu juga ada di daftar kru di sapu.earth/crews sejak kita mulai bekerja sama, dengan nama, logo, dan negaranya. Nama kru kamu di daftar itu bisa ditekan untuk membuka halaman publik kru kamu di sapu.earth, yang juga menampilkan situs web kru kamu. Setelah kru kamu punya laporan atau misi di sapu.earth, daftar itu juga menampilkan total dari semua laporannya (aksi bersih, kilogram, karung, dan berapa yang dibayar Sapu Earth), laporan terbarunya, serta misinya yang masih menunggu dana atau sudah didanai. Kru kamu keluar dari daftar itu saat kerja sama kita berhenti." };
+const pv = { en: "Your crew is also in the list of crews at sapu.earth/crews from the day we start working together, with its name, logo, country and TikTok account. Its name there links to your crew\x27s public page on sapu.earth, which also shows your crew\x27s website. Once your crew has a receipt or a mission on sapu.earth, the list also shows the totals of its receipts (cleanups, kilograms, sacks and what Sapu Earth paid), its newest receipt and its open and funded missions. It leaves the list when we stop working together.",
+  id: "Kru kamu juga ada di daftar kru di sapu.earth/crews sejak kita mulai bekerja sama, dengan nama, logo, negara, dan akun TikTok-nya. Nama kru kamu di daftar itu bisa ditekan untuk membuka halaman publik kru kamu di sapu.earth, yang juga menampilkan situs web kru kamu. Setelah kru kamu punya laporan atau misi di sapu.earth, daftar itu juga menampilkan total dari semua laporannya (aksi bersih, kilogram, karung, dan berapa yang dibayar Sapu Earth), laporan terbarunya, serta misinya yang masih menunggu dana atau sudah didanai. Kru kamu keluar dari daftar itu saat kerja sama kita berhenti." };
 for (const l of ["en", "id"]) if (/Selama kru kamu punya misi|While your crew has a mission/.test(T[l].pv_public)) bad.push(l + " the old rule");
 for (const l of ["en", "id"]) if (!T[l].pv_public.endsWith(" " + pv[l])) bad.push(l + " pv_public");
 if (/[\u2013\u2014]/.test(JSON.stringify([T.en.crews_listed, T.id.crews_listed, T.en.pv_public, T.id.pv_public]))) bad.push("dash");
 console.log(bad.length ? "wrong: " + bad.join("; ") : "ok");
 ' "$T/cx-u.js" 2>&1)
 [ "$CXT" = ok ] && echo "$UPX" | grep -qF "It leaves the list when we stop working together.</span>" \
-  && [ "$(echo "$UPX" | grep -cF 'Your crew is also in the list of crews at sapu.earth/crews from the day we start working together, with its name, logo and country. Its name there links to your crew'"'"'s public page on sapu.earth, which also shows your crew'"'"'s website. Once your crew has a receipt or a mission on sapu.earth, the list also shows')" = 1 ] \
+  && [ "$(echo "$UPX" | grep -cF 'Your crew is also in the list of crews at sapu.earth/crews from the day we start working together, with its name, logo, country and TikTok account. Its name there links to your crew'"'"'s public page on sapu.earth, which also shows your crew'"'"'s website. Once your crew has a receipt or a mission on sapu.earth, the list also shows')" = 1 ] \
   && ok "the crew page's list texts (crews_listed, crews_open) in EN and ID, and the upload notice names sapu.earth/crews: from the day we start working together with the crew's name, logo and country, its totals, newest receipt and missions once it has a receipt or a mission, until we stop (EN on the page and in the script, ID in the script), no dashes" \
   || bad "crew page list texts" "$CXT"
 MXT=$(node -e '
@@ -4404,14 +4663,15 @@ HOLDT=$(alist | jget "[a['created_at'] for a in d['applications'] if a['id'] == 
 sleep 1.1 # HT0 is a whole second, so the older application is before it
 # Crew HK's cleanup, mission and application come in after this moment: the newest of each kind.
 HT0=$(python3 -c "import datetime as t;print(t.datetime.now(t.timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.000Z'))")
-HKJ=$(newp "Housekeeping Crew $HRUN" ID "housekeeping-$HRUN"); HKT=$(echo "$HKJ" | jget "d['token']")
+HKJ=$(newp "Housekeeping Crew $HRUN" ID "housekeeping-$HRUN"); HKT=$(echo "$HKJ" | jget "d['token']"); HKPID=$(echo "$HKJ" | jget "d['id']")
 HOJ=$(newp "Housekeeping Loose Files $HRUN" PH "housekeeping-loose-$HRUN"); HOT=$(echo "$HOJ" | jget "d['token']"); HOPID=$(echo "$HOJ" | jget "d['id']")
 HB=$(upk $HKT before); HA=$(upk $HKT after); HN=$(upk $HKT before)
 st=$(msub $HKT - "$HB,$HA"); HSUB=$(mj "d['id']")
 st="$st $(mpost $HKT "place_name=Housekeeping $HRUN" "media=$HN")"; HMIS=$(mj "d['id']")
 st="$st $(apply "ip=2001:db8:$(printf '%x:%x' $RANDOM $RANDOM)::7" "org_name=Housekeeping $HRUN")"; HAPP=$(rj "d['id']")
 st="$st $(lpost $HKT $T/logo.jpg)"; HKLK=$(lkey)
-check "crew HK leaves a cleanup in PENDING, a mission in review, an application and a logo" "$st" "200 201 201 201"
+st="$st $(tpost $HKT '{"account":"@kru.housekeeping"}')"
+check "crew HK leaves a cleanup in PENDING, a mission in review, an application, a logo and a TikTok account" "$st" "200 201 201 201 200"
 KO=$(upk $HOT before); KF=$(upk $HOT before)
 [[ $KO =~ ^[0-9a-f]{32}$ && $KF =~ ^[0-9a-f]{32}$ ]] && ok "crew HO uploads two loose files" || bad "crew HO uploads" "$KO $KF"
 check "deactivate crew HO -> 200, its link stops working" \
@@ -4420,9 +4680,9 @@ check "deactivate crew HO -> 200, its link stops working" \
 # hk: POST /api/housekeeping. Prints the status, the body goes to $T/hk.json, the headers to $T/hk.h.
 hk()    { curl -s -o "$T/hk.json" -D "$T/hk.h" -w '%{http_code}' -X POST $B/api/housekeeping; }
 hkj()   { jget "$1" < "$T/hk.json"; }
-HKW="(d['waiting']['applications'], d['waiting']['missions'], d['waiting']['cleanups'], d['waiting']['logos'])"
+HKW="(d['waiting']['applications'], d['waiting']['missions'], d['waiting']['cleanups'], d['waiting']['logos'], d['waiting']['tiktok'])"
 
-HAGED=; HFRESH=; HTRIM=; HLOGO=; HPOST=
+HAGED=; HFRESH=; HTRIM=; HLOGO=; HPOST=; HTIK=
 if [ -n "$STATE" ]; then
   check "both loose files are in R2 (signed links -> 200 200)" "$(code "$B$(hsig $KO)") $(code "$B$(hsig $KF)")" "200 200"
   # Older than every other loose file, so it is in the one batch of 50 even on a long-used database.
@@ -4447,6 +4707,9 @@ if [ -n "$STATE" ]; then
   # file. A logo of an active crew that waited 91 days is declined with its file, so its crew page asks for another.
   HXJ=$(newp "Housekeeping Off Logo $HRUN" ID "hk-off-logo-$HRUN"); HXT=$(echo "$HXJ" | jget "d['token']"); HXPID=$(echo "$HXJ" | jget "d['id']")
   HYJ=$(newp "Housekeeping Old Logo $HRUN" ID "hk-old-logo-$HRUN"); HYT=$(echo "$HYJ" | jget "d['token']"); HYPID=$(echo "$HYJ" | jget "d['id']")
+  # The TikTok sweep (sweepCrewTiktok in functions/_lib/tiktok.js): crew HX, made inactive by SQL below (DEACTIVATE would
+  # have deleted it already), has a live TikTok account. Its row goes with the next run; crew HK's waiting one stays.
+  [ "$(tpost $HXT '{"account":"@kru.hx"}') $(tdec $HXPID kru.hx approve)" = "200 200" ] && HTIK=1 || bad "set up the TikTok sweep" "$(cat "$T/t.json")"
   st="$(lpost $HXT $T/logo.jpg)"; HXK=$(lkey); st="$st $(lpost $HYT $T/logo.jpg)"; HYK=$(lkey)
   HO1=$(openssl rand -hex 16); HO2=$(openssl rand -hex 16); HO3=$(openssl rand -hex 16)
   # The post link sweep (sweepCrewPostLinks in functions/_lib/social.js): crew HX, made inactive by SQL below (DEACTIVATE
@@ -4477,17 +4740,17 @@ fi
 
 st=$(hk); HRAN=$(hkj "d['ran']"); HW1=$(hkj "$HKW"); HW1A=$(hkj "d['waiting']['applications']")
 HN1=$(hkj "json.dumps(d['newest'])") # {"applications": "...", ...}: double quotes only, so it fits in '...' below
-check "POST /api/housekeeping -> 200 {ran, waiting: {applications, missions, cleanups, logos, thanks, late}, newest: the same keys}, whole counts" \
+check "POST /api/housekeeping -> 200 {ran, waiting: {applications, missions, cleanups, logos, tiktok, thanks, late}, newest: the same keys}, whole counts" \
   "$st $(hkj "(type(d['ran']) is bool, sorted(d), sorted(d['waiting']), all(type(v) is int and v >= 0 for v in d['waiting'].values()), sorted(d['newest']))")" \
-  "200 (True, ['newest', 'ran', 'waiting'], ['applications', 'cleanups', 'late', 'logos', 'missions', 'thanks'], True, ['applications', 'cleanups', 'late', 'logos', 'missions', 'thanks'])"
+  "200 (True, ['newest', 'ran', 'waiting'], ['applications', 'cleanups', 'late', 'logos', 'missions', 'thanks', 'tiktok'], True, ['applications', 'cleanups', 'late', 'logos', 'missions', 'thanks', 'tiktok'])"
 grep -qi '^cache-control: no-store' "$T/hk.h" && ok "the housekeeping answer is never cached" || bad "housekeeping cache-control" "$(tr -d '\r' < "$T/hk.h")"
 grep -qE "$HRUN|Housekeeping|housekeeping-" "$T/hk.json" && bad "the housekeeping answer names a crew" "$(cat "$T/hk.json")" || ok "the housekeeping answer has counts only, no names"
-check "its counts match the admin lists: new applications, missions in review, cleanups in PENDING, logos to check" "$HW1" \
-  "($(alist | jget "d['counts']['new']"), $(mlist | jget "d['counts']['review']"), $(curl -s "$B/api/admin/submissions?status=pending" -H "$A" | jget "len(d['submissions'])"), $(curl -s $B/api/admin/partners -H "$A" | jget "d['counts']['logos']"))"
+check "its counts match the admin lists: new applications, missions in review, cleanups in PENDING, logos and TikTok accounts to check" "$HW1" \
+  "($(alist | jget "d['counts']['new']"), $(mlist | jget "d['counts']['review']"), $(curl -s "$B/api/admin/submissions?status=pending" -H "$A" | jget "len(d['submissions'])"), $(curl -s $B/api/admin/partners -H "$A" | jget "d['counts']['logos']"), $(curl -s $B/api/admin/partners -H "$A" | jget "d['counts']['tiktok']"))"
 # thanks counts busy days, not something that came in, so these look at the other four (newest.thanks is null here).
-HK4="('applications', 'missions', 'cleanups', 'logos')"
-check "crew HK's cleanup, mission, application and logo are counted" "$(hkj "min(d['waiting'][k] for k in $HK4) >= 1")" True
-check "newest is when crew HK's cleanup, mission, application and logo came in (ISO times, after the start of this part)" \
+HK4="('applications', 'missions', 'cleanups', 'logos', 'tiktok')"
+check "crew HK's cleanup, mission, application, logo and TikTok account are counted" "$(hkj "min(d['waiting'][k] for k in $HK4) >= 1")" True
+check "newest is when crew HK's cleanup, mission, application, logo and TikTok account came in (ISO times, after the start of this part)" \
   "$(hkj "all(type(v) is str and len(v) == 24 and v.endswith('Z') and v >= '$HT0' for v in (d['newest'][k] for k in $HK4))")" True
 if [ -n "$HAGED" ]; then
   if [ "$HRAN" = False ] && [ -z "$HFRESH" ]; then
@@ -4510,6 +4773,10 @@ if [ -n "$HAGED" ]; then
       check "the post link sweep: crew HX's own links are deleted (the row with nothing else goes), our link stays" \
         "$(prow $HXS1) $(prow $HXS2)" "[] [[None, 'https://www.instagram.com/p/E2eSweepUs/']]"
     fi
+    if [ -n "$HTIK" ]; then
+      check "the TikTok sweep: the rows of crew HX (made inactive by SQL) and of the crew deactivated without the table are deleted, crew HK's stays" \
+        "$(d1 "SELECT partner_id FROM crew_tiktok WHERE partner_id IN ('$HXPID', '${WPID:-none}', '$HKPID')" | jget "sorted(r['partner_id'] == '$HKPID' for r in d[0]['results'])")" "[True]"
+    fi
     if [ -n "$HTRIM" ]; then
       # trimmed <table> <id>: "<private_note> <lat> <lng>" as the local D1 has them.
       trimmed() { d1 "SELECT private_note AS p, lat, lng FROM $1 WHERE id = '$2'" | jget "(lambda r: '%s %s %s' % (r['p'], r['lat'], r['lng']))(d[0]['results'][0])"; }
@@ -4525,11 +4792,11 @@ fi
 [ -n "$HTRIM" ] && { d1 "DELETE FROM submissions WHERE id = '$TFRESH'" >/dev/null || bad "delete the trim test cleanup" "$(tail -3 "$T/d1.err")"; }
 st=$(hk)
 check "a second POST right after -> 200, ran false (once per 10 minutes), the same counts" "$st $(hkj "d['ran']") $(hkj "$HKW")" "200 False $HW1"
-st="$(sdec "{\"id\":\"$HSUB\",\"action\":\"reject\",\"review_note\":\"e2e\"}") $(act "$HMIS" decline) $(adm reject "{\"id\":\"$HAPP\"}") $(ldec "$HKLK" decline)"
-check "reject crew HK's cleanup, decline its mission and its logo, delete its application" "$st" "rejected 200 200 200"
+st="$(sdec "{\"id\":\"$HSUB\",\"action\":\"reject\",\"review_note\":\"e2e\"}") $(act "$HMIS" decline) $(adm reject "{\"id\":\"$HAPP\"}") $(ldec "$HKLK" decline) $(tdec "$HKPID" kru.housekeeping decline)"
+check "reject crew HK's cleanup, decline its mission, its logo and its TikTok account, delete its application" "$st" "rejected 200 200 200 200"
 st=$(hk)
 check "the counts follow at once while the jobs wait out their 10 minutes: one less of each" \
-  "$st $(hkj "d['ran']") $(hkj "(d['waiting']['applications'] + 1, d['waiting']['missions'] + 1, d['waiting']['cleanups'] + 1, d['waiting']['logos'] + 1)")" "200 False $HW1"
+  "$st $(hkj "d['ran']") $(hkj "(d['waiting']['applications'] + 1, d['waiting']['missions'] + 1, d['waiting']['cleanups'] + 1, d['waiting']['logos'] + 1, d['waiting']['tiktok'] + 1)")" "200 False $HW1"
 check "newest goes back to an older one (or null) once crew HK's are handled" \
   "$(hkj "all(d['newest'][k] is None or d['newest'][k] < w for k, w in json.loads('$HN1').items() if k in $HK4)")" True
 check "newest of the applications is now the older one still waiting: the latest left, not the earliest" \
@@ -4578,12 +4845,26 @@ if [ -n "$STATE" ]; then
     st=$(hk)
     son >/dev/null && PRENAMED=
     check "without the tables of migration 0007: POST /api/housekeeping -> 200 with the same keys, waiting.thanks 0 and newest.thanks None" \
-      "$st $(hkj "(sorted(d['waiting']), sorted(d['newest']), d['waiting']['thanks'], d['newest']['thanks'])")" "200 (['applications', 'cleanups', 'late', 'logos', 'missions', 'thanks'], ['applications', 'cleanups', 'late', 'logos', 'missions', 'thanks'], 0, None)"
+      "$st $(hkj "(sorted(d['waiting']), sorted(d['newest']), d['waiting']['thanks'], d['newest']['thanks'])")" "200 (['applications', 'cleanups', 'late', 'logos', 'missions', 'thanks', 'tiktok'], ['applications', 'cleanups', 'late', 'logos', 'missions', 'thanks', 'tiktok'], 0, None)"
   else
     PRENAMED=
     bad "rename the tables of migration 0007 in the local D1 in $STATE" "$(tail -3 "$T/d1.err")"
   fi
+  # Deploy order (crew TikTok accounts): before migration 0009 the housekeeping answers waiting.tiktok 0 and newest.tiktok
+  # None; its TikTok sweep then finds no table, which noTiktokTable keeps out of the log (checked in node above).
+  TRENAMED=1
+  if d1 "ALTER TABLE crew_tiktok RENAME TO crew_tiktok_e2e_off" >/dev/null; then
+    st=$(hk)
+    d1 "ALTER TABLE crew_tiktok_e2e_off RENAME TO crew_tiktok" >/dev/null && TRENAMED=
+    check "without the crew_tiktok table: POST /api/housekeeping -> 200, waiting.tiktok 0, newest.tiktok None" "$st $(hkj "(d['waiting']['tiktok'], d['newest']['tiktok'])")" "200 (0, None)"
+  else
+    TRENAMED=
+    bad "rename the crew_tiktok table in the local D1 in $STATE" "$(tail -3 "$T/d1.err")"
+  fi
 fi
+grep -qF '["tiktok sweep", sweepCrewTiktok, noTiktokTable],' functions/api/housekeeping.js \
+  && grep -qF '["tiktok", "SELECT COUNT(*) AS n, MAX(t.sent_at) AS newest FROM crew_tiktok t JOIN partners p ON p.id = t.partner_id WHERE t.review IS NOT NULL AND p.active = 1", noTiktokTable],' functions/api/housekeeping.js \
+  && ok "the housekeeping runs the TikTok sweep and counts the TikTok accounts of active crews that wait, and a missing crew_tiktok table stays out of its log" || bad "housekeeping TikTok" ""
 grep -qF '["post link sweep", sweepCrewPostLinks, noSocialTables],' functions/api/housekeeping.js \
   && ok "the housekeeping runs the post link sweep, and a missing table of migration 0007 stays out of its log" || bad "housekeeping post link sweep" ""
 # The workflow reads the logos and the busy days of thanks too, and a run between the push and the deploy (neither in
@@ -4592,12 +4873,13 @@ WF=.github/workflows/housekeeping.yml
 # The public copy of this repo leaves the workflow out (its timer would run there too), so there these checks skip it.
 inwf() { [ ! -f "$WF" ] || grep -qF "$1" "$WF"; }
 [ -f "$WF" ] || echo "NOTE  $WF is not in this copy (the public repo leaves it out), so the checks of its text are skipped"
-inwf 'const KEYS = ["applications", "missions", "cleanups", "logos", "thanks", "late"];' && inwf 'const OPTIONAL = ["logos", "thanks", "late"];' \
+inwf 'const KEYS = ["applications", "missions", "cleanups", "logos", "tiktok", "thanks", "late"];' && inwf 'const OPTIONAL = ["logos", "tiktok", "thanks", "late"];' \
+  && inwf 'tiktok: (n) => `${n} crew TikTok account${n === 1 ? " waits" : "s wait"} for review (PARTNERS, TIKTOK TO CHECK)`,' \
   && inwf 'if (n === undefined && OPTIONAL.includes(k)) n = 0;' \
   && inwf 'logos: (n) => `${n} crew logo${n === 1 ? " waits" : "s wait"} for review (PARTNERS, LOGOS TO CHECK)`,' \
   && inwf 'thanks: (n) => `${n} day${n === 1 ? "" : "s"} with many thanks on sapu.earth (200 or more in all, or 100 or more on one receipt), to check (APPROVED, THANKS BY DAY)`,' \
   && grep -qF 'busySite: 200, busyReceipt: 100' functions/_lib/social.js \
-  && ok "the housekeeping workflow says when crew logos wait and when a day had many thanks (200 and 100, the numbers of THANKS), and reads a missing logo or thanks count as 0" || bad "housekeeping workflow logos and thanks" ""
+  && ok "the housekeeping workflow says when crew logos or TikTok accounts wait and when a day had many thanks (200 and 100, the numbers of THANKS), and reads a missing logo, TikTok or thanks count as 0" || bad "housekeeping workflow logos, TikTok and thanks" ""
 st=$(curl -s -o /dev/null -D "$T/hk.h" -w '%{http_code}' $B/api/housekeeping)
 check "GET /api/housekeeping -> 405 with Allow: POST, PUT -> 405" \
   "$st $(tr -d '\r' < "$T/hk.h" | sed -n 's/^[Aa]llow: *//p') $(code -X PUT $B/api/housekeeping)" "405 POST 405"
@@ -6351,7 +6633,7 @@ echo "$UJ" | grep -qF "\$\$('input[type=\"file\"][data-kind]').forEach((input) =
   && echo "$UJ" | grep -qF 'if (epoch !== logoEpoch) fresh.logo = logoLast;' \
   && [ -n "$LGJ" ] && echo "$LGJ" | grep -qF 'logoPhase' && echo "$UJ" | grep -qF 'renderMine();
     renderLogo();' \
-  && echo "$UJ" | grep -qF 'partner && !sendLocked() && !logoPhase && Date.now() - lastFetch' \
+  && echo "$UJ" | grep -qF 'partner && !sendLocked() && !logoPhase && !ttPhase && Date.now() - lastFetch' \
   && ! echo "$UJ" | grep -qE '"#logo(Line|Btn|Msg)"\)\.textContent' \
   && ok "upload.js: the form pickers only by data-kind, the logo posted as image/jpeg with retries after 2, 5 and 10 s, kept locked by the end of a send and by a slow list while it is on its way, renderLogo reads the phase, nothing comes back with a 5-minute refresh during it, its lines only through setMsg" \
   || bad "upload.js YOUR LOGO wiring" ""
@@ -6394,8 +6676,8 @@ P413=$(echo "$AJS" | grep -nF 'if (st === 413 || (st === 415 && (field === "phot
 AJL=$(echo "$AJ" | sed -n '/^  async function listPartners(data) {/,/^  }$/p')
 echo "$AJ" | grep -qF 'logo: a.logo && f.elements.use_logo && f.elements.use_logo.checked ? a.logo.key : null,' \
   && echo "$AJ" | grep -qF '"/api/admin/logos/decide"' \
-  && echo "$AJ" | grep -qF 'b.textContent = c > 0 ? `PARTNERS · ${c} LOGO${c === 1 ? "" : "S"}` : "PARTNERS";' \
-  && echo "$AJL" | grep -qF 'drawLogoCheck(partners);' && echo "$AJL" | grep -qF 'setPartnerCount(data.counts && data.counts.logos);' \
+  && echo "$AJ" | grep -qF 'if (c > 0) parts.push(`${c} LOGO${c === 1 ? "" : "S"}`);' && echo "$AJ" | grep -qF 'b.textContent = ["PARTNERS", ...parts].join(" · ");' \
+  && echo "$AJL" | grep -qF 'drawLogoCheck(partners);' && echo "$AJL" | grep -qF 'setPartnerCount(data.counts);' \
   && echo "$AJ" | grep -qF '<img class="p-logo" src="${esc(logo)}" alt="" width="40" height="40" loading="lazy" decoding="async">' \
   && echo "$AJ" | grep -qF 'const reload = e.code === "state" || e.code === "inactive";' \
   && echo "$AJ" | grep -qF 'Take the logo of ${p.name} off sapu.earth? It is deleted for good, and their crew page asks them for another one.' \
@@ -6474,11 +6756,11 @@ case "$PV" in
 esac
 # The logo sentences of both notices, EN on the page and in the script, ID in the script; the 90 days are the code's.
 grep -qF 'reviewDays: 90,' functions/_lib/logos.js \
-  && [ "$(printf '%s\n%s\n' "$UP" "$I18U" | grep -cF ' And your crew'"'"'s logo, if you add one.')" = 2 ] \
+  && [ "$(printf '%s\n%s\n' "$UP" "$I18U" | grep -cF ' And your crew'"'"'s logo and TikTok account, if you add them.')" = 2 ] \
   && [ "$(printf '%s\n%s\n' "$UP" "$I18U" | grep -cF 'Once we approve your crew'"'"'s logo, it shows next to your crew'"'"'s name on sapu.earth.')" = 2 ] \
   && [ "$(printf '%s\n%s\n' "$UP" "$I18U" | grep -cF 'photos and your crew'"'"'s logo are saved again as JPEG on your phone.')" = 2 ] \
   && [ "$(printf '%s\n%s\n' "$UP" "$I18U" | grep -cF 'Your crew'"'"'s logo is deleted when we do not use it, when it waits 90 days without our check, when a newer one replaces it, and when we stop working together.')" = 2 ] \
-  && echo "$I18U" | grep -qF ' Juga logo kru kamu, kalau kamu menambahkannya.' && echo "$I18U" | grep -qF 'Setelah kami setujui, logo kru kamu tampil di samping nama kru kamu di sapu.earth.' \
+  && echo "$I18U" | grep -qF ' Juga logo dan akun TikTok kru kamu, kalau kamu menambahkannya.' && echo "$I18U" | grep -qF 'Setelah kami setujui, logo kru kamu tampil di samping nama kru kamu di sapu.earth.' \
   && echo "$I18U" | grep -qF 'foto dan logo kru kamu disimpan ulang sebagai JPEG di HP kamu.' && echo "$I18U" | grep -qF 'kalau sudah 90 hari menunggu tanpa kami cek' \
   && [ "$(printf '%s\n%s\n' "$AP" "$I18A" | grep -cF 'up to 3 photos, your crew'"'"'s logo if you add one,')" = 2 ] \
   && [ "$(printf '%s\n%s\n' "$AP" "$I18A" | grep -cF 'and if we work together, to show your crew on sapu.earth from the first day: its name, country and logo in the list of crews at sapu.earth/crews, and on its public page also one of the links you gave us.')" = 2 ] \
@@ -6720,7 +7002,7 @@ echo "$REP" | grep -qF '<span>Report illegal content</span>' && echo "$REP" | gr
   && ! echo "$REP" | grep -qE "$DASHES" && grep -qF '#report a { color: var(--ink);' site/forms.css \
   && ok "/impressum/ says how to report illegal content right after the contact: by email, the link and why, in good faith, a name optional, a confirmation and the decision, the privacy notice, the DSA contact point, the crews' WhatsApp chat, last: in English or German" \
   || bad "/impressum/ report paragraph" "$REP"
-echo "$VN" | grep -qF "<li><b>Instagram and TikTok:</b> a receipt may link to a post about it on Instagram or TikTok, ours or the crew's own, where people can comment. It is a plain link: nothing loads from Instagram or TikTok until you tap it, and we never show their posts, comments or counts on sapu.earth. After the tap you are on their site or in their app, where their own privacy notices apply. The link does not tell them which of our pages you came from.</li>" \
+echo "$VN" | grep -qF "<li><b>Instagram and TikTok:</b> a receipt may link to a post about it on Instagram or TikTok, ours or the crew's own, where people can comment, and a crew's page and the list of crews may link to the crew's own TikTok account. Each is a plain link: nothing loads from Instagram or TikTok until you tap it, and we never show their posts, comments or counts on sapu.earth. After the tap you are on their site or in their app, where their own privacy notices apply. These links do not tell them which of our pages you came from.</li>" \
   && echo "$VN" | grep -qF '<li><b>Emails and reports:</b> if you email <a href="mailto:hello@sapu.earth">hello@sapu.earth</a>, for example to report something illegal, we use your email address, your name if you give it, and what you write only to handle it and to answer you. If we take something down after your report, we tell the crew why, but not who reported it. Emails reach us through Cloudflare (its Email Routing) and are kept in our mailbox at Google. We delete them at the latest one year after the matter is closed. A report a crew sends in its WhatsApp chat with us is used the same way, only to handle it and to answer, and we delete it from that chat at the latest one year after the matter is closed. Legal basis: for a report, our legal duty to handle it (GDPR Art. 6(1)(c), with Art. 16 of the EU Digital Services Act); otherwise our legitimate interest in answering you (GDPR Art. 6(1)(f)).</li>' \
   && echo "$VN" | grep -qF 'Cloudflare is certified under the EU-US Data Privacy Framework and uses the EU standard contractual clauses for other countries. Our mailbox is with Google, which may also use servers outside the EU and is certified under the same framework.</li>' \
   && [ "$(echo "$VN" | grep -n '<b>Satellite map:</b>' | cut -d: -f1)" -lt "$(echo "$VN" | grep -n '<b>Instagram and TikTok:</b>' | cut -d: -f1)" ] \
@@ -6729,16 +7011,17 @@ echo "$VN" | grep -qF "<li><b>Instagram and TikTok:</b> a receipt may link to a 
   && ok "/impressum/#privacy: Instagram and TikTok after the satellite map (a plain link, nothing loads before the tap), Emails and reports after the take-down line (purpose, the crew never learns who reported, Cloudflare Email Routing and Google, a year after the matter is closed, a report in a crew's WhatsApp chat the same way, the legal basis), and Where names the Google mailbox" \
   || bad "/impressum/ visitor notice: post links and emails" ""
 # The upload notice: the link to the crew's post in what it sends, on its receipt, and when it goes (EN on the page and in
-# the script, ID in the script); the sentence on the receipt comes right after the logo sentence, before the list of crews.
+# the script, ID in the script); the sentence on the receipt comes right after the logo and TikTok sentences, before the
+# list of crews.
 PLV1="your notes, the link to your post about the cleanup on Instagram or TikTok if you add one, and your message to Sapu Earth."
-PLV2="Once we approve your crew's logo, it shows next to your crew's name on sapu.earth. If you add the link to your post with a cleanup, its receipt can link to it, so people can comment there, unless we link our own post about the cleanup instead. Visitors can thank your crew with one tap under each receipt. The number of thanks shows on the receipt, on your crew's page and in the list of crews. Nobody signs in to do that, and we keep nothing about who tapped, so the counts cannot show who thanked. Your crew is also in the list of crews at sapu.earth/crews"
-PLV3="when a newer one replaces it, and when we stop working together. The link to your post is deleted when we take it off the receipt, with its cleanup when we do not approve it or take it off the site, and when we stop working together. The thanks stay with their receipt, but we may take off the thanks of a day that looks inflated. We keep the rest"
+PLV2="Once we approve your crew's logo, it shows next to your crew's name on sapu.earth. Once we approve your crew's TikTok account, your crew's public page and the list of crews link to it. If you add the link to your post with a cleanup, its receipt can link to it, so people can comment there, unless we link our own post about the cleanup instead. Visitors can thank your crew with one tap under each receipt. The number of thanks shows on the receipt, on your crew's page and in the list of crews. Nobody signs in to do that, and we keep nothing about who tapped, so the counts cannot show who thanked. Your crew is also in the list of crews at sapu.earth/crews"
+PLV3="when a newer one replaces it, and when we stop working together. Your crew's TikTok account is deleted when you remove it or another one replaces it, when we do not use it, and when we stop working together. The link to your post is deleted when we take it off the receipt, with its cleanup when we do not approve it or take it off the site, and when we stop working together. The thanks stay with their receipt, but we may take off the thanks of a day that looks inflated. We keep the rest"
 PLI1="catatan kamu, link postingan kamu tentang aksi bersih itu di Instagram atau TikTok kalau kamu menambahkannya, dan pesan kamu untuk Sapu Earth."
-PLI2="Setelah kami setujui, logo kru kamu tampil di samping nama kru kamu di sapu.earth. Kalau kamu menambahkan link postingan kamu saat mengirim aksi bersih, laporannya bisa menampilkan link ke postingan itu, supaya orang bisa berkomentar di sana, kecuali kami menampilkan link ke postingan kami sendiri tentang aksi bersih itu. Pengunjung bisa berterima kasih kepada kru kamu dengan satu ketukan di setiap laporan. Jumlah ucapan terima kasihnya tampil di laporan itu, di halaman kru kamu, dan di daftar kru. Untuk itu tidak perlu masuk dengan akun, dan kami tidak menyimpan apa pun tentang siapa yang menekan, jadi jumlahnya tidak bisa menunjukkan siapa yang berterima kasih. Kru kamu juga ada di daftar kru di sapu.earth/crews"
-PLI3="atau kalau kerja sama kita berhenti. Link postingan kamu dihapus kalau kami melepasnya dari laporan, bersama aksi bersihnya kalau tidak kami setujui atau kami turunkan dari situs, dan kalau kerja sama kita berhenti. Ucapan terima kasih tetap ada bersama laporannya, tapi kami bisa menghapus ucapan terima kasih dari satu hari yang jumlahnya tidak wajar. Sisanya"
+PLI2="Setelah kami setujui, logo kru kamu tampil di samping nama kru kamu di sapu.earth. Setelah kami setujui juga, halaman publik kru kamu dan daftar kru menampilkan link ke akun TikTok kru kamu. Kalau kamu menambahkan link postingan kamu saat mengirim aksi bersih, laporannya bisa menampilkan link ke postingan itu, supaya orang bisa berkomentar di sana, kecuali kami menampilkan link ke postingan kami sendiri tentang aksi bersih itu. Pengunjung bisa berterima kasih kepada kru kamu dengan satu ketukan di setiap laporan. Jumlah ucapan terima kasihnya tampil di laporan itu, di halaman kru kamu, dan di daftar kru. Untuk itu tidak perlu masuk dengan akun, dan kami tidak menyimpan apa pun tentang siapa yang menekan, jadi jumlahnya tidak bisa menunjukkan siapa yang berterima kasih. Kru kamu juga ada di daftar kru di sapu.earth/crews"
+PLI3="atau kalau kerja sama kita berhenti. Akun TikTok kru kamu dihapus kalau kamu menghapusnya atau akun lain menggantikannya, kalau tidak kami pakai, atau kalau kerja sama kita berhenti. Link postingan kamu dihapus kalau kami melepasnya dari laporan, bersama aksi bersihnya kalau tidak kami setujui atau kami turunkan dari situs, dan kalau kerja sama kita berhenti. Ucapan terima kasih tetap ada bersama laporannya, tapi kami bisa menghapus ucapan terima kasih dari satu hari yang jumlahnya tidak wajar. Sisanya"
 n=0; for t in "$PLV1" "$PLV2" "$PLV3"; do [ "$(printf '%s\n%s\n' "$UP" "$I18U" | grep -cF -- "$t")" = 2 ] && n=$((n+1)); done
 for t in "$PLI1" "$PLI2" "$PLI3"; do [ "$(echo "$I18U" | grep -cF -- "$t")" = 1 ] && n=$((n+1)); done
-check "the upload notice names the link to the crew's post and the thanks: what it sends, that its receipt can link it and that visitors can thank (right after the logo sentence, and that nobody can tell who thanked), and when the link is deleted and what happens to thanks (EN on the page and in the script, ID in the script)" "$n" 6
+check "the upload notice names the link to the crew's post and the thanks: what it sends, that its receipt can link it and that visitors can thank (right after the logo and TikTok sentences, and that nobody can tell who thanked), and when the link is deleted and what happens to thanks (EN on the page and in the script, ID in the script)" "$n" 6
 # Thanks on the homepage (site/app.js), run in node with its own thanksRow and thankedRow: SAY TERIMA KASIH (lang id or
 # ms) or SAY THANK YOU on real receipts of active crews and on samples, the count only for a crew no longer active, the
 # stamp for a tap made while the page is open, every line as written, and THANKED on a card only above 0, never on a

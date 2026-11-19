@@ -83,6 +83,24 @@
       e_logo_send: "Your logo was not sent. Check your internet connection and try again.",
       e_logo_limit: "You sent many logos today. Please try again tomorrow.",
       e_logo_refused: "This picture was not accepted. Try another picture.",
+      // YOUR TIKTOK (docs/upload-flow.md, Crew TikTok accounts): the line for each state, the field, its line and the rules.
+      tt_h: "YOUR TIKTOK", tt_send: "SEND", tt_remove: "REMOVE", tt_ph: "@yourcrew",
+      tt_none: "Add your crew's TikTok account. Once Sapu Earth has checked it, your crew's public page and the list of crews on sapu.earth link to it.",
+      tt_review: "@{acct} is waiting for Sapu Earth. We check it, usually within a few days. Once we approve it, your crew's public page and the list of crews link to it.",
+      tt_review_live: "Your new account @{acct} is waiting for Sapu Earth. Until we have checked it, sapu.earth keeps linking @{live}.",
+      tt_live: "Your crew's public page and the list of crews on sapu.earth link to @{acct}.",
+      tt_declined: "Sapu Earth is not showing the TikTok account you sent. You can send another one, or ask us on WhatsApp why.",
+      tt_declined_live: "Sapu Earth could not use your new account, so sapu.earth keeps linking @{live}.",
+      tt_sending: "Sending…",
+      tt_label: "Your crew's TikTok name, or the link to its profile",
+      tt_hint: "Type the name from your crew's TikTok profile with its @, like @sapu.earth. A link to the profile (tiktok.com/@...) works too.",
+      tt_rules: "Only your crew's own account: no other person's or organization's account, and no account that asks for money or shows people who did not agree to be shown. Otherwise we take the link off and tell you why.",
+      tt_ok: "Your TikTok: {link}",
+      tt_remove_q: "Remove your crew's TikTok account from sapu.earth? You can send it again later.",
+      e_tt: "This is not a TikTok name or the link to a TikTok profile. Type your crew's name with its @, like @sapu.earth.",
+      e_tt_short: "Short links (like vt.tiktok.com) cannot be checked. Type your crew's TikTok name instead, like @sapu.earth.",
+      e_tt_empty: "Type your crew's TikTok name first, like @sapu.earth.",
+      e_tt_send: "Not sent. Check your internet connection and try again.",
       card_ready: "READY TO CLEAN", card_today: "TODAY",
       card_day: "Cleanup day: {day}", card_planned: "Planned day: {day}",
       card_day_past: "The planned day ({day}) has passed. If the day changed and you have not told us yet, reply to our message with the new day.",
@@ -301,9 +319,9 @@
       pv_foot: "PRIVACY",
       pv_who_h: "Who:", pv_who: "Sapu Earth is run by Marcus Pousette in Innsbruck, Austria. Contact:",
       pv_what_h: "What you send:",
-      pv_what: "photos and videos (they may show people), the date, the place and the country, the exact location if you tap Use my location now, the numbers (kg, sacks, crew size, hours, costs and pay), where the trash went, your notes, the link to your post about the cleanup on Instagram or TikTok if you add one, and your message to Sapu Earth. For a mission also your plan, the day and the price. And your crew's logo, if you add one.",
+      pv_what: "photos and videos (they may show people), the date, the place and the country, the exact location if you tap Use my location now, the numbers (kg, sacks, crew size, hours, costs and pay), where the trash went, your notes, the link to your post about the cleanup on Instagram or TikTok if you add one, and your message to Sapu Earth. For a mission also your plan, the day and the price. And your crew's logo and TikTok account, if you add them.",
       pv_public_h: "What is public:",
-      pv_public: "once we approve a cleanup, it is a public receipt on sapu.earth with everything you sent, except your message to Sapu Earth and the exact location. The location is shown rounded to about 100 m. The receipt also shows your crew's name, website and page, and what Sapu Earth paid. A mission is public in the same way once we publish or fund it. It is also in the list of missions at sapu.earth/missions, and once it is cleaned it stays there with its receipt, also after we stop working together. Once we approve your crew's logo, it shows next to your crew's name on sapu.earth. If you add the link to your post with a cleanup, its receipt can link to it, so people can comment there, unless we link our own post about the cleanup instead. Visitors can thank your crew with one tap under each receipt. The number of thanks shows on the receipt, on your crew's page and in the list of crews. Nobody signs in to do that, and we keep nothing about who tapped, so the counts cannot show who thanked. Your crew is also in the list of crews at sapu.earth/crews from the day we start working together, with its name, logo and country. Its name there links to your crew's public page on sapu.earth, which also shows your crew's website. Once your crew has a receipt or a mission on sapu.earth, the list also shows the totals of its receipts (cleanups, kilograms, sacks and what Sapu Earth paid), its newest receipt and its open and funded missions. It leaves the list when we stop working together.",
+      pv_public: "once we approve a cleanup, it is a public receipt on sapu.earth with everything you sent, except your message to Sapu Earth and the exact location. The location is shown rounded to about 100 m. The receipt also shows your crew's name, website and page, and what Sapu Earth paid. A mission is public in the same way once we publish or fund it. It is also in the list of missions at sapu.earth/missions, and once it is cleaned it stays there with its receipt, also after we stop working together. Once we approve your crew's logo, it shows next to your crew's name on sapu.earth. Once we approve your crew's TikTok account, your crew's public page and the list of crews link to it. If you add the link to your post with a cleanup, its receipt can link to it, so people can comment there, unless we link our own post about the cleanup instead. Visitors can thank your crew with one tap under each receipt. The number of thanks shows on the receipt, on your crew's page and in the list of crews. Nobody signs in to do that, and we keep nothing about who tapped, so the counts cannot show who thanked. Your crew is also in the list of crews at sapu.earth/crews from the day we start working together, with its name, logo, country and TikTok account. Its name there links to your crew's public page on sapu.earth, which also shows your crew's website. Once your crew has a receipt or a mission on sapu.earth, the list also shows the totals of its receipts (cleanups, kilograms, sacks and what Sapu Earth paid), its newest receipt and its open and funded missions. It leaves the list when we stop working together.",
       pv_promo_h: "Marketing:",
       pv_promo: "we also use your photos and videos, edited or as they are, to promote Sapu Earth, for example in posts, videos and ads on social media and other websites, and in print. We may name your crew and the place with them. Social networks also process what we post there, under their own rules.",
       pv_private_h: "What stays private:",
@@ -315,7 +333,7 @@
       pv_where_h: "Where:",
       pv_where: "on Cloudflare servers (database and file storage), which may be outside the EU. Cloudflare stores them for us as our processor. It is certified under the EU-US Data Privacy Framework and uses the EU standard contractual clauses for other countries. This page loads all its files, fonts included, from sapu.earth.",
       pv_long_h: "How long:",
-      pv_long: "photos and videos you upload but never send are deleted after 48 hours. Approved cleanups stay on sapu.earth as public receipts, also after we stop working together. If we don't approve a cleanup, or take it off the site later, we delete its photos and videos. A mission nobody funds is removed after 28 days waiting for us, or after 28 days on sapu.earth. When a mission is removed for any reason, for example because you withdraw it, its photos and video, your message and its exact location are deleted. 90 days after we decide on a cleanup, or after a mission is done, we delete your message to Sapu Earth and round the exact location to about 100 m. Your crew's logo is deleted when we do not use it, when it waits 90 days without our check, when a newer one replaces it, and when we stop working together. The link to your post is deleted when we take it off the receipt, with its cleanup when we do not approve it or take it off the site, and when we stop working together. The thanks stay with their receipt, but we may take off the thanks of a day that looks inflated. We keep the rest, such as places, dates and numbers, as our record for as long as Sapu Earth runs.",
+      pv_long: "photos and videos you upload but never send are deleted after 48 hours. Approved cleanups stay on sapu.earth as public receipts, also after we stop working together. If we don't approve a cleanup, or take it off the site later, we delete its photos and videos. A mission nobody funds is removed after 28 days waiting for us, or after 28 days on sapu.earth. When a mission is removed for any reason, for example because you withdraw it, its photos and video, your message and its exact location are deleted. 90 days after we decide on a cleanup, or after a mission is done, we delete your message to Sapu Earth and round the exact location to about 100 m. Your crew's logo is deleted when we do not use it, when it waits 90 days without our check, when a newer one replaces it, and when we stop working together. Your crew's TikTok account is deleted when you remove it or another one replaces it, when we do not use it, and when we stop working together. The link to your post is deleted when we take it off the receipt, with its cleanup when we do not approve it or take it off the site, and when we stop working together. The thanks stay with their receipt, but we may take off the thanks of a day that looks inflated. We keep the rest, such as places, dates and numbers, as our record for as long as Sapu Earth runs.",
       pv_rights_h: "Your rights:",
       pv_rights: "ask to see, correct or delete your details, withdraw a consent, or object to how we use them, by emailing",
       pv_people: "Anyone shown in a photo or video can ask us the same way to take it down. We then stop using it and remove it where we can.",
@@ -366,6 +384,23 @@
       e_logo_send: "Logo kamu belum terkirim. Cek koneksi internet, lalu coba lagi.",
       e_logo_limit: "Hari ini kamu sudah mengirim banyak logo. Coba lagi besok, ya.",
       e_logo_refused: "Gambar ini tidak diterima. Coba pilih gambar lain.",
+      tt_h: "TIKTOK KRU KAMU", tt_send: "KIRIM", tt_remove: "HAPUS", tt_ph: "@krukamu",
+      tt_none: "Tambahkan akun TikTok kru kamu. Setelah dicek Sapu Earth, halaman publik kru kamu dan daftar kru di sapu.earth menampilkan link ke akun itu.",
+      tt_review: "@{acct} sedang menunggu dicek Sapu Earth, biasanya dalam beberapa hari. Setelah kami setujui, halaman publik kru kamu dan daftar kru menampilkan link ke akun itu.",
+      tt_review_live: "Akun baru kamu @{acct} sedang menunggu dicek Sapu Earth. Selama belum kami cek, sapu.earth tetap menampilkan link ke @{live}.",
+      tt_live: "Halaman publik kru kamu dan daftar kru di sapu.earth menampilkan link ke @{acct}.",
+      tt_declined: "Sapu Earth tidak menampilkan akun TikTok yang kamu kirim. Kamu bisa mengirim akun lain, atau tanyakan alasannya kepada kami lewat WhatsApp.",
+      tt_declined_live: "Sapu Earth tidak bisa memakai akun baru kamu, jadi sapu.earth tetap menampilkan link ke @{live}.",
+      tt_sending: "Mengirim…",
+      tt_label: "Nama TikTok kru kamu, atau link ke profilnya",
+      tt_hint: "Ketik nama dari profil TikTok kru kamu dengan @-nya, misalnya @sapu.earth. Link ke profilnya (tiktok.com/@...) juga bisa.",
+      tt_rules: "Hanya akun kru kamu sendiri: bukan akun orang atau organisasi lain, dan bukan akun yang meminta uang atau memperlihatkan orang yang tidak setuju ditampilkan. Kalau tidak, link-nya kami hapus dan kami beri tahu alasannya.",
+      tt_ok: "TikTok kamu: {link}",
+      tt_remove_q: "Hapus akun TikTok kru kamu dari sapu.earth? Nanti kamu bisa mengirimnya lagi.",
+      e_tt: "Ini bukan nama TikTok atau link ke profil TikTok. Ketik nama kru kamu dengan @-nya, misalnya @sapu.earth.",
+      e_tt_short: "Link pendek (seperti vt.tiktok.com) tidak bisa kami cek. Ketik saja nama TikTok kru kamu, misalnya @sapu.earth.",
+      e_tt_empty: "Ketik dulu nama TikTok kru kamu, misalnya @sapu.earth.",
+      e_tt_send: "Belum terkirim. Cek koneksi internet, lalu coba lagi.",
       card_ready: "SIAP DIBERSIHKAN", card_today: "HARI INI",
       card_day: "Hari aksi bersih: {day}", card_planned: "Tanggal rencana: {day}",
       card_day_past: "Tanggal rencananya ({day}) sudah lewat. Kalau jadwalnya berubah dan kamu belum memberi tahu kami, balas pesan kami dengan tanggal barunya.",
@@ -566,9 +601,9 @@
       pv_foot: "PRIVASI",
       pv_who_h: "Siapa:", pv_who: "Sapu Earth dijalankan oleh Marcus Pousette di Innsbruck, Austria. Kontak:",
       pv_what_h: "Yang kamu kirim:",
-      pv_what: "foto dan video (bisa memperlihatkan orang), tanggal, tempat dan negara, titik lokasi yang persis kalau kamu menekan Pakai lokasi saya sekarang, angka-angkanya (kg, karung, jumlah kru, jam, biaya, dan upah), ke mana sampahnya dibawa, catatan kamu, link postingan kamu tentang aksi bersih itu di Instagram atau TikTok kalau kamu menambahkannya, dan pesan kamu untuk Sapu Earth. Untuk misi, juga rencana, tanggal, dan harganya. Juga logo kru kamu, kalau kamu menambahkannya.",
+      pv_what: "foto dan video (bisa memperlihatkan orang), tanggal, tempat dan negara, titik lokasi yang persis kalau kamu menekan Pakai lokasi saya sekarang, angka-angkanya (kg, karung, jumlah kru, jam, biaya, dan upah), ke mana sampahnya dibawa, catatan kamu, link postingan kamu tentang aksi bersih itu di Instagram atau TikTok kalau kamu menambahkannya, dan pesan kamu untuk Sapu Earth. Untuk misi, juga rencana, tanggal, dan harganya. Juga logo dan akun TikTok kru kamu, kalau kamu menambahkannya.",
       pv_public_h: "Yang tampil untuk umum:",
-      pv_public: "setelah kami setujui, aksi bersih kamu menjadi laporan publik di sapu.earth dengan semua yang kamu kirim, kecuali pesan kamu untuk Sapu Earth dan titik lokasi yang persis. Lokasinya ditampilkan dibulatkan sampai sekitar 100 m. Laporan itu juga menampilkan nama, situs web, dan halaman kru kamu, serta berapa yang dibayar Sapu Earth. Misi tampil untuk umum dengan cara yang sama setelah kami tayangkan atau danai. Misi itu juga ada di daftar misi di sapu.earth/missions, dan setelah dibersihkan tetap ada di sana bersama laporannya, juga setelah kerja sama kita berhenti. Setelah kami setujui, logo kru kamu tampil di samping nama kru kamu di sapu.earth. Kalau kamu menambahkan link postingan kamu saat mengirim aksi bersih, laporannya bisa menampilkan link ke postingan itu, supaya orang bisa berkomentar di sana, kecuali kami menampilkan link ke postingan kami sendiri tentang aksi bersih itu. Pengunjung bisa berterima kasih kepada kru kamu dengan satu ketukan di setiap laporan. Jumlah ucapan terima kasihnya tampil di laporan itu, di halaman kru kamu, dan di daftar kru. Untuk itu tidak perlu masuk dengan akun, dan kami tidak menyimpan apa pun tentang siapa yang menekan, jadi jumlahnya tidak bisa menunjukkan siapa yang berterima kasih. Kru kamu juga ada di daftar kru di sapu.earth/crews sejak kita mulai bekerja sama, dengan nama, logo, dan negaranya. Nama kru kamu di daftar itu bisa ditekan untuk membuka halaman publik kru kamu di sapu.earth, yang juga menampilkan situs web kru kamu. Setelah kru kamu punya laporan atau misi di sapu.earth, daftar itu juga menampilkan total dari semua laporannya (aksi bersih, kilogram, karung, dan berapa yang dibayar Sapu Earth), laporan terbarunya, serta misinya yang masih menunggu dana atau sudah didanai. Kru kamu keluar dari daftar itu saat kerja sama kita berhenti.",
+      pv_public: "setelah kami setujui, aksi bersih kamu menjadi laporan publik di sapu.earth dengan semua yang kamu kirim, kecuali pesan kamu untuk Sapu Earth dan titik lokasi yang persis. Lokasinya ditampilkan dibulatkan sampai sekitar 100 m. Laporan itu juga menampilkan nama, situs web, dan halaman kru kamu, serta berapa yang dibayar Sapu Earth. Misi tampil untuk umum dengan cara yang sama setelah kami tayangkan atau danai. Misi itu juga ada di daftar misi di sapu.earth/missions, dan setelah dibersihkan tetap ada di sana bersama laporannya, juga setelah kerja sama kita berhenti. Setelah kami setujui, logo kru kamu tampil di samping nama kru kamu di sapu.earth. Setelah kami setujui juga, halaman publik kru kamu dan daftar kru menampilkan link ke akun TikTok kru kamu. Kalau kamu menambahkan link postingan kamu saat mengirim aksi bersih, laporannya bisa menampilkan link ke postingan itu, supaya orang bisa berkomentar di sana, kecuali kami menampilkan link ke postingan kami sendiri tentang aksi bersih itu. Pengunjung bisa berterima kasih kepada kru kamu dengan satu ketukan di setiap laporan. Jumlah ucapan terima kasihnya tampil di laporan itu, di halaman kru kamu, dan di daftar kru. Untuk itu tidak perlu masuk dengan akun, dan kami tidak menyimpan apa pun tentang siapa yang menekan, jadi jumlahnya tidak bisa menunjukkan siapa yang berterima kasih. Kru kamu juga ada di daftar kru di sapu.earth/crews sejak kita mulai bekerja sama, dengan nama, logo, negara, dan akun TikTok-nya. Nama kru kamu di daftar itu bisa ditekan untuk membuka halaman publik kru kamu di sapu.earth, yang juga menampilkan situs web kru kamu. Setelah kru kamu punya laporan atau misi di sapu.earth, daftar itu juga menampilkan total dari semua laporannya (aksi bersih, kilogram, karung, dan berapa yang dibayar Sapu Earth), laporan terbarunya, serta misinya yang masih menunggu dana atau sudah didanai. Kru kamu keluar dari daftar itu saat kerja sama kita berhenti.",
       pv_promo_h: "Promosi:",
       pv_promo: "kami juga memakai foto dan video kamu, diedit atau apa adanya, untuk mempromosikan Sapu Earth, misalnya di postingan, video, dan iklan di media sosial dan situs lain, juga di media cetak. Kami bisa menyebut nama kru kamu dan tempatnya. Media sosial juga memproses apa yang kami posting di sana, dengan aturan mereka sendiri.",
       pv_private_h: "Yang tetap pribadi:",
@@ -580,7 +615,7 @@
       pv_where_h: "Di mana:",
       pv_where: "di server Cloudflare (database dan penyimpanan file), yang bisa berada di luar Uni Eropa. Cloudflare menyimpannya untuk kami sebagai pemroses data kami. Cloudflare tersertifikasi di bawah EU-US Data Privacy Framework dan memakai klausul kontrak standar Uni Eropa untuk negara lain. Halaman ini memuat semua file, termasuk font, dari sapu.earth.",
       pv_long_h: "Berapa lama:",
-      pv_long: "foto dan video yang kamu unggah tapi tidak pernah dikirim dihapus setelah 48 jam. Aksi bersih yang disetujui tetap tampil di sapu.earth sebagai laporan publik, juga setelah kerja sama kita berhenti. Kalau aksi bersih tidak kami setujui, atau nanti kami turunkan dari situs, foto dan videonya kami hapus. Misi yang tidak didanai dihapus setelah 28 hari menunggu kami, atau setelah 28 hari tampil di sapu.earth. Kalau misi dihapus karena alasan apa pun, misalnya karena kamu membatalkannya, foto dan videonya, pesan kamu, dan titik lokasinya yang persis ikut dihapus. 90 hari setelah kami memutuskan sebuah aksi bersih, atau setelah sebuah misi selesai, pesan kamu untuk Sapu Earth kami hapus dan titik lokasinya kami bulatkan sampai sekitar 100 m. Logo kru kamu dihapus kalau tidak kami pakai, kalau sudah 90 hari menunggu tanpa kami cek, kalau diganti dengan logo yang lebih baru, atau kalau kerja sama kita berhenti. Link postingan kamu dihapus kalau kami melepasnya dari laporan, bersama aksi bersihnya kalau tidak kami setujui atau kami turunkan dari situs, dan kalau kerja sama kita berhenti. Ucapan terima kasih tetap ada bersama laporannya, tapi kami bisa menghapus ucapan terima kasih dari satu hari yang jumlahnya tidak wajar. Sisanya, seperti tempat, tanggal, dan angka, kami simpan sebagai catatan kami selama Sapu Earth masih berjalan.",
+      pv_long: "foto dan video yang kamu unggah tapi tidak pernah dikirim dihapus setelah 48 jam. Aksi bersih yang disetujui tetap tampil di sapu.earth sebagai laporan publik, juga setelah kerja sama kita berhenti. Kalau aksi bersih tidak kami setujui, atau nanti kami turunkan dari situs, foto dan videonya kami hapus. Misi yang tidak didanai dihapus setelah 28 hari menunggu kami, atau setelah 28 hari tampil di sapu.earth. Kalau misi dihapus karena alasan apa pun, misalnya karena kamu membatalkannya, foto dan videonya, pesan kamu, dan titik lokasinya yang persis ikut dihapus. 90 hari setelah kami memutuskan sebuah aksi bersih, atau setelah sebuah misi selesai, pesan kamu untuk Sapu Earth kami hapus dan titik lokasinya kami bulatkan sampai sekitar 100 m. Logo kru kamu dihapus kalau tidak kami pakai, kalau sudah 90 hari menunggu tanpa kami cek, kalau diganti dengan logo yang lebih baru, atau kalau kerja sama kita berhenti. Akun TikTok kru kamu dihapus kalau kamu menghapusnya atau akun lain menggantikannya, kalau tidak kami pakai, atau kalau kerja sama kita berhenti. Link postingan kamu dihapus kalau kami melepasnya dari laporan, bersama aksi bersihnya kalau tidak kami setujui atau kami turunkan dari situs, dan kalau kerja sama kita berhenti. Ucapan terima kasih tetap ada bersama laporannya, tapi kami bisa menghapus ucapan terima kasih dari satu hari yang jumlahnya tidak wajar. Sisanya, seperti tempat, tanggal, dan angka, kami simpan sebagai catatan kami selama Sapu Earth masih berjalan.",
       pv_rights_h: "Hak kamu:",
       pv_rights: "kamu bisa minta untuk melihat, memperbaiki, atau menghapus data kamu, menarik persetujuan, atau menolak cara kami memakainya, lewat email ke",
       pv_people: "Siapa pun yang terlihat di foto atau video bisa minta lewat cara yang sama agar foto atau video itu diturunkan. Kami lalu berhenti memakainya dan menghapusnya sebisa mungkin.",
@@ -918,6 +953,10 @@
   let logoPreview = null; // the new square's object URL, shown while it is sent
   let logoEpoch = 0;      // logo answers so far: a list asked for before the last one must not bring the older state back
   let logoLast = null;    // the logo state of the last answer (POST /api/logo)
+  // YOUR TIKTOK: "sending" while POST /api/tiktok runs, else null; ttEpoch and ttLast as logoEpoch and logoLast.
+  let ttPhase = null;
+  let ttEpoch = 0;
+  let ttLast = null;
   // What the tile may load: a live logo, or the signed link to the waiting one.
   const LOGO_SRC = /^\/media\/[0-9a-f]{32}(\?exp=\d{10}&sig=[0-9a-f]{64})?$/;
   let sending = "cleanup"; // the form whose status line and progress bar are in use
@@ -1794,6 +1833,39 @@
     return null;
   }
   // ---------- end of the post link block ----------
+  // ---------- TikTok accounts: the same block in upload/upload.js and functions/_lib/tiktok.js ----------
+  // tiktokAccount(text): the crew's TikTok account as a crew types or pastes it: its name with the @ (@sapu.earth; without
+  // the @ it could be a website, kru.org), the link to its profile (https://www.tiktok.com/@sapu.earth, also with
+  // ?_t=..&_r=1 as the app copies it), or the link to one of its videos or photo posts (the account is taken from it, and
+  // the line under the field shows which). Returns { account, url }: account in lower case without the @, url the one
+  // link pages show, https://www.tiktok.com/@<account>. Returns { short: true } for a short link (vm.tiktok.com,
+  // vt.tiktok.com, tiktok.com/t/...), which redirects and names no account anybody can check, and null for anything else.
+  // A paste without https:// on tiktok.com (www. or m.) gets it, and the query and the hash are dropped.
+  // An account: 2 to 24 of a to z, 0 to 9, . and _, with at least one letter or digit.
+  // Never: http:, another host or a port, a login in the link, a space, a link to anything but a profile, a video or a
+  // photo post, more than TIKTOK_MAX characters.
+  const TIKTOK_MAX = 300;
+  const TT_NAME = /^(?=[a-z0-9._]*[a-z0-9])[a-z0-9._]{2,24}$/;
+  const TT_WEB = /^(?:www\.|m\.)?tiktok\.com$/;
+  function tiktokAccount(text) {
+    if (typeof text !== "string") return null;
+    let s = text.trim();
+    if (!s || s.length > TIKTOK_MAX || /\s/.test(s)) return null;
+    const named = (name) => {
+      const account = name.toLowerCase();
+      return TT_NAME.test(account) ? { account, url: "https://www.tiktok.com/@" + account } : null;
+    };
+    if (/^@[A-Za-z0-9._]+$/.test(s)) return named(s.slice(1));
+    if (/^(?:(?:www\.|m\.)?tiktok\.com|v[mt]\.tiktok\.com)\//i.test(s)) s = "https://" + s;
+    let u;
+    try { u = new URL(s); } catch { return null; }
+    if (u.protocol !== "https:" || u.username || u.password || u.port) return null;
+    const host = u.hostname, path = u.pathname;
+    if (host === "vm.tiktok.com" || host === "vt.tiktok.com" || (TT_WEB.test(host) && path.startsWith("/t/"))) return { short: true };
+    const m = TT_WEB.test(host) && /^\/@([A-Za-z0-9._]{2,24})(?:\/(?:video|photo)\/\d{8,25})?\/?$/.exec(path);
+    return m ? named(m[1]) : null;
+  }
+  // ---------- end of the TikTok account block ----------
   // Show how a typed number was read, for example "= 1,500 kg", so mistakes are visible. Plain digits get the line
   // from 5 digits on: "1500000" is easy to misread, "= 1.500.000 IDR" is not.
   function echoNum(name) {
@@ -2682,6 +2754,7 @@
     if (live) { $("#pubLink").href = page; setText($("#pubLink"), page.replace(/^https:\/\//, "")); }
     renderMine();
     renderLogo();
+    renderTiktok();
   }
   $("#sharePub").addEventListener("click", (ev) => { if (partner && partner.page_url) shareOrCopy(partner.page_url, ev.currentTarget); });
 
@@ -2791,6 +2864,103 @@
       if (logoPreview) { URL.revokeObjectURL(logoPreview); logoPreview = null; }
       renderLogo();
     }
+  });
+
+  // ---------- YOUR TIKTOK (docs/upload-flow.md, Crew TikTok accounts) ----------
+  // The crew's own TikTok account, between YOUR LOGO and YOUR PUBLIC PAGE: from partner.tiktok (GET /api/partner, or the
+  // answer of POST /api/tiktok). Hidden while TikTok accounts are off (tiktok.enabled not true: before migration 0009, or
+  // an older server). The line says where it stands, written only through setMsg; the line under the field shows the
+  // link as it will show, or why it is not taken; SEND sends the account to wait for Sapu Earth, REMOVE takes it off
+  // sapu.earth at once (the waiting one too). Nothing about it is kept on the phone.
+  function ttName(v) { return typeof v === "string" && TT_NAME.test(v) ? v : ""; }
+  function renderTiktok() {
+    const box = $("#ttBox");
+    const tt = partner && partner.tiktok;
+    box.hidden = !(tt && tt.enabled === true);
+    if (box.hidden) return;
+    const live = ttName(tt.live), review = ttName(tt.review), declined = tt.declined === true;
+    const key = ttPhase ? "tt_sending"
+      : review ? (live ? "tt_review_live" : "tt_review")
+      : live ? (declined ? "tt_declined_live" : "tt_live")
+      : declined ? "tt_declined" : "tt_none";
+    setMsg($("#ttLine"), key, { acct: review || live, live });
+    $("#ttRemove").hidden = !live && !review;
+    $("#ttSend").disabled = $("#ttRemove").disabled = $("#ttInput").disabled = !!ttPhase;
+  }
+  // The line under the field: the link as it will show ("Your TikTok: tiktok.com/@sapu.earth"), or why it is not taken,
+  // in orange. Empty while the field is.
+  function echoTiktok() {
+    const out = $("#ttEcho");
+    const raw = $("#ttInput").value.trim();
+    const acct = raw ? tiktokAccount(raw) : null;
+    out.classList.toggle("warn", !!raw && !(acct && acct.account));
+    if (!raw) setMsg(out);
+    else if (acct && acct.account) setMsg(out, "tt_ok", { link: "tiktok.com/@" + acct.account });
+    else setMsg(out, acct && acct.short ? "e_tt_short" : "e_tt");
+  }
+  // POST /api/tiktok: up to 4 tries, after 2, 5 and 10 s, as for the logo, on no answer (60 s at most), a 429 without our
+  // code (the rate limiting rule) or a 5xx other than the migration answer. Returns the answer; anything else is a Fatal
+  // with the key to show ("migration": TikTok accounts are off).
+  async function postTiktok(account) {
+    const waits = [2, 5, 10];
+    for (let attempt = 0; ; attempt++) {
+      let r = null, body = null;
+      const ac = typeof AbortController === "function" ? new AbortController() : null;
+      const timer = ac ? setTimeout(() => ac.abort(), STALL_MS) : null;
+      try {
+        r = await fetch(`/api/tiktok?k=${encodeURIComponent(token)}`, {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ account }), signal: ac ? ac.signal : undefined,
+        });
+        try { body = await r.json(); } catch { /* not JSON */ }
+      } catch {
+        r = null; // offline, timed out, or the answer was cut off
+      } finally {
+        if (timer) clearTimeout(timer);
+      }
+      const code = body && body.code;
+      if (r && r.status === 200 && body && body.tiktok && typeof body.tiktok === "object") return body;
+      if (r && r.status === 503 && code === "migration") throw new Fatal("migration");
+      if (r && r.status === 404) throw new Fatal("bad_link");
+      if (r && r.status === 400) throw new Fatal(code === "short" ? "e_tt_short" : "e_tt");
+      if ((r && r.status < 500 && r.status !== 429) || attempt >= waits.length) throw new Fatal("e_tt_send");
+      await sleep(waits[attempt] * 1000);
+    }
+  }
+  // One send: account is the name to send, or "" to take the crew's TikTok off sapu.earth. The answer (the crew's new
+  // state) redraws the panel and empties the field; a refusal or a failed send leaves both, with the reason under them.
+  async function sendTiktok(account) {
+    if (ttPhase || !partner) return;
+    setMsg($("#ttMsg"));
+    ttPhase = "sending";
+    renderTiktok();
+    try {
+      const body = await postTiktok(account);
+      ttLast = body.tiktok;
+      ttEpoch++;
+      partner.tiktok = body.tiktok;
+      $("#ttInput").value = "";
+      echoTiktok();
+    } catch (e) {
+      // TikTok accounts are off on the server (before migration 0009): the panel goes. Anything else says why under it.
+      if (e instanceof Fatal && e.msgKey === "migration") { if (partner.tiktok) partner.tiktok.enabled = false; }
+      else setMsg($("#ttMsg"), e instanceof Fatal ? e.msgKey : "e_tt_send");
+    } finally {
+      ttPhase = null;
+      renderTiktok();
+    }
+  }
+  $("#ttInput").addEventListener("input", () => { setMsg($("#ttMsg")); echoTiktok(); });
+  $("#ttInput").addEventListener("keydown", (ev) => { if (ev.key === "Enter" && !ev.isComposing) { ev.preventDefault(); $("#ttSend").click(); } });
+  $("#ttSend").addEventListener("click", () => {
+    const raw = $("#ttInput").value.trim();
+    const acct = raw ? tiktokAccount(raw) : null;
+    if (!raw) { setMsg($("#ttMsg"), "e_tt_empty"); $("#ttInput").focus(); return; }
+    if (!acct || !acct.account) { echoTiktok(); $("#ttInput").focus(); return; }
+    sendTiktok(acct.account);
+  });
+  $("#ttRemove").addEventListener("click", () => {
+    if (ttPhase || !confirm(t("tt_remove_q"))) return;
+    sendTiktok("");
   });
 
   // ---------- opening a cleanup, switching, deleting ----------
@@ -3225,13 +3395,14 @@
 
   async function refreshPartner() {
     lastFetch = Date.now();
-    const epoch = logoEpoch;
+    const epoch = logoEpoch, ttE = ttEpoch;
     try {
       const r = await fetch(`/api/partner?k=${encodeURIComponent(token)}`, { cache: "no-store" });
       if (r.ok) {
         const fresh = await r.json();
         // A logo answer that came while this list was on its way is newer than the list's logo.
         if (epoch !== logoEpoch) fresh.logo = logoLast;
+        if (ttE !== ttEpoch) fresh.tiktok = ttLast; // the same for a TikTok answer
         partner = fresh;
         const dropped = fillMissionPicker();
         renderChips();
@@ -3247,7 +3418,7 @@
   // The crew page is where a crew sees that a mission was funded (or its logo checked): back on the page after 5
   // minutes or more, the lists are asked again (never during a send, and never while a logo is on its way).
   document.addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "visible" && partner && !sendLocked() && !logoPhase && Date.now() - lastFetch >= 5 * 60 * 1000) refreshPartner();
+    if (document.visibilityState === "visible" && partner && !sendLocked() && !logoPhase && !ttPhase && Date.now() - lastFetch >= 5 * 60 * 1000) refreshPartner();
   });
 
   function done(id, missionId) {

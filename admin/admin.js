@@ -857,19 +857,25 @@
     return box;
   }
 
-  // The PARTNERS tab says how many crew logos wait under LOGOS TO CHECK ("PARTNERS · 1 LOGO"), yellow like the other
-  // counts. It counts logos, not partners: logos are rare, and the label reads as what waits. Not a number: no change.
-  function setPartnerCount(count) {
-    const c = Number(count);
+  // The PARTNERS tab says how many crew logos wait under LOGOS TO CHECK and how many TikTok accounts under TIKTOK TO
+  // CHECK ("PARTNERS · 1 LOGO · 1 TIKTOK"), yellow like the other counts. It counts what waits, not partners: both are
+  // rare, and the label reads as what waits. No logo count that is a number: no change. A missing TikTok count (a server
+  // from before them) counts as 0.
+  function setPartnerCount(counts) {
+    const c = Number(counts && counts.logos);
     if (!Number.isFinite(c)) return;
+    const tt = Number(counts.tiktok) > 0 ? Number(counts.tiktok) : 0;
+    const parts = [];
+    if (c > 0) parts.push(`${c} LOGO${c === 1 ? "" : "S"}`);
+    if (tt > 0) parts.push(`${tt} TIKTOK`);
     const b = $('[data-tab="partners"]');
-    b.textContent = c > 0 ? `PARTNERS · ${c} LOGO${c === 1 ? "" : "S"}` : "PARTNERS";
-    b.classList.toggle("has-new", c > 0);
+    b.textContent = ["PARTNERS", ...parts].join(" · ");
+    b.classList.toggle("has-new", parts.length > 0);
   }
   async function refreshPartnerCount() {
     try {
       const r = await api("/api/admin/partners");
-      if (r && r.counts) setPartnerCount(r.counts.logos);
+      if (r && r.counts) setPartnerCount(r.counts);
     } catch { /* only a hint; the tab shows the error when opened */ }
   }
 
@@ -877,6 +883,7 @@
     const data = await api("/api/admin/partners");
     view.innerHTML = `
       <section class="panel logo-check" id="logoCheck" hidden></section>
+      <section class="panel logo-check" id="tiktokCheck" hidden></section>
       <form class="panel" id="newPartner" novalidate>
         <h2 class="panel-title">NEW PARTNER</h2>
         <div class="edit-grid">
@@ -917,16 +924,18 @@
     await listPartners(data);
   }
 
-  // LOGOS TO CHECK, the partner rows and the tab label, all from one answer of GET /api/admin/partners ({partners,
-  // counts}; fetched when not given), so they always agree. Every action that changes a partner or a logo calls it
-  // again. A NEW LINK box showing in a row is the only copy of that link: it moves into the redrawn row.
+  // LOGOS TO CHECK, TIKTOK TO CHECK, the partner rows and the tab label, all from one answer of GET /api/admin/partners
+  // ({partners, counts}; fetched when not given), so they always agree. Every action that changes a partner, a logo or a
+  // TikTok account calls it again. A NEW LINK box showing in a row is the only copy of that link: it moves into the
+  // redrawn row.
   async function listPartners(data) {
     if (!data) data = await api("/api/admin/partners");
     const list = $("#plist");
     if (!list) return; // another tab was opened meanwhile
     const partners = Array.isArray(data.partners) ? data.partners : [];
     drawLogoCheck(partners);
-    setPartnerCount(data.counts && data.counts.logos);
+    drawTiktokCheck(partners);
+    setPartnerCount(data.counts);
     const kept = {};
     for (const box of $$(".p-row [data-secret]", list)) if (box.childElementCount) kept[box.closest(".p-row").dataset.id] = box;
     if (!partners.length) { list.innerHTML = '<p class="hint">No partners yet.</p>'; return; }
@@ -937,6 +946,7 @@
       row.dataset.id = p.id;
       const contact = [p.contact_name, p.whatsapp, p.email].filter((x) => n(x)).map(esc).join(" · ");
       const logo = p.logo ? safeMedia(p.logo.url) : "";
+      const tiktok = ttName(p.tiktok);
       row.innerHTML = `
         <div>
           ${logo ? `<img class="p-logo" src="${esc(logo)}" alt="" width="40" height="40" loading="lazy" decoding="async">` : ""}<span class="p-name">${esc(p.name)}</span>
@@ -944,10 +954,13 @@
           ${p.url ? `<small>${esc(p.url)}</small>` : ""}
           ${contact ? `<small>contact: ${contact}</small>` : ""}
           ${p.logo_review ? "<small>new logo waits under LOGOS TO CHECK</small>" : ""}
+          ${tiktok ? `<small>tiktok: <a href="${esc(ttLink(tiktok))}" target="_blank" rel="noopener noreferrer">@${esc(tiktok)} ↗</a></small>` : ""}
+          ${p.tiktok_review && ttName(p.tiktok_review.account) ? "<small>new TikTok account waits under TIKTOK TO CHECK</small>" : ""}
         </div>
         <div class="btn-row">
           ${p.active ? `<a class="b b-sm b-ghost" href="/p/${esc(p.slug)}" target="_blank" rel="noopener">PAGE</a>
           ${p.logo ? '<button type="button" class="b b-sm b-ghost" data-act="logo-remove">REMOVE LOGO</button>' : ""}
+          ${tiktok ? '<button type="button" class="b b-sm b-ghost" data-act="tiktok-remove">REMOVE TIKTOK</button>' : ""}
           <button type="button" class="b b-sm b-ghost" data-act="rotate">NEW LINK</button>
           <button type="button" class="b b-sm b-red" data-act="deactivate">DEACTIVATE</button>` : ""}
         </div>
@@ -966,6 +979,16 @@
           } catch (e) { logoFailed(e, [ev.target], null); }
           return;
         }
+        if (act === "tiktok-remove") {
+          if (!tiktok || !confirm(`Take the TikTok account @${tiktok} of ${p.name} off sapu.earth? It is deleted, and their crew page tells them Sapu Earth is not showing it. They can send one again.`)) return;
+          ev.target.disabled = true;
+          try {
+            await api("/api/admin/tiktok/decide", { partner_id: p.id, account: tiktok, action: "remove" });
+            flash(`The TikTok account of ${p.name} was taken off sapu.earth.`);
+            await listPartners();
+          } catch (e) { logoFailed(e, [ev.target], null); }
+          return;
+        }
         const q = act === "rotate"
           ? `Make a new upload link for ${p.name}? The old link stops working right away.`
           : `Deactivate ${p.name}? Their upload link stops working and their partner page goes offline. ` +
@@ -973,6 +996,7 @@
             "Published cleanups and done missions stay." +
             (contact ? " Their contact details from the application are deleted too." : "") +
             (p.logo || p.logo_review ? " Their logo is deleted too." : "") +
+            (p.tiktok || p.tiktok_review ? " Their TikTok account comes off sapu.earth too." : "") +
             " Links to their own posts on Instagram or TikTok come off their receipts.";
         if (!confirm(q)) return;
         try {
@@ -987,6 +1011,7 @@
             flash(`${p.name} deactivated.` + (gone ? ` ${gone} mission${gone === 1 ? "" : "s"} removed, with ${gone === 1 ? "its photos and any video" : "their photos and any videos"}.` : "") +
               (funded.length ? ` Funded ones: ${funded.join(", ")}. The advance stays with the crew and the rest is not due.` : "") +
               (r && Number(r.logos_removed) > 0 ? " Their logo was deleted." : "") +
+              (r && Number(r.tiktok_removed) > 0 ? " Their TikTok account came off sapu.earth." : "") +
               (r && Number(r.post_links_removed) > 0
                 ? ` Links to their own posts came off ${Number(r.post_links_removed)} receipt${Number(r.post_links_removed) === 1 ? "" : "s"}.` : ""));
             refreshMissionCount();
@@ -1045,7 +1070,60 @@
       list.append(item);
     }
   }
-  // A logo decision that did not go through. The logo was decided or replaced meanwhile (another tab, the crew sent a
+  // TIKTOK TO CHECK, under LOGOS TO CHECK: the TikTok accounts active crews sent from their crew page, oldest first, each
+  // with OPEN ON TIKTOK and what sapu.earth links now. APPROVE TIKTOK and DECLINE are one tap: DECLINE only drops a name
+  // the crew can send again, and changes nothing public (ops/production-rules.md, rule 5). Hidden when nothing waits.
+  // Every decision names the account shown here, so one the crew changed meanwhile answers 409 and the list reloads.
+  function drawTiktokCheck(partners) {
+    const box = $("#tiktokCheck");
+    if (!box) return;
+    const waiting = partners.filter((p) => p.active && p.tiktok_review && ttName(p.tiktok_review.account))
+      .sort((a, b) => String(a.tiktok_review.sent_at || "").localeCompare(String(b.tiktok_review.sent_at || "")));
+    box.hidden = !waiting.length;
+    box.innerHTML = "";
+    if (!waiting.length) return;
+    box.innerHTML = `<h2 class="panel-title">TIKTOK TO CHECK (${waiting.length})</h2>
+      <p class="hint">Crews sent their TikTok account from their crew page. Nothing shows on sapu.earth before you approve. OPEN ON TIKTOK first: approve the crew's own account, with its cleanups. Decline another person's or organization's account, one that asks for money or shows bank or phone numbers, one that shows children or people who would not want to be shown, and anything you would not link from sapu.earth. APPROVE TIKTOK links it on their page and in the list of crews; public pages catch up within 5 minutes. DECLINE drops it: their crew page says Sapu Earth is not showing it, and they can send another one.</p>
+      <div class="lc-list"></div>`;
+    const list = $(".lc-list", box);
+    for (const p of waiting) {
+      const account = ttName(p.tiktok_review.account);
+      const sent = p.tiktok_review.sent_at;
+      const age = ageDays(sent);
+      const now = ttName(p.tiktok);
+      const item = document.createElement("div");
+      item.className = "lc-item";
+      item.innerHTML = `<div class="lc-text">
+          <span class="p-name">${esc(p.name)}</span>
+          <small>new: <b>@${esc(account)}</b> · <a href="${esc(ttLink(account))}" target="_blank" rel="noopener noreferrer">OPEN ON TIKTOK ↗</a></small>
+          <small>sent ${esc(String(sent || "").slice(0, 16).replace("T", " "))}${age !== null ? ` (${esc(daysAgo(age))})` : ""}</small>
+          <small>now on sapu.earth: ${now ? `@${esc(now)}` : "no TikTok yet"}</small>
+          <div class="btn-row">
+            <button type="button" class="b b-sm b-ok" data-act="tiktok-approve">APPROVE TIKTOK</button>
+            <button type="button" class="b b-sm b-red" data-act="tiktok-decline">DECLINE</button>
+          </div>
+          <div class="msg"></div>
+        </div>`;
+      item.addEventListener("click", async (ev) => {
+        const act = ev.target.dataset && ev.target.dataset.act;
+        if (act !== "tiktok-approve" && act !== "tiktok-decline") return;
+        const btns = $$("button", item);
+        btns.forEach((x) => (x.disabled = true));
+        try {
+          await api("/api/admin/tiktok/decide", { partner_id: p.id, account, action: act === "tiktok-approve" ? "approve" : "decline" });
+          flash(act === "tiktok-approve" ? `@${account} is linked on the page of ${p.name} now.`
+            : `@${account} was declined.` + (now ? ` Their current account @${now} stays on sapu.earth.` : " Their crew page tells them."));
+          await listPartners();
+        } catch (e) { logoFailed(e, btns, $(".msg", item)); }
+      });
+      list.append(item);
+    }
+  }
+  // A TikTok account's name as the server sends it (2 to 24 of a to z, 0 to 9, . and _), else "": only such a name
+  // reaches a link or the page. ttLink: its one link.
+  function ttName(v) { return typeof v === "string" && /^(?=[a-z0-9._]*[a-z0-9])[a-z0-9._]{2,24}$/.test(v) ? v : ""; }
+  function ttLink(name) { return "https://www.tiktok.com/@" + name; }
+  // A logo or TikTok decision that did not go through. It was decided or replaced meanwhile (another tab, the crew sent a
   // new one), or its crew was deactivated: the lists are drawn again. Otherwise the buttons work again.
   function logoFailed(e, btns, line) {
     const reload = e.code === "state" || e.code === "inactive";

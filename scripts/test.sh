@@ -15,8 +15,9 @@ LOG=.wrangler/test-server.log
 # rows (the 200 files and 8 GB a day checks), ages crew logos and logo records (the logo sweep), makes a crew with post
 # links inactive (the post link sweep), sets thanks to their caps, seeds a day of thanks two days back (the two undos)
 # and makes a day busy for a moment (the GitHub note), and renames the applications, missions and logos tables, the
-# uploads.stage column and the four tables of migration 0007 (post_links, thanks, thanks_days, thanks_site) for a moment
-# (the deploy-order checks). D1_CONFIG must be the config scripts/dev.sh uses, so both open the same local sqlite file.
+# uploads.stage column, the four tables of migration 0007 (post_links, thanks, thanks_days, thanks_site) and the
+# crew_tiktok table of migration 0009 for a moment (the deploy-order checks). D1_CONFIG must be the config scripts/dev.sh
+# uses, so both open the same local sqlite file.
 # Everything stays --local.
 export STATE D1_CONFIG=.dev/wrangler.toml
 rm -rf "$STATE"

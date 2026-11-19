@@ -2,7 +2,8 @@
 // functions/_lib/crews.js). First the crews with an approved cleanup or a public mission, newest activity first, with
 // their live logo or their letters, name, country, the totals of their approved receipts, their newest receipt and their
 // open and funded missions; then, under JUST JOINED · FIRST MISSION COMING, the crews with neither yet, the newest
-// first, with their logo or letters, name and country only. English, rendered here with no script, so it works without
+// first, with their logo or letters, name and country only. A crew with a live TikTok account (docs/upload-flow.md, Crew
+// TikTok accounts) has it as the last row of its card, in both groups. English, rendered here with no script, so it works without
 // JavaScript on any phone. /crews/ reaches this Function too, and HEAD gets its status and headers (headOf).
 // ?country=XX lists the crews of one country in both groups, but only when a country chip offers it (2 or more
 // countries); any other value lists everyone and is never echoed. While no crew is active the page says so (NO CREW IS
@@ -11,6 +12,7 @@
 // crew text goes through esc(). A number keeps its unit, a day its month and year, and a " · " its dot on one line (nb,
 // DOT).
 import { SITE, esc, fmtNum, headOf } from "../_lib/util.js";
+import { tiktokUrl } from "../_lib/tiktok.js";
 import { DOT, JOIN, PAGE_HEADERS as HEADERS, countryName, eurText, fmtDay, listedCrews, missionsListed, nb } from "../_lib/crews.js";
 import { monogram } from "../_lib/logos.js";
 import { ASSET_V } from "../_lib/asset-version.js"; // written by scripts/build-site.sh on every build
@@ -92,6 +94,12 @@ const face = (c) => (c.logo
   ? `<img class="cx-logo" src="${esc(c.logo)}" alt="" width="56" height="56" loading="lazy" decoding="async">`
   : `<span class="cx-mono" aria-hidden="true">${esc(monogram(c.name))}</span>`);
 
+// The crew's live TikTok account, the last row of its card, laid out like LAST CLEANUP: "TIKTOK @sapu.earth ↗", a new
+// tab, no referrer, marked as the crew's own (nofollow ugc, as /p/<slug> marks a crew's website). "" without one.
+const tiktokRow = (c) => (c.tiktok
+  ? `\n      <p class="cx-last cx-tt"><a href="${esc(tiktokUrl(c.tiktok))}" rel="noopener noreferrer nofollow ugc" target="_blank"><b>TIKTOK</b><span>@${esc(c.tiktok)}</span>↗</a></p>`
+  : "");
+
 function card(c) {
   const slug = esc(c.slug);
   const head = face(c);
@@ -111,33 +119,33 @@ function card(c) {
   }
   return `
     <li class="cx-card" data-slug="${slug}" data-cleanups="${esc(c.cleanups)}" data-kg="${esc(c.kg)}" data-sacks="${esc(c.sacks)}" data-paid="${esc(c.paid_eur)}">
-      <a class="cx-head" href="/p/${slug}">${head}<span class="cx-name"><b>${esc(c.name)}</b><small>${cardLine(c)}</small></span></a>${last}${ms}
+      <a class="cx-head" href="/p/${slug}">${head}<span class="cx-name"><b>${esc(c.name)}</b><small>${cardLine(c)}</small></span></a>${last}${ms}${tiktokRow(c)}
     </li>`;
 }
 
 // A JUST JOINED card: a crew Sapu Earth works with that has no approved cleanup and no public mission yet. Its logo or
-// letters, its name linking /p/<slug> and "Indonesia · first mission coming", nothing else: it has no numbers to show,
-// and like every card it never shows the website or anything from the application. "first mission coming" stays on one
-// line, so a narrow phone breaks after the dot, never inside it.
+// letters, its name linking /p/<slug> and "Indonesia · first mission coming", and its live TikTok account when it has
+// one, nothing else: it has no numbers to show, and like every card it never shows the website or anything from the
+// application. "first mission coming" stays on one line, so a narrow phone breaks after the dot, never inside it.
 function joinedCard(c) {
   const slug = esc(c.slug);
   const country = countryName(c.country);
   return `
     <li class="cx-card cx-new" data-slug="${slug}">
-      <a class="cx-head" href="/p/${slug}">${face(c)}<span class="cx-name"><b>${esc(c.name)}</b><small>${country ? esc(country) + DOT : ""}${nb("first mission coming")}</small></span></a>
+      <a class="cx-head" href="/p/${slug}">${face(c)}<span class="cx-name"><b>${esc(c.name)}</b><small>${country ? esc(country) + DOT : ""}${nb("first mission coming")}</small></span></a>${tiktokRow(c)}
     </li>`;
 }
 
 // Each line says only what the code keeps: every active crew is listed, under JUST JOINED until it has a mission or a
 // cleanup on sapu.earth (a crew whose first mission came and went stays out of it, listedCrews in _lib/crews.js);
 // the totals come from approved receipts, kilograms may be estimated (the crew form says so), a funded mission's day is
-// the crew's plan, Sapu Earth checks a logo but cannot vouch for it, and thanks are taps that mark nobody
+// the crew's plan, Sapu Earth checks a logo or a TikTok account but cannot vouch for it, and thanks are taps that mark nobody
 // (docs/upload-flow.md, Thanks), so they count taps, not people.
 const HOW = [
-  "A crew shows up here as soon as it works with Sapu Earth. Until it has a mission or a cleanup on sapu.earth, it is under JUST JOINED with its name, logo and country only. A crew Sapu Earth stops working with leaves the list; its receipts stay on the globe.",
+  "A crew shows up here as soon as it works with Sapu Earth. Until it has a mission or a cleanup on sapu.earth, it is under JUST JOINED with its name, logo, country and TikTok only. A crew Sapu Earth stops working with leaves the list; its receipts stay on the globe.",
   "The totals add up each crew's approved receipts. Crews count the sacks and weigh or estimate the kilograms themselves, and Sapu Earth checks the photos and numbers of every cleanup before it becomes a receipt.",
   "An open mission is a spot a crew wants to clean, waiting for funding. A funded one is paid for by Sapu Earth, and the crew plans to clean it on the day shown.",
-  "Crews send their own logos, and Sapu Earth checks each one before it shows.",
+  "Crews send their own logos and TikTok accounts, and Sapu Earth checks each one before it shows.",
   "Thanks are one tap under a receipt. Nobody signs in and nothing marks who tapped, so one person can thank more than once: read them as applause, not votes. They are never money.",
   "Newest activity first, and under JUST JOINED the crews that joined most recently first. No crew is ranked by kilograms, money or thanks.",
 ];

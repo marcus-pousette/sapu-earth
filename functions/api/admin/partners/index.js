@@ -1,14 +1,18 @@
-// GET  /api/admin/partners -> {partners, counts: {logos}}: the list, with the contact from the application that
-//      created the partner (contact_name, whatsapp, email), or null when it was created by hand, and the crew's
+// GET  /api/admin/partners -> {partners, counts: {logos, tiktok}}: the list, with the contact from the application
+//      that created the partner (contact_name, whatsapp, email), or null when it was created by hand, the crew's
 //      logos: logo (the live one) and logo_review (one waiting under LOGOS TO CHECK, with created_at), each
-//      {key, url} with a signed url, or null. counts.logos: the logos of active crews waiting for a decision.
-//      It is /admin/'s token check too, so it must answer before migrations 0003 and 0006 (no contacts, no logos).
+//      {key, url} with a signed url, or null, and the crew's TikTok account: tiktok (the live one, its name) and
+//      tiktok_review (one waiting under TIKTOK TO CHECK, {account, sent_at}), or null. counts.logos and counts.tiktok:
+//      the logos and TikTok accounts of active crews waiting for a decision.
+//      It is /admin/'s token check too, so it must answer before migrations 0003, 0006 and 0009 (no contacts, no logos,
+//      no TikTok accounts).
 // POST /api/admin/partners {name, url, country, slug} -> {id, slug, name, token, upload_url}
 // The token is shown ONCE. Only its SHA-256 hex is stored.
 import { KEY_RE, handle, json, readJson, signedMediaUrl } from "../../../_lib/util.js";
 import { createPartner } from "../../../_lib/partners.js";
 import { noApplicationsTable } from "../../../_lib/applications.js";
 import { withLogos } from "../../../_lib/logos.js";
+import { tiktokForAdmin } from "../../../_lib/tiktok.js";
 
 // The join picks at most one application per partner, so it cannot duplicate rows.
 const LIST = (withContact) =>
@@ -40,9 +44,11 @@ export const onRequestGet = handle(async ({ env }) => {
   const live = {}, review = {};
   for (const l of logos) if (KEY_RE.test(l.key || "")) (l.status === "live" ? live : review)[l.partner_id] = l;
   const active = new Set(results.filter((p) => p.active).map((p) => p.id));
+  // The live and the waiting TikTok account of each crew. null before migration 0009.
+  const tiktok = (await tiktokForAdmin(env)) || {};
   const partners = [];
   for (const p of results) {
-    const lv = live[p.id], rv = review[p.id];
+    const lv = live[p.id], rv = review[p.id], tt = tiktok[p.id];
     partners.push({
       ...p,
       active: !!p.active,
@@ -52,9 +58,14 @@ export const onRequestGet = handle(async ({ env }) => {
       email: p.email || null,
       logo: lv ? { key: lv.key, url: await signedMediaUrl(env, lv.key) } : null,
       logo_review: rv ? { key: rv.key, url: await signedMediaUrl(env, rv.key), created_at: rv.created_at } : null,
+      tiktok: tt ? tt.live : null,
+      tiktok_review: tt ? tt.review : null,
     });
   }
-  return json({ partners, counts: { logos: Object.keys(review).filter((id) => active.has(id)).length } });
+  return json({ partners, counts: {
+    logos: Object.keys(review).filter((id) => active.has(id)).length,
+    tiktok: Object.keys(tiktok).filter((id) => active.has(id) && tiktok[id].review).length,
+  } });
 });
 
 export const onRequestPost = handle(async ({ request, env }) => {
