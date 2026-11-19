@@ -7,15 +7,19 @@ export const SITE = "https://sapu.earth";
 export const LIMITS = {
   photoBytes: 15 * 1024 * 1024,
   videoBytes: 95 * 1024 * 1024,
-  uploadsPerDay: 60,
+  uploadsPerDay: 200,              // files per partner per 24 h (200 since 2026-11-19, when a cleanup took 60 videos; 60 before)
   place: 120,
   disposal: 200,
   notes: 1000,
   reviewNote: 1000,
   privateNote: 1000,
-  bytesPerDay: 1024 * 1024 * 1024, // 1 GB per partner per 24 h
-  unattached: 40,                  // uploaded files not yet part of a sent cleanup (40 since 2026-11-17: a cleanup at 4 spots
-                                   // takes up to 4 x 8 photos and 2 videos, docs/missions.md, Spots)
+  bytesPerDay: 8 * 1024 * 1024 * 1024, // 8 GB per partner per 24 h (1 GB before 2026-11-19: a cleanup's 60 videos are up
+                                   // to 5.7 GB). A safe integer, so the quota check in api/upload.js compares it exactly
+  unattached: 100,                 // uploaded files not yet part of a sent cleanup (100 since 2026-11-19: a cleanup at 4 spots
+                                   // takes up to 4 x 8 photos and 60 videos, 92 files; 40 from 2026-11-17, docs/missions.md, Spots)
+  cleanupVideos: 60,               // a cleanup's videos in all, a video without a stage (from an older page) included
+                                   // (POST /api/submit; 2 before 2026-11-19)
+  stageVideos: 30,                 // a cleanup's videos before the cleanup, and its videos after it (uploads.stage; 1 each before)
   orphanHours: 48,                 // unattached files older than this are deleted
   privateDays: 90,                 // after a decision (cleanup) or done (mission): private note gone, point rounded
   // Partner applications (POST /api/apply)
@@ -395,7 +399,8 @@ export async function withStage(fn) {
 
 // Load media rows for a set of submission ids, grouped as {id: {before:[], after:[], videos:[]}}.
 // A video row carries its stage ('before', 'after', or null for one sent without it, and before
-// migration 0005), and the videos come in that order: before, after, then the ones without a stage.
+// migration 0005), and the videos come in that order: before, after, then the ones without a stage, each stage in
+// upload order (up to LIMITS.stageVideos of each). The receipt and /admin/ number them in this order (BEFORE · VIDEO 2/3).
 // A photo row carries its spot (uploads.spot, migration 0008: 2 to 4, or null for spot 1 and before the migration), and
 // the photos come spot by spot, spot 1 first, each spot's in upload order (docs/missions.md, Spots).
 export async function mediaFor(env, ids) {

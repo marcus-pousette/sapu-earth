@@ -1,9 +1,10 @@
 // POST /api/upload?k=TOKEN&kind=before|after|video[&stage=before|after][&spot=2..4]
 // Raw body (one file). Validates token, kind vs type, size and magic bytes, then
 // streams the file into R2 under a random 128-bit hex key.
-// stage: only for a video, the cleanup's video before or after the cleanup (VIDEO BEFORE, VIDEO AFTER on
-// the upload page). A mission's video, and a video from an older page, come without it. Stored in
-// uploads.stage (migration 0005); before that migration the video is stored without its stage.
+// stage: only for a video, whether it is one of the cleanup's videos before or after the cleanup (the two video fields
+// on the upload page, up to 30 each; POST /api/submit counts them, LIMITS.stageVideos). A mission's video, and a video
+// from an older page, come without it. Stored in uploads.stage (migration 0005); before that migration the video is
+// stored without its stage.
 // spot: only for a before or after photo, the spot of a mission with several spots it shows (2 to SPOTS.max; spot 1 comes
 // without it), from the field the photo was picked in on the cleanup form (docs/missions.md, Spots). Stored in
 // uploads.spot (migration 0008); before that migration no mission has spots, and a photo sent with one is refused.

@@ -61,6 +61,10 @@
 .am-card .decline .btn-row + .hint { margin-top: 10px; }
 /* cleanup cards of a mission: NOW photos next to BEFORE and AFTER */
 .media-ba.has-now { grid-template-columns: repeat(3, 1fr); }
+/* a cleanup with more than two videos (up to 30 before and 30 after since 2026-11-19, and the mission's): each title
+   over its player in a cell, as many across as fit (mediaBlock in admin.js) */
+.media-vgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0 10px; }
+.media-vgrid video { max-height: 320px; }
 .am-facts { background: #fff8d6; border: 2px solid var(--ink); padding: 8px 10px; }
 /* PENDING: Link to mission, for a cleanup the crew sent without one */
 .am-linkbox { margin-top: 12px; padding: 10px; border: 2px dashed var(--ink); background: #fff; overflow-wrap: anywhere; }

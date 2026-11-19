@@ -2,18 +2,19 @@
 // Creates a pending submission and attaches this partner's unattached uploads (part of neither a
 // cleanup nor a mission). Optional mission_id: the cleanup for one of this partner's funded missions
 // (docs/missions.md); approving it in /admin/ marks the mission done.
-// Media: 1 to 4 before and 1 to 4 after photos, at most 2 videos, of which at most 1 was uploaded as the
-// video before the cleanup and 1 as the video after it (uploads.stage). A video without a stage only
-// counts toward the 2.
+// Media: 1 to 4 before and 1 to 4 after photos, at most 60 videos (LIMITS.cleanupVideos), of which at most 30
+// (LIMITS.stageVideos) were uploaded as videos before the cleanup and 30 as videos after it (uploads.stage). A video
+// without a stage (from an older page) only counts toward the 60. Until 2026-11-19 a cleanup took 2, one of each.
 // Before migration 0004 there is no mission_id column: cleanups without a mission still work. Before
 // migration 0005 there is no stage column: the videos are then all without a stage.
 // Optional post_url: the link to the crew's own post about the cleanup on Instagram or TikTok, stored in post_links
 // (docs/upload-flow.md, Post links and thanks; postLink in _lib/social.js). A link that is not one post, or a short
 // link, is refused (400 code post_link). Before migration 0007 the cleanup is stored and the link dropped.
 // A mission with several spots (docs/missions.md, Spots; migration 0008): the cleanup has 1 to 4 before and 1 to 4 after
-// photos for each spot (uploads.spot, set by POST /api/upload), the videos stay at most 2 for the whole mission, and
-// spot_dates lists the day the crew cleaned spots 2, 3 and 4 (cleanup_date is spot 1's). The mission's spots go on the
-// cleanup (submissions.spots) with those days. A photo of spot 2 or later is refused for any other cleanup.
+// photos for each spot (uploads.spot, set by POST /api/upload), the videos stay at most 30 before and 30 after (60 in
+// all) for the whole mission, never per spot, and spot_dates lists the day the crew cleaned spots 2, 3 and 4
+// (cleanup_date is spot 1's). The mission's spots go on the cleanup (submissions.spots) with those days. A photo of spot
+// 2 or later is refused for any other cleanup.
 import {
   CURRENCY_RE, HttpError, ID_RE, ISO2_RE, KEY_RE, LIMITS,
   cleanText, err, handle, isoDate, json, noBindings, nowIso, num, randomId, readJson, requirePartner, withStage,
@@ -23,8 +24,10 @@ import { SPOTS, extraSpots, spotOf, withSpots } from "../_lib/spots.js";
 import { postLink, withSocial } from "../_lib/social.js";
 
 const unattached = (m) => (m ? "submission_id IS NULL AND mission_id IS NULL" : "submission_id IS NULL");
-// The most files a cleanup takes: 4 before and 4 after photos for each of SPOTS.max spots, and 2 videos.
-const MEDIA_MAX = 8 * SPOTS.max + 2;
+// The most files a cleanup takes: 4 before and 4 after photos for each of SPOTS.max spots, and its videos (92). The
+// UPDATE that attaches them binds 3 + that many values, and D1 takes at most 100 in one statement, so this must stay at
+// 97 or below.
+const MEDIA_MAX = 8 * SPOTS.max + LIMITS.cleanupVideos;
 
 // The mission a cleanup is sent for must be this partner's, funded, and not have a pending or
 // approved cleanup yet. Throws the error to answer with, returns its spots 2 to 4 when it is fine ([] for one spot).
@@ -101,7 +104,7 @@ export const onRequestPost = handle(async ({ request, env }) => {
       : "post_url must be the link to one Instagram or TikTok post.", "post_link", "post_url");
   }
 
-  // Media: keys this partner uploaded that are not attached to any submission yet. 8 photos for each spot and 2 videos.
+  // Media: keys this partner uploaded that are not attached to any submission yet. 8 photos for each spot and 60 videos.
   if (!Array.isArray(b.media) || b.media.length === 0 || b.media.length > MEDIA_MAX) {
     throw new HttpError(400, `media must list 2 to ${MEDIA_MAX} uploaded file keys.`);
   }
@@ -131,9 +134,13 @@ export const onRequestPost = handle(async ({ request, env }) => {
   }
   const count = (k) => rows.filter((r) => r.kind === k).length;
   if (count("before") < 1 || count("after") < 1) throw new HttpError(400, "Add at least one before photo and one after photo.");
-  if (count("video") > 2) throw new HttpError(400, "At most 2 videos.");
+  // The videos: in all (one without a stage counts here too, and before migration 0005 every video is one), then each
+  // stage. No code "media" on either: the crew page would forget every key and upload all the files again.
+  if (count("video") > LIMITS.cleanupVideos) throw new HttpError(400, `At most ${LIMITS.cleanupVideos} videos.`);
   const staged = (st) => rows.filter((r) => r.kind === "video" && r.stage === st).length;
-  if (staged("before") > 1 || staged("after") > 1) throw new HttpError(400, "At most 1 video before and 1 video after the cleanup.");
+  if (staged("before") > LIMITS.stageVideos || staged("after") > LIMITS.stageVideos) {
+    throw new HttpError(400, `At most ${LIMITS.stageVideos} videos before and ${LIMITS.stageVideos} videos after the cleanup.`);
+  }
 
   // After the idempotent retry above: a retry of a mission cleanup must get its id back, not a 409.
   const extra = mission_id ? await checkMission(env, partner, mission_id) : [];

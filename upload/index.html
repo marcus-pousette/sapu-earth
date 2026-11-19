@@ -164,11 +164,11 @@
       </div>
 
       <div class="field" id="f-video_before">
-        <span data-i18n="video_before">Video before the cleanup (optional)</span>
-        <p class="hint" data-i18n="videos_hint">One video before and one after the cleanup. Short vertical clips of 15 to 30 seconds work best and send faster. Limit: 90 seconds and 95 MB each.</p>
-        <label class="drop"><span data-i18n="add_video">+ Add video</span><input type="file" accept="video/mp4,video/quicktime,video/webm,video/*" data-kind="video_before" data-i18n-aria="video_before" aria-label="Video before the cleanup (optional)"></label>
-        <div class="thumbs" data-list="video_before"></div>
+        <span data-i18n="video_before">Videos before the cleanup (optional)</span>
+        <p class="hint" data-i18n="videos_hint">Up to 30 videos before the cleanup and 30 after it. Short vertical clips of 15 to 30 seconds work best and send faster. Limit: 90 seconds and 95 MB each.</p>
+        <label class="drop"><span data-i18n="add_videos">+ Add videos</span><input type="file" accept="video/mp4,video/quicktime,video/webm,video/*" multiple data-kind="video_before" data-i18n-aria="video_before" aria-label="Videos before the cleanup (optional)"></label>
         <div class="msg err" data-msg="video_before"></div>
+        <div class="thumbs vlist" data-list="video_before"></div>
       </div>
 
       <div class="field" id="f-geo">
@@ -191,10 +191,10 @@
       </div>
 
       <div class="field" id="f-video_after">
-        <span data-i18n="video_after">Video after the cleanup (optional)</span>
-        <label class="drop"><span data-i18n="add_video">+ Add video</span><input type="file" accept="video/mp4,video/quicktime,video/webm,video/*" data-kind="video_after" data-i18n-aria="video_after" aria-label="Video after the cleanup (optional)"></label>
-        <div class="thumbs" data-list="video_after"></div>
+        <span data-i18n="video_after">Videos after the cleanup (optional)</span>
+        <label class="drop"><span data-i18n="add_videos">+ Add videos</span><input type="file" accept="video/mp4,video/quicktime,video/webm,video/*" multiple data-kind="video_after" data-i18n-aria="video_after" aria-label="Videos after the cleanup (optional)"></label>
         <div class="msg err" data-msg="video_after"></div>
+        <div class="thumbs vlist" data-list="video_after"></div>
       </div>
     </section>
 

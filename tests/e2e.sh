@@ -6,8 +6,8 @@
 #   B=http://127.0.0.1:8790 STATE=.wrangler/state bash tests/e2e.sh   (also the checks that need the database)
 #
 # Creates a partner, uploads photos and a video, submits, approves, checks every public page and
-# the names files download under, sends a cleanup with a video before and a video after (stages),
-# then rejects, rotates and deactivates. Then sends crew applications to /api/apply, approves one,
+# the names files download under, sends a cleanup with 30 videos before and 30 after (stages; a 31st of a stage and a
+# 61st video refused, the receipt and PENDING in upload order within each stage), then rejects, rotates and deactivates. Then sends crew applications to /api/apply, approves one,
 # rejects one, hits the rate limit (per address, IPv6 per /64), checks how WhatsApp numbers are
 # cleaned up and that deactivating a partner wipes its contact details. Then missions: three crews
 # post missions, the admin publishes, funds, declines, removes and cancels them, a cleanup is sent
@@ -29,14 +29,15 @@
 # thanks, and the GitHub note's busy days.
 # With STATE (the server's --persist-to folder, scripts/test.sh sets it) it also writes old
 # applications, missions and uploads straight into the LOCAL D1 file to check the 90-day and 28-day
-# expiry, the 48-hour orphan cleanup, the 30-file quota, the mission list of a crew with many
+# expiry, the 48-hour orphan cleanup, the 100-file quota, a crew's day (200 files, 8 GB), the mission list of a crew with many
 # missions and the missions of a deactivated crew, sets thanks to their caps, seeds a day of thanks two days back for
 # the two undos and makes a day busy for a moment, and renames the applications and missions tables,
 # the uploads.stage column, the logos table and the four tables of migration 0007 (post_links, thanks, thanks_days,
 # thanks_site) for a moment to check that the site still works before migrations 0003, 0004, 0005, 0006 and 0007.
 # At the end, missions with several spots (docs/missions.md, Spots): the UPDATE that adds a spot, every place where the
 # spots show, each spot's photos and day on the crew page and the APIs, PENDING, APPROVE and the receipt, LATE from the
-# last day, and the three columns of migration 0008 renamed for a moment. /apply/ asks no head count (2026-11-17).
+# last day, the biggest cleanup there is (4 spots, 32 photos and 60 videos, 92 files, sent, approved and unpublished),
+# and the three columns of migration 0008 renamed for a moment. /apply/ asks no head count (2026-11-17).
 # Exits non-zero if any check fails.
 set -u
 cd "$(dirname "$0")/.."
@@ -312,7 +313,7 @@ check "jpeg sent as kind=video -> 415" "$(code -X POST "$B/api/upload?k=$TOK&kin
 check "text/html upload -> 415" "$(code -X POST "$B/api/upload?k=$TOK&kind=after" -H 'content-type: text/html' --data-binary @$T/fake.jpg)" 415
 check "oversized photo (16 MB) -> 413" "$(code -X POST "$B/api/upload?k=$TOK&kind=before" -H 'content-type: image/jpeg' --data-binary @$T/big.bin)" 413
 check "bad kind -> 400" "$(code -X POST "$B/api/upload?k=$TOK&kind=selfie" -H 'content-type: image/jpeg' --data-binary @$F/before.jpg)" 400
-# The cleanup's video before and video after go up with their stage (uploads.stage, migration 0005). Only a
+# The cleanup's videos before and after go up with their stage (uploads.stage, migration 0005). Only a
 # video has one, and only before or after. upv <token> [stage]: uploads tiny.mp4 as a video, prints the key.
 upv() { curl -s -X POST "$B/api/upload?k=$1&kind=video${2:+&stage=$2}" -H 'content-type: video/mp4' --data-binary @$F/tiny.mp4 | jget "d['key']"; }
 KSA=$(upv $TOK after); KSB=$(upv $TOK before)
@@ -454,18 +455,42 @@ done
 echo "$PP" | grep -qE 'href="/site/[^"?]+\.css"' && bad "/p/<slug> links an unversioned stylesheet" "" || ok "/p/<slug> links only versioned stylesheets"
 echo "$PP" | grep -qE 'fonts\.(googleapis|gstatic)\.com' && bad "/p/<slug> loads Google Fonts" "" || ok "/p/<slug> loads no Google Fonts"
 
-# A cleanup with a video before and a video after: at most one of each, and PENDING and the receipt show
-# them labelled, the one before first, whatever order they were uploaded and sent in (the after one first).
-KSB2=$(upv $TOK before); KB3=$(up before image/jpeg $F/before.jpg); KA3=$(up after image/jpeg $F/after.jpg)
-check "a cleanup with two videos before -> 400" "$(code -X POST "$B/api/submit?k=$TOK" -H 'content-type: application/json' -d "$(body $TODAY Staged $KB3,$KA3,$KSB,$KSB2)")" 400
-ID3=$(curl -s -X POST "$B/api/submit?k=$TOK" -H 'content-type: application/json' -d "$(body $TODAY Staged $KB3,$KA3,$KSA,$KSB)" | jget "d['id']")
-[[ $ID3 =~ ^[a-z2-7]{10}$ ]] && ok "a cleanup with a video after and a video before -> 200 ($ID3)" || bad "cleanup with a video before and after" "$ID3"
-check "PENDING: its two videos are labelled, the one before first" \
-  "$(curl -s "$B/api/admin/submissions?status=pending" -H "$A" | jget "[[v['stage'] for v in s['media']['videos']] for s in d['submissions'] if s['id']=='$ID3']")" "[['before', 'after']]"
+# A cleanup takes up to 30 videos before and 30 after, 60 in all (LIMITS.stageVideos and LIMITS.cleanupVideos since
+# 2026-11-19, one of each before): a 31st video of a stage and a 61st video (one sent without a stage counts) are refused,
+# without the code "media" (the crew page would forget every key and upload all its files again), and PENDING and the
+# receipt list the videos before, then after, each stage in upload order, whatever order the keys were sent in (the
+# after ones first). KSA went up before KSB, so each stage starts with it. vsub <keys>: POST /api/submit, the answer in
+# $T/vs.json, prints the status.
+vsub() { curl -s -o "$T/vs.json" -w '%{http_code}' -X POST "$B/api/submit?k=$TOK" -H 'content-type: application/json' -d "$(body $TODAY Staged "$1")"; }
+VSB=$KSB; for i in $(seq 2 31); do VSB="$VSB,$(upv $TOK before)"; done
+VSA=$KSA; for i in $(seq 2 31); do VSA="$VSA,$(upv $TOK after)"; done
+KSN=$(upv $TOK); KB3=$(up before image/jpeg $F/before.jpg); KA3=$(up after image/jpeg $F/after.jpg)
+VB30=$(echo "$VSB" | cut -d, -f1-30); VA30=$(echo "$VSA" | cut -d, -f1-30); VB29=$(echo "$VSB" | cut -d, -f1-29)
+[ "$(echo "$VSB,$VSA,$KSN" | tr ',' '\n' | grep -cE '^[0-9a-f]{32}$')" = 63 ] && ok "31 videos uploaded with stage=before, 31 with stage=after and one without a stage" \
+  || bad "the staged video uploads" "$VSB $VSA $KSN"
+STAGE_ERR="At most 30 videos before and 30 videos after the cleanup."
+check "31 videos before (none after), and 31 after with 29 before (60 in all) -> 400 each, without a code" \
+  "$(vsub "$KB3,$KA3,$VSB") $(jget "(d.get('error'), d.get('code'))" < "$T/vs.json") $(vsub "$KB3,$KA3,$VB29,$VSA") $(jget "(d.get('error'), d.get('code'))" < "$T/vs.json")" \
+  "400 ('$STAGE_ERR', None) 400 ('$STAGE_ERR', None)"
+check "61 videos (30 before, 30 after and one sent without a stage) -> 400, without a code" \
+  "$(vsub "$KB3,$KA3,$VA30,$VB30,$KSN") $(jget "(d.get('error'), d.get('code'))" < "$T/vs.json")" "400 ('At most 60 videos.', None)"
+st=$(vsub "$KB3,$KA3,$VA30,$VB30"); ID3=$(jget "d.get('id')" < "$T/vs.json")
+[ "$st" = 200 ] && [[ $ID3 =~ ^[a-z2-7]{10}$ ]] && ok "a cleanup with 30 videos after and 30 before, sent in that order, and its two photos (62 files) -> 200 ($ID3)" \
+  || bad "cleanup with 30 videos before and 30 after" "$st $(cat "$T/vs.json")"
+check "PENDING: its 60 videos, the 30 before first, each stage in upload order, with their stages" \
+  "$(curl -s "$B/api/admin/submissions?status=pending" -H "$A" | jget "[([v['key'] for v in s['media']['videos']] == '$VB30,$VA30'.split(','), [v['stage'] for v in s['media']['videos']] == ['before'] * 30 + ['after'] * 30) for s in d['submissions'] if s['id']=='$ID3']")" \
+  "[(True, True)]"
 check "approve it" "$(curl -s -X POST $B/api/admin/decide -H "$A" -H 'content-type: application/json' -d "{\"id\":\"$ID3\",\"action\":\"approve\",\"paid_eur\":40}" | jget "d['status']")" approved
-check "/api/events: the receipt has the video before, then the video after, with their stages" \
-  "$(curl -s $B/api/events | jget "[(e['media']['videos'], e['media']['video_stages']) for e in d if e['id']=='$ID3']")" \
-  "[(['/media/$KSB', '/media/$KSA'], ['before', 'after'])]"
+check "/api/events: the receipt has the 30 videos before, then the 30 after, each stage in upload order, with their stages" \
+  "$(curl -s $B/api/events | jget "[(e['media']['videos'] == ['/media/' + k for k in '$VB30,$VA30'.split(',')], e['media']['video_stages'] == ['before'] * 30 + ['after'] * 30) for e in d if e['id']=='$ID3']")" \
+  "[(True, True)]"
+# The most files a cleanup lists (MEDIA_MAX): 8 photos for each of 4 spots and 60 videos, 92. A list of 93 is refused
+# before any key is looked up; 92 unknown keys get as far as the lookup (one statement with 93 bound values, under D1's
+# 100) and its "upload them again".
+FK=$(python3 -c "import secrets;print(','.join(secrets.token_hex(16) for _ in range(93)))")
+check "a cleanup that lists 93 files -> 400 (92 at most), 92 files it does not have -> 400 code media" \
+  "$(vsub "$FK") $(jget "d.get('error')" < "$T/vs.json") $(vsub "${FK%,*}") $(jget "d.get('code')" < "$T/vs.json")" \
+  "400 media must list 2 to 92 uploaded file keys. 400 media"
 
 # Reject path: a new submission, then reject. Its media must be gone.
 K1=$(up before image/jpeg $F/before.jpg); K2=$(up after image/jpeg $F/after.jpg)
@@ -1387,22 +1412,54 @@ if [ -n "$STATE" ]; then
       bad "write closed missions into the local D1 in $STATE" "$(tail -3 "$T/d1.err")"
     fi
 
-    # A mission's photos are not loose files: 40 photos on a mission leave the 40-file quota free (LIMITS.unattached, 40
-    # since a cleanup can have 4 spots). The same 40 as loose files fill it. The rows go straight into the local D1 (no
-    # files in R2).
-    QK=$(python3 -c "import secrets;print(' '.join(secrets.token_hex(16) for _ in range(40)))")
+    # A mission's photos are not loose files: 100 photos on a mission leave the 100-file quota free (LIMITS.unattached,
+    # 100 since a cleanup at 4 spots takes up to 92 files with its 60 videos). The same 100 as loose files fill it. The
+    # rows go straight into the local D1 (no files in R2); with crew OT's own uploads they stay under its 200 a day, so
+    # the 429 is the loose files'.
+    QK=$(python3 -c "import secrets;print(' '.join(secrets.token_hex(16) for _ in range(100)))")
     QL=$(printf "'%s'," $QK); QL=${QL%,}
     NOW0=$(ago 0)
     QV=$(printf "('%s', '$OPID', 'before', 'image/jpeg', 1000, '$NOW0', '$XK')," $QK); QV=${QV%,}
     if d1 "INSERT INTO uploads (key, partner_id, kind, content_type, size, created_at, mission_id) VALUES $QV;" >/dev/null; then
       QA=$(upk $OT before)
-      [[ $QA =~ ^[0-9a-f]{32}$ ]] && ok "40 photos on a mission are not loose files: another upload -> 200" || bad "upload next to 40 mission photos" "$QA"
+      [[ $QA =~ ^[0-9a-f]{32}$ ]] && ok "100 photos on a mission are not loose files: another upload -> 200" || bad "upload next to 100 mission photos" "$QA"
       d1 "UPDATE uploads SET mission_id = NULL WHERE key IN ($QL)" >/dev/null
-      check "the same 40 as loose files fill the quota: another upload -> 429" \
+      check "the same 100 as loose files fill the quota: another upload -> 429" \
         "$(code -X POST "$B/api/upload?k=$OT&kind=before" -H 'content-type: image/jpeg' --data-binary @$F/before.jpg)" 429
       d1 "DELETE FROM uploads WHERE key IN ($QL)" >/dev/null
     else
       bad "write mission photos into the local D1 in $STATE" "$(tail -3 "$T/d1.err")"
+    fi
+
+    # A crew's day (LIMITS.uploadsPerDay and LIMITS.bytesPerDay: 200 files and 8 GB in 24 hours since 2026-11-19, so a
+    # cleanup with 60 videos of 95 MB fits): rows on mission XK (not loose) fill crew OT's day to one file short of 200,
+    # then, once they are gone, one row fills its bytes to one photo short of 8 GB. The last file that fits -> 200, the
+    # next -> 429 limit. Each time the rows go again; the two photos that got in stay loose files.
+    DAY0=$(ago 1)
+    read -r UNN UNB <<< "$(d1 "SELECT COUNT(*) AS n, COALESCE(SUM(size), 0) AS b FROM uploads WHERE partner_id = '$OPID' AND created_at > '$DAY0'" | jget "'%d %d' % (d[0]['results'][0]['n'], d[0]['results'][0]['b'])")"
+    PSZ=$(size $F/before.jpg)
+    upday() { curl -s -o "$T/day.json" -w '%{http_code}' -X POST "$B/api/upload?k=$OT&kind=before" -H 'content-type: image/jpeg' --data-binary @$F/before.jpg; }
+    if [[ ${UNN:-x} =~ ^[0-9]+$ && $UNN -lt 150 ]]; then
+      DK=$(python3 -c "import secrets,sys;print(' '.join(secrets.token_hex(16) for _ in range(int(sys.argv[1]))))" $((199 - UNN)))
+      DL=$(printf "'%s'," $DK); DL=${DL%,}
+      DV=$(printf "('%s', '$OPID', 'before', 'image/jpeg', 1, '$NOW0', '$XK')," $DK); DV=${DV%,}
+      if d1 "INSERT INTO uploads (key, partner_id, kind, content_type, size, created_at, mission_id) VALUES $DV;" >/dev/null; then
+        st="$(upday) $(upday) $(jget "d.get('code')" < "$T/day.json")"
+        d1 "DELETE FROM uploads WHERE key IN ($DL)" >/dev/null
+        check "a crew's 200th upload of the day -> 200, the 201st -> 429 limit" "$st" "200 429 limit"
+      else
+        bad "write a day of uploads into the local D1 in $STATE" "$(tail -3 "$T/d1.err")"
+      fi
+      DBK=$(python3 -c "import secrets;print(secrets.token_hex(16))")
+      if d1 "INSERT INTO uploads (key, partner_id, kind, content_type, size, created_at, mission_id) VALUES ('$DBK', '$OPID', 'video', 'video/mp4', $((8 * 1024 * 1024 * 1024 - UNB - 2 * PSZ)), '$NOW0', '$XK');" >/dev/null; then
+        st="$(upday) $(upday) $(jget "d.get('code')" < "$T/day.json")"
+        d1 "DELETE FROM uploads WHERE key = '$DBK'" >/dev/null
+        check "the upload that brings a crew's day to 8 GB exactly -> 200, one more -> 429 limit" "$st" "200 429 limit"
+      else
+        bad "write a day of bytes into the local D1 in $STATE" "$(tail -3 "$T/d1.err")"
+      fi
+    else
+      bad "crew OT's uploads today" "$UNN $UNB"
     fi
   else
     bad "write old missions into the local D1 in $STATE" "$(tail -3 "$T/d1.err")"
@@ -1571,7 +1628,9 @@ const src = require("fs").readFileSync(process.env.ADMIN_JS, "utf8");
 const line = (re) => { const m = src.match(re); if (!m) throw new Error("missing " + re); return m[0]; };
 const a = src.indexOf("  function downloads("), b = src.indexOf("\n  }\n", a);
 if (a < 0 || b < 0) throw new Error("missing downloads()");
-eval([line(/^  const safeMedia = .*$/m), line(/^  const DL_NAME_RE = .*$/m), src.slice(a, b + 4), "globalThis.downloads = downloads;"].join("\n"));
+const c = src.indexOf("  function videoRows("), e = src.indexOf("\n  }\n", c);
+if (c < 0 || e < 0) throw new Error("missing videoRows()");
+eval([line(/^  const safeMedia = .*$/m), line(/^  const DL_NAME_RE = .*$/m), src.slice(c, e + 4), src.slice(a, b + 4), "globalThis.downloads = downloads; globalThis.videoRows = videoRows;"].join("\n"));
 JS
 dlnode() { ADMIN_JS="$T/admin.js" node -r "$T/dlpre.js" -e "$1" "${@:2}" 2>&1; }
 ROWS=$(curl -s "$B/api/admin/submissions?status=approved" -H "$A" | dlnode '
@@ -1587,6 +1646,19 @@ const s = { id: "abcdefgh23", media: { before: [{ url: sig("1") }, { url: "https
 console.log(downloads(s, null).map(short).join(" ") + " | " + downloads({ ...s, id: "Odd Id" }, { now: [{ url: sig("5") }], now_video: null }).map(short).join(" "));')
 check "the download row: no mission no spot files, videos without a stage video-<n>, a link that is not signed left out, an id that does not fit dl=1" "$DLU" \
   "before-1=1:abcdefgh23-before-1 after-1=2:abcdefgh23-after-1 video-1=3:abcdefgh23-video-1 video-2=4:abcdefgh23-video-2 | now-1=5:1 before-1=1:1 after-1=2:1 video-1=3:1 video-2=4:1"
+# Several videos of a stage (up to 30 of each since 2026-11-19) each get a name of their own, numbered in the card's
+# order, and the same titles as the card (videoRows): one of a stage keeps its plain name and title, and the ones
+# without a stage count among themselves.
+DLN=$(dlnode '
+const sig = (c) => `/media/${c.repeat(32)}?exp=1999999999&sig=${"0".repeat(64)}`;
+const v = (c, stage) => ({ url: sig(c), stage });
+const s = { id: "abcdefgh23", media: { before: [], after: [], videos: [v("1", "before"), v("2", "before"), v("3", "before"), v("4", "after"), v("5", null), v("6")] } };
+const names = downloads(s, { now: [], now_video: { url: sig("7") } }).map((r) => r.label).join(" ");
+const titles = videoRows(s.media.videos).map((r) => r.title).join(" | ");
+const thirty = videoRows(Array.from({ length: 30 }, () => v("8", "after"))).map((r) => r.title + "=" + r.dl);
+console.log(names + " || " + titles + " || " + thirty[0] + " " + thirty[29] + " " + new Set(thirty).size);')
+check "the download row and the card's titles with several videos of a stage: numbered within each stage, one alone plain, 30 of a stage all different (admin.js videoRows, node)" "$DLN" \
+  "video-now video-before-1 video-before-2 video-before-3 video-after video-1 video-2 || VIDEO BEFORE 1/3 | VIDEO BEFORE 2/3 | VIDEO BEFORE 3/3 | VIDEO AFTER | VIDEO 1/2 | VIDEO 2/2 || VIDEO AFTER 1/30=video-after-1 VIDEO AFTER 30/30=video-after-30 30"
 grep -qF '<div class="dl-list">${downloads(s, mis).map((d) => `<a href="${esc(d.href)}" download>⬇ ${esc(d.label)}</a>`).join("")}</div>' "$T/admin.js" \
   && ok "the APPROVED card draws its download row from downloads()" || bad "admin.js download row" ""
 curl -s $B/m/$NOV | grep -q 'og:video' && bad "/m of a done mission names a video" "" || ok "/m of a done mission has no og:video (its receipt's photo is the picture)"
@@ -5441,20 +5513,21 @@ echo "$UJ" | grep -qF 'const token = rawToken.replace(/[^A-Za-z0-9_-]/g, "");' &
 # The wait for files, run in node with upload.js's own refuse and filesReady and stubs around them: a SEND waits only
 # for its own form's picks and shows the wait text meanwhile; it gets back the fields that refused a file since the pick
 # started (also a refusal just before the tap), never one of the other form; waitingFiles is cleared after; a pick that
-# never ends is waited for once, up to the cap of a minute on screen, and then not again.
+# never ends is waited for once, up to the cap of a minute on screen, and then not again; a pick of many clips that gets
+# one more ready every 40 seconds on screen is waited for to its end, past the minute (prepared).
 WF=$(echo "$UJ" | node -e '
 let s = ""; process.stdin.on("data", (d) => (s += d)).on("end", async () => {
-  let waitingFiles = false, statusKey = null, fake = null;
+  let waitingFiles = false, statusKey = null, fake = null, onNow = null;
   const working = new Map(), stale = new Set(), notes = {};
   const fieldMsg = (kind, key) => { notes[kind] = key || ""; };
   const $ = (sel) => ({ textContent: notes[(sel.match(/data-msg="([^"]+)"/) || [])[1]] || "" });
   const status = (k) => { statusKey = k || null; };
   const sleep = (ms) => (fake !== null ? Promise.resolve() : new Promise((r) => setTimeout(r, ms)));
-  const performance = { now: () => (fake === null ? Date.now() : (fake += 1000)) };
+  const performance = { now: () => { if (fake === null) return Date.now(); fake += 1000; if (onNow) onNow(fake); return fake; } };
   global.document = { visibilityState: "visible" };
   const a = s.indexOf("const formOfKind"), b = s.lastIndexOf("\n", s.indexOf("forEach((input) => input.addEventListener(\"change\"", a));
   const c = s.indexOf("async function filesReady"), d = s.indexOf("// Files were refused while SEND waited");
-  eval(s.slice(a, b) + "\n" + s.slice(c, d) + "\nglobalThis.refusedOf = (g) => refusedKinds[g].length;");
+  eval(s.slice(a, b) + "\n" + s.slice(c, d) + "\nglobalThis.refusedOf = (g) => refusedKinds[g].length; globalThis.bump = (g) => { prepared[g]++; };");
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const pick = (g, fn) => { const seen = refusedOf(g); const job = fn(); working.set(job, { g, seen }); const forget = () => { working.delete(job); stale.delete(job); }; job.then(forget, forget); };
   const bad = [];
@@ -5485,10 +5558,18 @@ let s = ""; process.stdin.on("data", (d) => (s += d)).on("end", async () => {
   const steps = fake / 2000, f5 = fake;
   const r6 = await filesReady("cleanup");
   if (r5.length || r6.length || waitingFiles || stale.size !== 1 || steps !== 60 || fake !== f5) bad.push("a pick that never ends: " + steps + " steps, then " + (fake - f5) / 2000);
+  // 30 clips, one ready every 40 s on screen (each step of the wait is a second on screen): 20 minutes, never stale.
+  let finish = null, made = 0;
+  fake = 0;
+  onNow = (v) => { if (v % 80000 === 0 && made < 30) { made++; bump("cleanup"); if (made === 30) finish(); } };
+  pick("cleanup", () => new Promise((r) => { finish = r; }));
+  const r8 = await filesReady("cleanup");
+  onNow = null;
+  if (r8.length || waitingFiles || made !== 30 || stale.size !== 1 || fake < 30 * 80000) bad.push("a pick of 30 slow clips: " + made + " made, " + stale.size + " stale, " + fake / 2000 + " steps");
   console.log(bad.length ? "wrong: " + bad.join("; ") : "ok");
   process.exit(0);
 });' 2>&1)
-[ "$WF" = ok ] && ok "SEND waits for its own form only, gets the fields that refused a file since the pick (also before the tap, not once fixed), clears waitingFiles, and waits once, a minute, for a pick that never ends (upload.js run in node)" \
+[ "$WF" = ok ] && ok "SEND waits for its own form only, gets the fields that refused a file since the pick (also before the tap, not once fixed), clears waitingFiles, waits once, a minute, for a pick that never ends, and to its end for 30 clips that get ready one by one (upload.js run in node)" \
   || bad "upload.js wait for files (node)" "$WF"
 # The IndexedDB wrapper, run in node with a fake indexedDB: when Safari closed the connection (transaction() throws,
 # or a close event), the next write or delete opens it again, so removed and sent files still leave the phone.
@@ -5540,7 +5621,7 @@ ADDF=$(echo "$UJ" | sed -n -e '/async function addPhoto/,/^  }$/p' -e '/async fu
   && echo "$UJ" | grep -qF 'sends.cleanup++;' && echo "$UJ" | grep -qF 'sends.mission++;' && echo "$UJ" | grep -qF 'if (sends[g] !== gen) break;' \
   && echo "$UJ" | grep -qF 'item.blob = await cleanJpeg(item.blob).catch(() => { throw new Fatal("e_upload_fatal"); });' \
   && [ "$(echo "$ADDF" | grep -cF 'if (!files[kind].includes(item) || sends[g] !== gen) return;')" = 2 ] && [ "$(echo "$ADDF" | grep -cF 'const g = formOfKind(kind);')" = 2 ] \
-  && [ "$(echo "$ADDF" | grep -o 'refuse(' | wc -l | tr -d ' ')" = 9 ] && ! echo "$ADDF" | grep -q 'fieldMsg(' \
+  && [ "$(echo "$ADDF" | grep -o 'refuse(' | wc -l | tr -d ' ')" = 11 ] && ! echo "$ADDF" | grep -q 'fieldMsg(' \
   && echo "$UJ" | grep -qF 'r.result.onclose = () => { dbp = null; };' \
   && echo "$UJ" | grep -qF 'if (document.visibilityState === "visible") left -= Math.min(performance.now() - t0, 1000);' \
   && [ "$(echo "$UJ" | grep -c 'preparing_files:')" = 2 ] && grep -qF '.thumbs.invalid {' site/forms.css \
@@ -5548,8 +5629,9 @@ ADDF=$(echo "$UJ" | sed -n -e '/async function addPhoto/,/^  }$/p' -e '/async fu
   || bad "upload.js wait for files wiring" ""
 curl -s $B/admin/admin.js | grep -qF 'revision: m.revision, video: video ? m.now_video.key : null,' \
   && ok "admin.js sends the revision with PUBLISH and FUND, and the video the card plays" || bad "admin.js revision" ""
-# Videos: SEND A CLEANUP has a field for the video before and one for the video after, POST A MISSION one for the
-# video of the spot now, one clip each; the cleanup's go up with their stage, the mission's as a plain video.
+# Videos: SEND A CLEANUP has a field for the videos before and one for the videos after, up to 30 clips each and several
+# picked at once (multiple), POST A MISSION one for the video of the spot now, one clip; the cleanup's go up with their
+# stage, the mission's as a plain video.
 UPC=$(echo "$UP" | sed -n '/<form id="form"/,/<\/form>/p'); UPM=$(echo "$UP" | sed -n '/<form id="mform"/,/<\/form>/p')
 n=0; for k in video_before video_after now_video now_video_hint; do [ "$(echo "$UJ" | grep -cE "^      $k: \"")" = 2 ] && n=$((n+1)); done
 echo "$UPC" | grep -qF 'data-kind="video_before"' && echo "$UPC" | grep -qF 'data-kind="video_after"' && echo "$UPM" | grep -qF 'data-kind="now_video"' \
@@ -5557,9 +5639,169 @@ echo "$UPC" | grep -qF 'data-kind="video_before"' && echo "$UPC" | grep -qF 'dat
   && echo "$UJ" | grep -qF 'const UPLOAD_AS = { now: ["before"], now_video: ["video"], video_before: ["video", "before"], video_after: ["video", "after"] };' \
   && echo "$UJ" | grep -qF '&kind=${kind}${stage ? `&stage=${stage}` : ""}' \
   && echo "$UJ" | grep -qF 'const formOfKind = (kind) => (kind === "now" || kind === "now_video" ? "mission" : "cleanup");' \
-  && echo "$UJ" | grep -qF 'const LIMIT = { photos: 4, videos: 1,' && echo "$UJ" | grep -qF 'const VIDEO_KINDS = ["video_before", "video_after", "now_video"];' \
-  && ok "upload page: a video before and a video after the cleanup, a video of the spot now for a mission, one each (EN and ID), sent with their stage" \
+  && echo "$UJ" | grep -qF 'const LIMIT = { photos: 4, videos: 30, missionVideos: 1,' && echo "$UJ" | grep -qF 'const VIDEO_KINDS = ["video_before", "video_after", "now_video"];' \
+  && echo "$UJ" | grep -qF 'const maxOf = (kind) => (kind === "now_video" ? LIMIT.missionVideos : VIDEO_KINDS.includes(kind) ? LIMIT.videos : LIMIT.photos);' \
+  && echo "$UPC" | grep -qF 'multiple data-kind="video_before"' && echo "$UPC" | grep -qF 'multiple data-kind="video_after"' \
+  && ! echo "$UPM" | grep -F 'data-kind="now_video"' | grep -q multiple && [ "$(echo "$UPC" | grep -cF '<span data-i18n="add_videos">+ Add videos</span>')" = 2 ] \
+  && echo "$UPM" | grep -qF '<span data-i18n="add_video">+ Add video</span><input type="file" accept="video/mp4,video/quicktime,video/webm,video/*" data-kind="now_video"' \
+  && ok "upload page: up to 30 videos before and 30 after the cleanup (several at once), 1 of the spot now for a mission (EN and ID), sent with their stage" \
   || bad "upload page video fields" "keys found in EN and ID: $n of 4"
+# addVideo run in node with upload.js's own limits, refuse and maxOf, and stubs for the length, the location check and
+# the page: 31 clips one by one into a cleanup field keep 30 and refuse the 31st ("At most 30 videos here."), two picks
+# of 20 at once into the other keep 30 and refuse 10 (also those let through before the others were ready), the
+# mission's field keeps 1 and refuses the 2nd with its own text, and a clip too long, of a type it does not take or too
+# big is refused as before. The same clip (name, size and last change) picked again, in its own field or the other one,
+# or twice at once, is refused ("This video is already added."), while the same name with another size or last change is
+# another clip, and the mission's field is not compared with the cleanup's. The texts: EN and ID, the page's English as
+# T.en's.
+ADV=$(echo "$UJ" | node -e '
+let s = ""; process.stdin.on("data", (d) => (s += d)).on("end", async () => {
+  const cut = (from, to) => { const a = s.indexOf(from), b = s.indexOf(to, a); if (a < 0 || b < 0) throw new Error("missing " + from); return s.slice(a, b); };
+  const files = { video_before: [], video_after: [], now_video: [] }, sends = { cleanup: 0, mission: 0 }, notes = [];
+  let seq = 0;
+  const fieldMsg = (kind, key) => { if (key) notes.push(kind + " " + key); };
+  const showItem = () => {}, idb = { put() {} };
+  const sleep = () => new Promise((r) => setTimeout(r, Math.random() * 5));
+  const videoDuration = async (f) => { await sleep(); return f.dur; };
+  global.window = { SapuVideoClean: { stripVideoLocation: async (f) => { await sleep(); return { ok: true, blob: f }; } } };
+  const a = s.indexOf("  const formOfKind"), b = s.lastIndexOf("\n", s.indexOf("forEach((input) => input.addEventListener(\"change\"", a));
+  eval(cut("  const VIDEO_EXT = ", "  const STALL_MS") + cut("  function videoType(", "\n  }\n") + "\n  }\n" + s.slice(a, b) + "\n" + cut("  async function addVideo(", "\n  }\n") + "\n  }\n"
+    + "globalThis.X = { addVideo, maxOf, LIMIT };");
+  const clip = (i, o = {}) => ({ name: "clip" + i + ".mp4", type: "video/mp4", size: 40 * 1048576, dur: 20, ...o });
+  const pick = async (kind, list) => { for (const f of list) await X.addVideo(kind, f, 0); };
+  const bad = [], count = (k) => notes.filter((n) => n === k).length;
+  await pick("video_before", Array.from({ length: 31 }, (_, i) => clip(i)));
+  if (files.video_before.length !== 30 || notes.join() !== "video_before e_max_videos") bad.push("31 into one field: " + files.video_before.length + " " + notes.join());
+  notes.length = 0;
+  await Promise.all([pick("video_after", Array.from({ length: 20 }, (_, i) => clip(100 + i))), pick("video_after", Array.from({ length: 20 }, (_, i) => clip(120 + i)))]);
+  if (files.video_after.length !== 30 || count("video_after e_max_videos") !== 10 || notes.length !== 10) bad.push("two picks of 20: " + files.video_after.length + " " + notes.length);
+  notes.length = 0;
+  await pick("now_video", [clip(1), clip(2)]);
+  if (files.now_video.length !== 1 || notes.join() !== "now_video e_max_videos_1") bad.push("the mission field: " + files.now_video.length + " " + notes.join());
+  notes.length = 0; files.video_before.length = 0;
+  await pick("video_before", [clip(1, { dur: 120 }), clip(2, { name: "x.avi", type: "video/x-msvideo" }), clip(3, { size: 96 * 1048576 }), clip(4)]);
+  if (files.video_before.length !== 1 || notes.join() !== "video_before e_video_long,video_before e_video_type,video_before e_video_big") bad.push("one clip each refused: " + notes.join());
+  if (X.maxOf("video_before") !== 30 || X.maxOf("video_after") !== 30 || X.maxOf("now_video") !== 1 || X.maxOf("before_2") !== 4 || X.maxOf("now") !== 4) bad.push("maxOf");
+  notes.length = 0; files.video_after.length = 0; files.now_video.length = 0;
+  await pick("video_before", [clip(4)]); await pick("video_after", [clip(4)]);
+  await pick("video_after", [clip(4, { lastModified: 5 }), clip(4, { size: 41 * 1048576 })]);
+  await Promise.all([pick("video_after", [clip(7)]), pick("video_before", [clip(7)])]);
+  await pick("now_video", [clip(4)]);
+  const sevens = [...files.video_before, ...files.video_after].filter((it) => it.sig === "clip7.mp4|41943040|undefined").length;
+  if (files.video_before.length + files.video_after.length !== 4 || sevens !== 1 || files.now_video.length !== 1 || notes.length !== 3
+    || notes.some((n) => !n.endsWith(" e_video_twice")) || files.video_before[0].sig !== "clip4.mp4|41943040|undefined") bad.push("the same clip twice: " + notes.join() + " " + files.video_after.length);
+  const t0 = s.indexOf("  const T = {"), t1 = s.indexOf("\n  };", t0);
+  const T = new Function("return (" + s.slice(t0 + "  const T = ".length, t1 + 4) + ");")();
+  const want = { en: { e_max_videos: "At most 30 videos here.", e_max_videos_1: "Only one video here. Remove it first to choose another.", add_videos: "+ Add videos", e_video_twice: "This video is already added.",
+    video_before: "Videos before the cleanup (optional)", video_after: "Videos after the cleanup (optional)",
+    videos_hint: "Up to 30 videos before the cleanup and 30 after it. Short vertical clips of 15 to 30 seconds work best and send faster. Limit: 90 seconds and 95 MB each." },
+    id: { e_max_videos: "Maksimal 30 video di sini.", e_max_videos_1: "Hanya bisa satu video di sini. Hapus dulu video yang sudah ada kalau mau memilih yang lain.", add_videos: "+ Tambah video", e_video_twice: "Video ini sudah ditambahkan." } };
+  for (const l of ["en", "id"]) for (const [k, v] of Object.entries(want[l])) if (T[l][k] !== v) bad.push(l + " " + k + ": " + T[l][k]);
+  if (!T.en.watch_video || !T.id.watch_video || !T.en.watch_video.includes("{n}") || !T.id.watch_video.includes("{n}")) bad.push("watch_video");
+  console.log(bad.length ? "wrong: " + bad.join("; ") : "ok " + JSON.stringify([T.en.videos_hint, T.en.video_before, T.en.video_after]));
+  process.exit(0);
+});' 2>&1)
+ADVP=$(printf '%s' "$UP" | python3 -c "
+import re,sys,json
+p=sys.stdin.read()
+print('ok ' + json.dumps([re.search(r'data-i18n=\"videos_hint\">([^<]*)<', p).group(1), re.search(r'data-i18n=\"video_before\">([^<]*)<', p).group(1), re.search(r'data-i18n=\"video_after\">([^<]*)<', p).group(1)], separators=(',', ':')))" 2>&1)
+[ "${ADV%% *}" = ok ] && [ "$ADV" = "$ADVP" ] \
+  && ok "the video fields in node: 31 clips keep 30 and refuse 1, two picks of 20 at once keep 30, the mission's keeps 1 with its own text, too long, wrong type and too big refused, the same clip picked again (or twice at once) refused in either cleanup field; the texts in EN and ID, the page's English the same" \
+  || bad "upload.js addVideo and its texts (node)" "$ADV | page: $ADVP"
+# The clip list of the two cleanup video fields and the screen lock of a send, run in node with a stand-in page: a clip of
+# a cleanup field is one line (vrow) with no player and no link to its file, "▶ 2 · 23 s · 41 MB" numbered in the
+# field's order and again after a removal, read out as "Watch video 2, 23 s, 41 MB"; ▶ plays one clip at a time under
+# its line, and closing it (▶ again, another ▶) lets go of the player and revokes its link; the mission's one clip keeps
+# its picture. keepAwake asks for the screen lock once, lets it go at the end, also when the end comes before the lock,
+# asks again when the page shows during a send after the browser let go, and goes on without the API or when refused.
+CLP=$(echo "$UJ" | node -e '
+let s = ""; process.stdin.on("data", (d) => (s += d)).on("end", async () => {
+  const cut = (from, to) => { const a = s.indexOf(from), b = s.indexOf(to, a); if (a < 0 || b < 0) throw new Error("missing " + from); return s.slice(a, b); };
+  const urls = new Set(), bad = [];
+  const el = (tag) => ({ tag, attrs: {}, kids: [], classes: [], textContent: "", removed: false, src: "", next: null, loads: 0,
+    classList: null, setAttribute(k, v) { this.attrs[k] = String(v); }, removeAttribute(k) { delete this.attrs[k]; if (k === "src") this.src = ""; },
+    append(...k) { this.kids.push(...k); }, prepend(x) { this.kids.unshift(x); }, after(x) { this.next = x; }, remove() { this.removed = true; },
+    querySelector(q) { return this.kids.find((k) => (q === ".vlabel" ? k.className === "vlabel" : k.tag === q)) || null; },
+    addEventListener(t, f) { this["on" + t] = f; }, pause() {}, load() { this.loads++; } });
+  const mk = (tag) => { const e = el(tag); e.classList = { add: (c) => e.classes.push(c) }; return e; };
+  const document = { createElement: mk };
+  const URL = { createObjectURL: () => { const u = "blob:" + Math.random(); urls.add(u); return u; }, revokeObjectURL: (u) => urls.delete(u) };
+  const t = (k, v) => k + ":" + v.n, mb = (b) => String(Math.round(b / 1048576));
+  const files = { video_before: [], now_video: [] };
+  const X = new Function("document", "URL", "t", "mb", "files", cut("  const VIDEO_KINDS = ", "  const STALL_MS")
+    + cut("  // A clip of the cleanup\x27s video fields is one line", "  function renderThumb(") + "\nreturn { addPreview, rowLabels, togglePeek, closePeek };")(document, URL, t, mb, files);
+  const item = (i, kind, dur, size) => { const it = { id: i, kind, blob: { size }, dur, el: mk("div") }; files[kind].push(it); return it; };
+  const a = item(1, "video_before", 23.4, 41 * 1048576), b = item(2, "video_before", null, 5 * 1048576), c = item(3, "video_before", 90, 95 * 1048576);
+  [a, b, c].forEach((it) => X.addPreview(it));
+  const lab = (it) => it.el.kids[0];
+  if ([a, b, c].some((it) => it.url || it.el.kids.length !== 1 || it.el.kids[0].tag !== "button" || !it.el.classes.includes("vrow")) || urls.size) bad.push("a clip line has a player or a link");
+  if ([a, b, c].map((it) => lab(it).textContent).join(" | ") !== "▶ 1 · 23 s · 41 MB | ▶ 2 · 5 MB | ▶ 3 · 90 s · 95 MB") bad.push("the lines: " + [a, b, c].map((it) => lab(it).textContent).join(" | "));
+  if (lab(a).attrs["aria-label"] !== "watch_video:1, 23 s, 41 MB" || lab(a).attrs["aria-expanded"] !== "false") bad.push("the name: " + JSON.stringify(lab(a).attrs));
+  files.video_before.shift(); X.rowLabels("video_before");
+  if (lab(b).textContent !== "▶ 1 · 5 MB" || lab(c).textContent !== "▶ 2 · 90 s · 95 MB") bad.push("numbered again: " + lab(b).textContent);
+  lab(b).onclick();
+  const pb = b.el.next, vb = pb && pb.kids[0];
+  if (!vb || vb.tag !== "video" || !vb.controls || !vb.playsInline || !urls.has(vb.src) || lab(b).attrs["aria-expanded"] !== "true") bad.push("▶ plays the clip under its line");
+  const ub = vb && vb.src;
+  lab(c).onclick();
+  const vc = c.el.next && c.el.next.kids[0];
+  if (!pb.removed || urls.has(ub) || vb.src || !vb.loads || lab(b).attrs["aria-expanded"] !== "false" || !vc || urls.size !== 1) bad.push("another ▶ closes the first");
+  lab(c).onclick();
+  if (!c.el.next.removed || urls.size || lab(c).attrs["aria-expanded"] !== "false") bad.push("▶ again closes it");
+  const n = item(4, "now_video", 12, 1048576); X.addPreview(n);
+  if (!n.url || n.el.kids[0].tag !== "video" || n.el.classes.includes("vrow")) bad.push("the mission clip keeps its picture");
+  // keepAwake
+  const on = { visibilitychange: [] }, doc = { visibilityState: "visible", addEventListener: (k, f) => on[k].push(f) };
+  let asked = 0, freed = 0, hold = null, refuse = false;
+  const lock = () => ({ ls: [], addEventListener(k, f) { this.ls.push(f); }, release() { freed++; this.ls.forEach((f) => f()); return Promise.resolve(); } });
+  const nav = { wakeLock: { request: (type) => { asked++; if (type !== "screen") bad.push("type " + type); if (refuse) return Promise.reject(new Error("no")); return new Promise((r) => { hold = () => r(lock()); }); } } };
+  const W = new Function("navigator", "document", cut("  let wake = null, awake = false, asking = false;", "  // Uploads the form\x27s files that are not on the server yet") + "\nreturn { keepAwake, now: () => wake };")(nav, doc);
+  const tick = () => new Promise((r) => setTimeout(r, 0));
+  W.keepAwake(true); W.keepAwake(true); hold(); await tick();
+  if (asked !== 1 || !W.now()) bad.push("one lock: " + asked);
+  const l1 = W.now(); l1.release(); await tick();
+  if (W.now() !== null) bad.push("the browser let go");
+  doc.visibilityState = "hidden"; on.visibilitychange.forEach((f) => f());
+  doc.visibilityState = "visible"; on.visibilitychange.forEach((f) => f()); hold(); await tick();
+  if (asked !== 2 || !W.now()) bad.push("asked again when the page shows: " + asked);
+  W.keepAwake(false); await tick();
+  if (W.now() !== null || freed !== 2) bad.push("let go at the end: " + freed);
+  on.visibilitychange.forEach((f) => f());
+  if (asked !== 2) bad.push("asked after the end");
+  W.keepAwake(true); W.keepAwake(false); hold(); await tick();
+  if (W.now() !== null || freed !== 3) bad.push("the end before the lock: " + freed);
+  refuse = true; W.keepAwake(true); await tick(); W.keepAwake(false);
+  const N = new Function("navigator", "document", cut("  let wake = null, awake = false, asking = false;", "  // Uploads the form\x27s files that are not on the server yet") + "\nreturn { keepAwake };")({}, doc);
+  N.keepAwake(true); N.keepAwake(false);
+  console.log(bad.length ? "wrong: " + bad.join("; ") : "ok");
+  process.exit(0);
+});' 2>&1)
+RSND=$(echo "$UJ" | sed -n '/^  async function runSend(g, post) {/,/^  }$/p')
+[ "$CLP" = ok ] && [ "$(echo "$RSND" | grep -A1 -F '    lockForms(true);' | tail -1)" = '    keepAwake(true);' ] && [ "$(echo "$RSND" | grep -A1 -F '      lockForms(false);' | tail -1)" = '      keepAwake(false);' ] \
+  && echo "$UJ" | grep -qF 'if (peek && peek.item === item) closePeek();' && echo "$UJ" | grep -qF 'if (LIST_KINDS.includes(k)) rowLabels(k);' \
+  && [ "$(echo "$UP" | grep -cF '<div class="thumbs vlist" data-list="video_')" = 2 ] && grep -qF '.thumbs.vlist { grid-template-columns: 1fr; gap: 6px; }' site/forms.css \
+  && ok "the cleanup's clip lists: one numbered line per clip with no player, read out with its number, length and size, one clip played at a time and let go when closed or removed, the mission's clip as a picture; a send keeps the screen on and lets it go (node)" \
+  || bad "upload.js clip list and screen lock (node)" "$CLP"
+# With 30 clips in a field its note, its marks and its player stay where the crew is: each video field's note stands
+# above its list (under + Add videos, or the field's label once + Add videos hides), so it is in view after a big pick; a
+# field taller than the screen is shown from its top when SEND waited and a clip was refused (its label and note in
+# view), not centred; a file the server refuses, or a video that would not go up, is scrolled into view (centred) with
+# the message above SEND, since it can be thousands of pixels above it; the clip ▶ plays stops when the cleanup form
+# goes (render: the crew page, POST A MISSION, THANK YOU); a language switch writes the clip lines again (applyLang); and
+# a clip's name, size and last change are kept with it on the phone, so one that came back after a reload is still
+# known when it is picked again.
+RSND2=$(echo "$UJ" | sed -n '/^  async function runSend(g, post) {/,/^  }$/p')
+REND=$(echo "$UJ" | sed -n '/^  function render() {/,/^  }$/p'); APLG=$(echo "$UJ" | sed -n '/^  function applyLang() {/,/^  }$/p')
+[ "$(echo "$UP" | grep -A1 -F '<div class="msg err" data-msg="video_' | grep -cF '<div class="thumbs vlist" data-list="video_')" = 2 ] \
+  && [ "$(echo "$UP" | grep -A1 -F '<div class="thumbs vlist" data-list="video_' | grep -cF 'data-msg=')" = 0 ] \
+  && echo "$UJ" | grep -qF 'if (fields[0]) fields[0].scrollIntoView({ behavior: "smooth", block: fields[0].offsetHeight > innerHeight ? "start" : "center" });' \
+  && echo "$RSND2" | grep -qF 'const marked = e instanceof Fatal && (e.msgKey === "e_upload_fatal" || e.msgKey === "e_upload_video") && all.find((x) => x.el && x.el.classList.contains("failed"));' \
+  && [ "$(echo "$RSND2" | grep -B1 -F '      return null;' | head -1)" = '      if (marked) marked.el.scrollIntoView({ behavior: "smooth", block: "center" });' ] \
+  && echo "$UJ" | grep -qF 'item.el && item.el.classList.remove("failed");' \
+  && echo "$REND" | grep -qxF '    if (form.hidden) closePeek();' && echo "$APLG" | grep -qxF '    LIST_KINDS.forEach(rowLabels); // the clip lines: "Watch video 2", and the size as this language writes it (0,4 MB)' \
+  && echo "$UJ" | grep -qF ', dur: it.dur || null, sig: it.sig || null,' && echo "$UJ" | grep -qF ', progress: r.key ? 1 : 0, sig: r.sig || null };' \
+  && ok "the crew page with 30 clips a field: each video field's note above its list, a tall field shown from its top after SEND's wait, a refused or failed file scrolled into view, the clip being watched stopped when the form goes, the lines rewritten on a language switch, a clip's signature kept on the phone" \
+  || bad "upload.js notes and marks with long clip lists" ""
 # On a phone the hint above "+ Add video" sat 1.5 to 4 px from the dashed border. A hint right before a picker now gets
 # the same 6px as a field's label (.field > span), so its text sits 7.5 to 10 px above the box, as a label's does (8 to
 # 9.5 px, measured in Chrome at 412 and 375 px, EN and ID). Only the two video hints sit right before a picker: the photo
@@ -5624,12 +5866,37 @@ echo "$AJ" | grep -qF '"VIDEO BEFORE"' && echo "$AJ" | grep -qF '"VIDEO AFTER"' 
   && [ "$(echo "$AJ" | grep -c 'preload=')" = 1 ] \
   && ok "/admin/: VIDEO BEFORE, VIDEO AFTER and the mission's VIDEO NOW in PENDING and APPROVED, the video on the mission card and under Link to mission, and the questions and the decline message say photos and video" \
   || bad "admin.js videos" ""
+# PENDING's and APPROVED's media block (admin.js mediaBlock) in node with its own helpers: the mission's VIDEO NOW, #12
+# first, then every video under its own title, numbered within its stage in the server's order (videoRows); more than
+# two side by side (.media-vgrid in admin.css), one or two at the card's width as before.
+MBK=$(node -e '
+const src = require("fs").readFileSync(process.argv[1], "utf8");
+const line = (re) => { const m = src.match(re); if (!m) throw new Error("missing " + re); return m[0]; };
+const fn = (name) => { const a = src.indexOf("  function " + name + "("), b = src.indexOf("\n  }\n", a); if (a < 0 || b < 0) throw new Error("missing " + name); return src.slice(a, b + 4); };
+eval([/^  const ESC = .*$/m, /^  const esc = .*$/m, /^  const safeMedia = .*$/m, /^  const missionNo = .*$/m, /^  const spotsOf = .*$/m, /^  const player = .*$/m].map(line).join("\n")
+  + "\n" + fn("videoRows") + fn("mediaBlock") + "globalThis.mediaBlock = mediaBlock;");
+const sig = (c) => `/media/${c.repeat(32)}?exp=1999999999&sig=${"0".repeat(64)}`;
+const v = (c, stage) => ({ url: sig(c), stage });
+const s = (videos) => ({ media: { before: [{ url: sig("a") }], after: [{ url: sig("b") }], videos } });
+const heads = (h) => [...h.matchAll(/<h4>([^<]*)<\/h4>/g)].map((m) => m[1]).filter((t) => t.startsWith("VIDEO"));
+const many = mediaBlock(s([v("1", "before"), v("2", "before"), v("3", "before"), v("4", "after"), v("5", null), v("6", null)]), { no: 12, now: [], now_video: { url: sig("7") } });
+const two = mediaBlock(s([v("1", "before"), v("4", "after")]), null);
+console.log(JSON.stringify([heads(many).join(" | "), (many.match(/<div class="media-v media-vgrid">/g) || []).length, (many.match(/<video /g) || []).length,
+  (two.match(/<div class="media-v">/g) || []).length, heads(two).join(" | ")]));
+' "$T/admin.js" 2>&1)
+check "PENDING and APPROVED (admin.js mediaBlock, node): VIDEO NOW, #12 first, then each video titled and numbered within its stage, more than two side by side, two at the card's width" "$MBK" \
+  '["VIDEO NOW, #12 | VIDEO BEFORE 1/3 | VIDEO BEFORE 2/3 | VIDEO BEFORE 3/3 | VIDEO AFTER | VIDEO 1/2 | VIDEO 2/2",1,7,1,"VIDEO BEFORE | VIDEO AFTER"]'
+grep -qF '.media-vgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0 10px; }' admin/admin.css \
+  && ok "admin.css stands more than two of a cleanup's videos side by side" || bad "admin.css .media-vgrid" ""
 echo "$SJ" | grep -qF 'e.media?.video_stages' && echo "$SJ" | grep -qF '"BEFORE · VIDEO"' && echo "$SJ" | grep -qF '"AFTER · VIDEO"' \
   && echo "$SJ" | grep -qF '"NOW · VIDEO"' && echo "$SJ" | grep -qF 'const nowVideoOf = (m) => safeSrc(m?.now_video);' \
   && echo "$SJ" | grep -qF '${nowVideoOf(m) ? '"'"'<div class="vid-tag">▶ VIDEO</div>'"'"' : ""}' \
   && echo "$SJ" | grep -qF '<div class="pm pm-video"><span class="tag">${escapeHTML(tag)}</span><video controls' \
   && echo "$SC" | grep -qF '.post-media .pm-video .tag { position: static; display: inline-block; margin: 8px 10px 6px; }' && echo "$SC" | grep -qF '.mcard .vid-tag { top: 70px; }' \
-  && ok "homepage: receipt videos tagged BEFORE · VIDEO and AFTER · VIDEO above the player (never on its controls), a mission's video in its post (NOW · VIDEO) and a ▶ VIDEO badge on its NEXT UP card" \
+  && echo "$SC" | grep -qxF '.post-media .pm-video video { width: 100%; height: 520px; display: block; background: #000; }' && ! echo "$SC" | grep -qF 'max-height: 520px' \
+  && echo "$SJ" | grep -qF 'const videos = videosIn(e).map((v) => videoBox(v.src, v.tag, true)).join("");' && ! echo "$SJ" | grep -qF 'v.tag === "' \
+  && [ "$(echo "$SJ" | grep -cF 'videosIn(e)')" = 2 ] \
+  && ok "homepage: receipt videos tagged BEFORE · VIDEO and AFTER · VIDEO above the player (never on its controls), numbered when a stage has several (videosIn, in both posts, never placed by their tag), each player 520 px tall whatever its clip (no jump when a lazy one loads, WebKit has no scroll anchoring), a mission's video in its post (NOW · VIDEO) and a ▶ VIDEO badge on its NEXT UP card" \
   || bad "site/app.js videos" ""
 # A mission's video always goes with its photos: the delete, the sweep of leftovers and the expiry never filter on kind.
 KG=$(sed -n -e '/^async function dropPhotos/,/^}$/p' -e '/^export async function sweepRemovedPhotos/,/^}$/p' -e '/^export async function expireMissions/,/^}$/p' functions/_lib/missions.js)
@@ -6457,7 +6724,7 @@ if (a < 0 || b < a) throw new Error("the block is missing");
 const k = s.indexOf("  const safeSrc = (u) =>"), safe = s.slice(k, s.indexOf("\n", s.indexOf("\n", k) + 1));
 const helpers = [/^  const ESC = .*$/m, /^  const escapeHTML = .*$/m, /^  const isNo = .*$/m, /^  const missionOf = .*$/m, /^  const nowOf = .*$/m, /^  const nowVideoOf = .*$/m].map(line).join("\n");
 const sp = s.slice(s.indexOf("  // ---------- spots (pure; tests/e2e.sh runs this block in node) ----------"), s.indexOf("  // ---------- end of the spots ----------"));
-const X = new Function(helpers + "\n" + safe + "\n" + sp + "\n" + s.slice(a, b) + "\nreturn { receiptSlides, missionSlides, wideHtml };")();
+const X = new Function(helpers + "\n" + safe + "\n" + sp + "\n" + s.slice(a, b) + "\nreturn { receiptSlides, missionSlides, wideHtml, videosIn };")();
 const tags = (sl) => sl.map((x) => x.map((it) => it.tag + (it.video ? " [v]" : "") + (it.src ? "" : " [soon]")).join(" | "));
 const bad = [], eq = (n, got, want) => { if (JSON.stringify(got) !== JSON.stringify(want)) bad.push(n + ": " + JSON.stringify(got)); };
 const M = (k) => "/media/" + k.repeat(32).slice(0, 32);
@@ -6482,6 +6749,23 @@ eq("a receipt with 2 spots", tags(X.receiptSlides({ spots: two, media: { before:
 eq("a broken spot list, and spots with no photo of spot 1", [tags(X.receiptSlides({ spots: [two[0]], media: { before: [M("a")], after: [M("d")], before_spots: [2], after_spots: [2] } })),
   tags(X.receiptSlides({ spots: two, media: { before: [M("b")], after: [M("e")], before_spots: [2], after_spots: [2] } }))],
   [["BEFORE | AFTER", "BEFORE", "AFTER"], ["BEFORE · SPOT 2 | AFTER · SPOT 2", "BEFORE · SPOT 2", "AFTER · SPOT 2"]]);
+// Several videos of a stage (up to 30 before and 30 after since 2026-11-19), numbered like the photos in the order they
+// came (upload order), each group where its stage belongs, whatever their tags say: the slides go by stage (videosIn).
+eq("several videos of a stage", tags(X.receiptSlides({ media: { before: [M("a")], after: [M("d")], videos: [M("f"), M("1"), M("2"), M("3"), M("4"), M("5")], video_stages: ["before", "before", "before", "after", "after", null] } })),
+  ["BEFORE | AFTER", "BEFORE", "BEFORE · VIDEO 1/3 [v]", "BEFORE · VIDEO 2/3 [v]", "BEFORE · VIDEO 3/3 [v]", "AFTER", "AFTER · VIDEO 1/2 [v]", "AFTER · VIDEO 2/2 [v]", "VIDEO [v]"]);
+const K = (i) => "/media/" + i.toString(16).padStart(32, "0");
+const big = { media: { before: [M("a"), M("b")], after: [M("d")], videos: Array.from({ length: 60 }, (_, i) => K(i)), video_stages: Array.from({ length: 60 }, (_, i) => (i % 2 ? "after" : "before")) } };
+const bs = X.receiptSlides(big), bt = tags(bs);
+eq("30 before and 30 after sent in turns: each 30 numbered in their order, after their photos", [bt.length, bt[3], bt[4], bt[32], bt[33], bt[34], bt[35], bt[63], bs[3]?.[0].src, bs[4]?.[0].src, bs[34]?.[0].src, bs[63]?.[0].src],
+  [64, "BEFORE · VIDEO 1/30 [v]", "BEFORE · VIDEO 2/30 [v]", "BEFORE · VIDEO 30/30 [v]", "AFTER", "AFTER · VIDEO 1/30 [v]", "AFTER · VIDEO 2/30 [v]", "AFTER · VIDEO 30/30 [v]", K(0), K(2), K(1), K(59)]);
+eq("an unsafe link among three videos before is left out before the count", tags(X.receiptSlides({ media: { before: [M("a")], after: [M("d")], videos: [M("1"), "javascript:alert(1)", M("2")], video_stages: ["before", "before", "before"] } })),
+  ["BEFORE | AFTER", "BEFORE", "BEFORE · VIDEO 1/2 [v]", "BEFORE · VIDEO 2/2 [v]", "AFTER"]);
+eq("videos with no stages, and stages that are none: VIDEO 1/2 and 2/2 at the end", [tags(X.receiptSlides({ media: { before: [M("a")], after: [M("d")], videos: [M("1"), M("2")] } })),
+  X.videosIn({ media: { videos: [M("1"), M("2"), M("3")], video_stages: ["BEFORE", { x: 1 }, "after"] } }).map((v) => v.tag + " " + v.stage)],
+  [["BEFORE | AFTER", "BEFORE", "AFTER", "VIDEO 1/2 [v]", "VIDEO 2/2 [v]"], ["AFTER · VIDEO after", "VIDEO 1/2 null", "VIDEO 2/2 null"]]);
+eq("the one-column post has the same videos as the wide post (videosIn), in the same order", X.videosIn(big).map((v) => v.tag + " " + v.src), bs.filter((x) => x[0].video).map((x) => x[0].tag + " " + x[0].src));
+const bh = X.wideHtml("Cleanup receipt", bs, "", "", "");
+eq("the wide post of 60 videos: 60 players that load nothing, each named by its tag", [(bh.match(/<video controls playsinline preload="none" src="/g) || []).length, bh.includes("aria-label=\"before · video 3/30\""), bh.includes("aria-label=\"after · video 30/30\"")], [60, true, true]);
 const h = X.wideHtml("Mission #7", X.missionSlides({ no: 7, now: [M("a"), M("b")], now_video: M("v") }), "<div class=\"stamp\">S</div>", "<div class=\"post-paper\">P</div>", "<p class=\"post-all\">A</p>");
 const sl = h.match(/<div class="pv-slide(?: pv-two)?"( hidden)?>/g) || [];
 if (!h.includes("<div class=\"post-frame\" role=\"dialog\" aria-modal=\"true\" aria-label=\"Mission #7\"><div class=\"post-paper\">P</div>") || h.indexOf("post-paper") > h.indexOf("pv-stage")) bad.push("the frame, the paper first");
@@ -6493,9 +6777,35 @@ const one = X.wideHtml("Mission #3", X.missionSlides({ no: 3, now: [M("a")] }), 
 if (one.includes("pv-nav") || one.includes(" hidden") || one.includes("pv-acts")) bad.push("one slide with arrows, or a box for no links");
 const solo = X.wideHtml("Cleanup receipt", [[{ src: M("a"), tag: "BEFORE" }]], "", "", "<b>A</b>");
 if (!solo.includes("<div class=\"pv-bar\"><div class=\"pv-acts\"><b>A</b></div><p class=\"pv-live\" aria-live=\"polite\"></p></div>")) bad.push("links without arrows");
-console.log(bad.length ? "wrong: " + bad.join("; ") : "ok 19");
+console.log(bad.length ? "wrong: " + bad.join("; ") : "ok 25");
 ' "$T/pl-app.js" 2>&1)
-check "the wide post's slides (site/app.js, node): a cleanup's first before and after side by side, then every photo and video alone in the order of the day; a mission's NOW photos and video; unsafe links dropped; the dialog with the paper first, one slide shown, videos that load nothing, lazy photos, arrows only with two slides, the post's own links in the bar after the arrows" "$WSL" "ok 19"
+check "the wide post's slides (site/app.js, node): a cleanup's first before and after side by side, then every photo and video alone in the order of the day, several videos of a stage numbered (30 before and 30 after, by stage, in upload order, unsafe ones left out first), the same videos in the one-column post; a mission's NOW photos and video; unsafe links dropped; the dialog with the paper first, one slide shown, videos that load nothing, lazy photos, arrows only with two slides, the post's own links in the bar after the arrows" "$WSL" "ok 25"
+# The receipt with 30 videos before and 30 after sent at the start ($ID3), as the server gives it: the homepage's videosIn
+# (both posts) and /admin/'s videoRows number its videos in upload order within each stage, BEFORE · VIDEO 1/30 first
+# and AFTER · VIDEO 30/30 last on the receipt, VIDEO BEFORE 1/30 to VIDEO AFTER 30/30 with 60 different download names on
+# the APPROVED card.
+curl -s $B/api/events > "$T/ev60.json"; curl -s "$B/api/admin/submissions?status=approved" -H "$A" > "$T/ap60.json"
+R60=$(node -e '
+const fs = require("fs"), s = fs.readFileSync(process.argv[1], "utf8"), aj = fs.readFileSync(process.argv[2], "utf8");
+const line = (src, re) => { const m = src.match(re); if (!m) throw new Error("missing " + re); return m[0]; };
+const a = s.indexOf("  // ---------- the wide post\x27s slides (pure; tests/e2e.sh runs this block in node) ----------"), b = s.indexOf("  // ---------- end of the wide post\x27s slides ----------");
+const k = s.indexOf("  const safeSrc = (u) =>"), safe = s.slice(k, s.indexOf("\n", s.indexOf("\n", k) + 1));
+const helpers = [/^  const ESC = .*$/m, /^  const escapeHTML = .*$/m, /^  const isNo = .*$/m, /^  const missionOf = .*$/m, /^  const nowOf = .*$/m, /^  const nowVideoOf = .*$/m].map((re) => line(s, re)).join("\n");
+const sp = s.slice(s.indexOf("  // ---------- spots (pure; tests/e2e.sh runs this block in node) ----------"), s.indexOf("  // ---------- end of the spots ----------"));
+const X = new Function(helpers + "\n" + safe + "\n" + sp + "\n" + s.slice(a, b) + "\nreturn { receiptSlides, videosIn };")();
+const c = aj.indexOf("  function videoRows("), d = aj.indexOf("\n  }\n", c);
+const videoRows = new Function(aj.slice(c, d + 4) + "\nreturn videoRows;")();
+const [id, before, after] = process.argv.slice(3), keys = (l) => l.split(",").map((x) => "/media/" + x);
+const e = JSON.parse(fs.readFileSync(process.argv[6], "utf8")).find((x) => x.id === id);
+const sub = JSON.parse(fs.readFileSync(process.argv[7], "utf8")).submissions.find((x) => x.id === id);
+if (!e || !sub) { console.log("missing " + id); process.exit(0); }
+const vs = X.receiptSlides(e).filter((x) => x[0].video).map((x) => x[0]), vi = X.videosIn(e), rows = videoRows(sub.media.videos);
+const want = [...keys(before), ...keys(after)];
+console.log(JSON.stringify([vs.length, vs[0].tag, vs[29].tag, vs[30].tag, vs[59].tag, JSON.stringify(vs.map((v) => v.src)) === JSON.stringify(want),
+  JSON.stringify(vi.map((v) => v.tag)) === JSON.stringify(vs.map((v) => v.tag)), rows[0].title, rows[59].title, new Set(rows.map((r) => r.dl)).size, rows[0].dl, rows[30].dl]));
+' "$T/pl-app.js" "$T/admin.js" "$ID3" "$VB30" "$VA30" "$T/ev60.json" "$T/ap60.json" 2>&1)
+check "the receipt with 60 videos as the server sends it: on the homepage BEFORE · VIDEO 1/30 to AFTER · VIDEO 30/30 in upload order (both posts), on APPROVED VIDEO BEFORE 1/30 to VIDEO AFTER 30/30 with 60 download names" "$R60" \
+  '[60,"BEFORE · VIDEO 1/30","BEFORE · VIDEO 30/30","AFTER · VIDEO 1/30","AFTER · VIDEO 30/30",true,true,"VIDEO BEFORE 1/30","VIDEO AFTER 30/30",60,"video-before-1","video-after-1"]'
 # Below WIDE the post is the one column as before: openPost's and openMission's templates, run in node with stand-ins for
 # their helpers and with their own links (acts) as each function builds them, give the phone markup with wide false (the
 # dialog on the paper, the stamp, the photos, and COPY LINK, SHARE and ALL MISSIONS exactly as at 65bd0bf) and none of it
@@ -6726,7 +7036,8 @@ console.log(bad.length ? "wrong: " + bad.join("; ") : "ok");
 # the post no longer fits; its listener guarded, since Safari before 14 has only addListener and an unguarded call stops
 # the whole homepage script there), the paper's fade (pv-more: on open, on its scroll, on any change of its size or its
 # parts' sizes, and on resize; only with more than its 18 blank px below), and a video that loads nothing until its slide
-# shows (preload none only in the wide post, metadata only in videoBox).
+# has shown for 300 ms (preload none in the wide post, loadShown run in node below; videoBox's preload none for a
+# receipt's videos in the one column, lazyVideos below, metadata for the mission post's one video).
 OPM=$(echo "$SJ" | sed -n '/^  function openMission(m) {/,/^  }$/p'); OPR=$(echo "$SJ" | sed -n '/^  function openPost(e) {/,/^  }$/p')
 WX=""
 [ "$(echo "$SJ" | grep -cF 'const WIDE = matchMedia("(min-width: 900px) and (min-height: 520px)");')" = 1 ] && echo "$SJ" | grep -qxF '  let reopen = null, stage = null;' || WX="$WX [query]"
@@ -6751,13 +7062,128 @@ for t in 'if (!stage || overlay.hidden || (ev.key !== "ArrowLeft" && ev.key !== 
          '    st.more = () => paper.classList.toggle("pv-more", paper.scrollHeight - paper.clientHeight - paper.scrollTop > 18);' \
          '    paper.addEventListener("scroll", st.more, { passive: true });' \
          '    if (typeof ResizeObserver === "function") { const ro = new ResizeObserver(() => st.more()); [paper, ...paper.children].forEach((el) => ro.observe(el)); }' \
-         "els[i].querySelectorAll('video[preload=\"none\"]').forEach((v) => { v.preload = \"metadata\"; });" \
+         '      st.at = i;' '      loadShown();' '      }, Math.max(300, vlast + 1000 - performance.now()));' \
+         '        vs.forEach((v) => { if (v.preload === "none") v.preload = "metadata"; else v.load(); });' \
          'if (j !== i) el.querySelectorAll("video").forEach((v) => v.pause());' "el?.querySelectorAll('img[loading=\"lazy\"]').forEach((im) => { im.loading = \"eager\"; });"; do
   echo "$SJ" | grep -qF -- "$t" || WX="$WX [$t]"
 done
-[ "$(echo "$SJ" | grep -oF '<video controls playsinline preload="none" src=' | wc -l | tr -d ' ')" = 1 ] && [ "$(echo "$SJ" | grep -oF '<video controls playsinline preload="metadata" src=' | wc -l | tr -d ' ')" = 1 ] || WX="$WX [preload]"
+[ "$(echo "$SJ" | grep -oF '<video controls playsinline preload="none" src=' | wc -l | tr -d ' ')" = 1 ] \
+  && [ "$(echo "$SJ" | grep -oF '<video controls playsinline preload="${lazy ? "none" : "metadata"}" src=' | wc -l | tr -d ' ')" = 1 ] \
+  && ! echo "$SJ" | grep -qF 'preload="metadata" src=' || WX="$WX [preload]"
+[ "$(echo "$SJ" | sed -n '/^  function startStage(slides) {/,/^  }$/p' | grep -A1 -xF '      st.at = i;' | tail -1)" = '      loadShown();' ] \
+  && ! echo "$SJ" | grep -qF "querySelectorAll('video[preload=\"none\"]')" || WX="$WX [loadShown in go]"
 [ -z "$WX" ] && ok "the wide post's wiring: one query (WIDE), the one-column post assigned as before below it, the paper's links handed to the bar on a wide screen, the stage started after showOverlay, closePost and both choosers clear it, ← and → (never on a video or with a modifier), the redraw across WIDE (300 ms, never during full screen, only when the post no longer fits, its listener guarded for Safari before 14), the paper's fade while more is below, videos that load nothing until their slide shows" \
   || bad "the wide post's wiring (site/app.js)" "$WX"
+# The wide post's videos (loadShown in startStage, site/app.js) run in node with a stand-in clock and slides: a slide's
+# video loads its first frame (metadata) only once the slide has stayed 300 ms, and one at most every second, so holding
+# → (a step every 80 ms) loads only where it stops and a step every 0.4 s loads every third; a video whose load failed (a
+# 429 of the rate limiting rule) loads again when its slide shows again, a loaded one never again, and nothing loads once
+# the post was closed or drawn again (stage is no longer this one).
+STG=$(node -e '
+const s = require("fs").readFileSync(process.argv[1], "utf8");
+const a = s.indexOf("    let vt = 0, vlast = -1e9;"), b = s.indexOf("    st.go = (i, say) => {", a);
+if (a < 0 || b < 0) throw new Error("loadShown is missing");
+let now = 0, timers = [];
+const setTimeout = (f, ms) => { timers.push({ f, at: now + ms }); return timers.length; };
+const clearTimeout = (id) => { if (id && timers[id - 1]) timers[id - 1].f = null; };
+const run = (to) => { for (;;) { const t = timers.filter((x) => x.f && x.at <= to).sort((x, y) => x.at - y.at)[0]; if (!t) break; now = t.at; const f = t.f; t.f = null; f(); } now = to; };
+const performance = { now: () => now };
+const got = [];
+const vid = (i) => { let p = "none"; return { error: null, get preload() { return p; }, set preload(x) { if (x === "metadata" && p === "none") got.push(i + "@" + now); p = x; }, load() { got.push(i + " again@" + now); this.error = null; } }; };
+const vids = Array.from({ length: 12 }, (_, i) => vid(i + 1));
+const slide = (v) => ({ querySelectorAll: (q) => (q === "video" && v ? [v] : []) });
+const els = [slide(null), ...vids.map(slide)];
+const st = { at: 0 }, S = { stage: st };
+const code = s.slice(a, b);
+if (code.split("stage === st").length !== 2) throw new Error("loadShown checks stage once");
+const X = new Function("els", "st", "S", "setTimeout", "clearTimeout", "performance", code.replace("stage === st", "S.stage === st") + "\nreturn { loadShown };")(els, st, S, setTimeout, clearTimeout, performance);
+const go = (i) => { st.at = i; X.loadShown(); };
+const bad = [], take = () => got.splice(0).join(" ");
+go(0); for (let i = 1; i <= 8; i++) { run(80 * i); go(i); }
+run(929); const held = take(); run(2000);
+if (held !== "" || take() !== "8@940") bad.push("holding: only where it stops, 300 ms later");
+for (let k = 0; k < 4; k++) { run(3000 + 400 * k); go(9 + k); }
+run(6000);
+if (take() !== "9@3300 12@4500") bad.push("a step every 0.4 s: one a second at most");
+vids[8].error = { code: 4 };
+run(7000); go(9); run(7290); go(10); run(8000);
+const failed = take();
+run(9000); go(9); run(10000);
+if (failed !== "10@7590" || take() !== "9 again@9300") bad.push("a failed video loads again on its next showing: " + failed);
+run(11000); go(10); run(12000);
+if (take() !== "") bad.push("a loaded video loaded again");
+run(13000); go(11); S.stage = null; run(15000);
+if (take() !== "") bad.push("loaded after the post was closed");
+console.log(bad.length ? "wrong: " + bad.join("; ") : "ok");
+' "$T/pl-app.js" 2>&1)
+[ "$STG" = ok ] && ok "the wide post's videos (node): a slide's video loads 300 ms after it shows and one a second at most (holding → loads only where it stops, a step every 0.4 s every third), a failed one loads again on its next showing, a loaded one never again, nothing after the post closed" \
+  || bad "site/app.js loadShown" "$STG"
+# A receipt's videos in the one-column post (lazyVideos, site/app.js) run in node with a stand-in IntersectionObserver and
+# clock: they load nothing (preload none) until each has been within 300 px of the paper's view for 250 ms, then their
+# first frame (metadata), each once and one at most every second (also one that comes near only after the last started),
+# those that came near first first; one that leaves sooner, or is gone from the page by then, loads nothing; a new post
+# or closePost (lazyStop) ends the watch and its wait; without IntersectionObserver nothing loads before a tap on play.
+# It is called after every receipt post is drawn, and closePost stops it.
+LZV=$(node -e '
+const s = require("fs").readFileSync(process.argv[1], "utf8");
+const a = s.indexOf("  let lazyStop = () => {};"), b = s.indexOf("\n  }\n", s.indexOf("  function lazyVideos(", a));
+if (a < 0 || b < 0) throw new Error("lazyVideos is missing");
+let now = 0, timers = [], io = null, made = 0;
+const setTimeout = (f, ms) => { timers.push({ f, at: now + ms }); return timers.length; };
+const clearTimeout = (id) => { if (id && timers[id - 1]) timers[id - 1].f = null; };
+const run = (to) => { for (;;) { const t = timers.filter((x) => x.f && x.at <= to).sort((x, y) => x.at - y.at)[0]; if (!t) break; now = t.at; const f = t.f; t.f = null; f(); } now = to; };
+const performance = { now: () => now };
+class IO { constructor(cb, opt) { made++; io = this; this.cb = cb; this.opt = opt; this.seen = new Set(); this.off = false; }
+  observe(v) { this.seen.add(v); } unobserve(v) { this.seen.delete(v); } disconnect() { this.off = true; this.seen.clear(); }
+  fire(list) { this.cb(list.map(([v, on]) => ({ target: v, isIntersecting: on }))); } }
+const vid = () => ({ preload: "none", isConnected: true });
+let vids = [], paper = { p: 1 };
+const overlay = { querySelector: (q) => (q === ".post-paper" ? paper : null), querySelectorAll: (q) => (q === ".post-media video[preload=\"none\"]" ? vids : []) };
+let IntersectionObserver = IO;
+const code = s.slice(a, b + 4);
+const X = new Function("overlay", "setTimeout", "clearTimeout", "IO", "performance", code.replace("typeof IntersectionObserver", "typeof IO").replace("new IntersectionObserver(", "new IO(")
+  + "\nreturn { lazyVideos, stop: () => lazyStop() };")(overlay, setTimeout, clearTimeout, IO, performance);
+const bad = [], pre = () => vids.map((v) => v.preload[0]).join("");
+vids = [vid(), vid(), vid()];
+X.lazyVideos();
+if (made !== 1 || io.opt.root !== paper || io.opt.rootMargin !== "300px 0px" || io.seen.size !== 3) bad.push("the watch: " + JSON.stringify([made, io.opt.rootMargin, io.seen.size]));
+io.fire([[vids[0], true], [vids[1], true]]); run(100);
+if (pre() !== "nnn") bad.push("loaded before 250 ms: " + pre());
+io.fire([[vids[1], false]]); run(1000);
+if (pre() !== "mnn" || io.seen.has(vids[0]) || !io.seen.has(vids[1])) bad.push("near for 250 ms, and one that left: " + pre());
+io.fire([[vids[1], true], [vids[2], true]]); vids[2].isConnected = false; run(3000);
+if (pre() !== "mmn") bad.push("near again, and one gone from the page: " + pre());
+vids = [vid(), vid()];
+X.lazyVideos(); now = 4000; io.fire([[vids[0], true]]); now = 4100; io.fire([[vids[0], false]]); now = 4200; io.fire([[vids[1], true]]);
+run(4300); const early = pre(); run(4500);
+if (early + " " + pre() !== "nn nm") bad.push("a video that came near after the wait began waits its own 250 ms: " + early + " " + pre());
+vids = [vid(), vid(), vid(), vid()];
+X.lazyVideos(); vids.forEach((v, i) => { now = 6000 + 10 * i; io.fire([[v, true]]); });
+const steps = [6260, 7240, 7260, 8260, 9260].map((t) => { run(t); return pre(); });
+if (steps.join() !== "mnnn,mnnn,mmnn,mmmn,mmmm") bad.push("one every second, in the order they came near: " + steps.join());
+vids = [vid(), vid()];
+X.lazyVideos(); now = 10000; io.fire([[vids[0], true]]); run(10260); now = 10300; io.fire([[vids[1], true]]);
+run(11240); const mid = pre(); run(11260);
+if (mid + " " + pre() !== "mn mm") bad.push("one that comes near after the last started waits the rest of its second: " + mid + " " + pre());
+vids = [vid()]; const old = io;
+X.lazyVideos();
+if (!old.off || made !== 5) bad.push("a new post does not end the old watch");
+now = 12000; io.fire([[vids[0], true]]); run(12100); X.stop(); run(16000);
+if (pre() !== "n" || !io.off) bad.push("lazyStop left a wait: " + pre());
+vids = []; X.lazyVideos();
+if (made !== 5) bad.push("a watch with no video");
+vids = [vid()]; IntersectionObserver = undefined;
+const Y = new Function("overlay", "setTimeout", "clearTimeout", "performance", code + "\nreturn { lazyVideos };")(overlay, setTimeout, clearTimeout, performance);
+Y.lazyVideos(); run(30000);
+if (pre() !== "n") bad.push("without IntersectionObserver: " + pre());
+console.log(bad.length ? "wrong: " + bad.join("; ") : "ok");
+' "$T/pl-app.js" 2>&1)
+OPR2=$(echo "$SJ" | sed -n '/^  function openPost(e) {/,/^  }$/p')
+[ "$LZV" = ok ] && echo "$OPR2" | grep -qxF '    lazyVideos(); // the one column'"'"'s videos (a wide post has none in its paper)' \
+  && [ "$(echo "$SJ" | sed -n '/^  function closePost() {/,/^  }$/p' | sed -n 3p)" = '    lazyStop();' ] \
+  && echo "$OPR2" | grep -qF '${misVideo ? videoBox(misVideo, "NOW · MISSION #" + mis.no + " · VIDEO", true) : ""}' \
+  && ok "a receipt's videos in the one-column post load their first frame only after 250 ms near the paper's view, each once and one every second at most, never once gone or after the post closed, and not without IntersectionObserver (node); every receipt post starts the watch, closePost ends it" \
+  || bad "site/app.js lazyVideos" "$LZV"
 # Tab and Shift+Tab stay in every open post and chooser (site/app.js): the handler itself, run in node with four controls
 # (the last one hidden, so it has no client rects) and a stand-in for the focus. Tab on the last shown control goes to the
 # first, Shift+Tab on the first to the last, Tab or Shift+Tab from outside the dialog to the first or last, each with the
@@ -6982,8 +7408,13 @@ print(json.dumps(d))" "$b" "$2" "${4:-}")
   st="$st $(ssub $SPT - "$SB1,$SA1,$SB2")"
   check "POST /api/submit refuses: no photos for spot 2, no after photo for spot 2, no spot_dates, a day in the future, a photo of spot 3 (the mission has 2), a spot photo without a mission" \
     "$st" "400 400 400/spot_dates 400 400 400"
-  st=$(ssub $SPT "$SPM" "$SB1,$SA1,$SB2,$SA2" "$TD"); SPS=$(mj "d.get('id')")
-  check "the cleanup of a mission with 2 spots: the before and after of each, the day of spot 2 -> 200" "$st" 200
+  # Its videos are the whole mission's, never a spot's (up to 30 before and 30 after, as for any cleanup): 3 before, 2 after.
+  SPVS="$(upv $SPT before),$(upv $SPT before),$(upv $SPT before),$(upv $SPT after),$(upv $SPT after)"
+  st=$(ssub $SPT "$SPM" "$SB1,$SA1,$SB2,$SA2,$SPVS" "$TD"); SPS=$(mj "d.get('id')")
+  check "the cleanup of a mission with 2 spots: the before and after of each, the day of spot 2, 3 videos before and 2 after -> 200" "$st" 200
+  check "its videos stay the mission's: 3 before then 2 after in PENDING, and no video row with a spot" \
+    "$(curl -s "$B/api/admin/submissions?status=pending" -H "$A" | jget "[[v['stage'] for v in s['media']['videos']] for s in d['submissions'] if s['id']=='${SPS:-none}']") $(d1 "SELECT COUNT(*) AS n FROM uploads WHERE submission_id = '${SPS:-none}' AND kind = 'video' AND spot IS NOT NULL" | jget "d[0]['results'][0]['n']")" \
+    "[['before', 'before', 'before', 'after', 'after']] 0"
   check "the cleanup keeps the mission's spot 2 with the day it was cleaned" \
     "$(d1 "SELECT spots FROM submissions WHERE id = '${SPS:-none}'" | jget "json.loads(d[0]['results'][0]['spots'])")" \
     "[{'place_name': '$SP2P', 'lat': -0.812, 'lng': 100.301, 'date': '$TODAY'}]"
@@ -7032,6 +7463,47 @@ print(json.dumps(d))" "$b" "$2" "${4:-}")
     check "reject that plain cleanup again" "$(sdec "{\"id\":\"${SPP:-none}\",\"action\":\"reject\",\"review_note\":\"e2e\"}")" rejected
   else
     bad "write a funded mission with spots into the local D1 in $STATE" "$(tail -3 "$T/d1.err")"
+  fi
+
+  # The biggest cleanup there is (MEDIA_MAX in functions/api/submit.js): a mission with 4 spots (SPOTS.max), 4 before
+  # and 4 after photos of each, and as many videos as the limits take (LIMITS.stageVideos before and after, and the rest
+  # of LIMITS.cleanupVideos without a stage; today 30, 30 and none: 92 files). Attaching them is one UPDATE with 3 more
+  # bound values than files, and the local D1 refuses more than 100 in one statement as Cloudflare's does, so limits
+  # that let MEDIA_MAX pass 97 fail here. The resend gets the same id; APPROVE puts it all on the receipt, and UNPUBLISH
+  # deletes every file and the mission.
+  SV=$(sed -n 's/^ *stageVideos: *\([0-9][0-9]*\),.*/\1/p' functions/_lib/util.js); CV=$(sed -n 's/^ *cleanupVideos: *\([0-9][0-9]*\),.*/\1/p' functions/_lib/util.js)
+  NV=$((CV - 2 * SV)); NF=$((32 + CV))
+  check "the limits of the biggest cleanup: 4 spots, $SV videos before and after, $CV in all" \
+    "$(grep -cxF 'export const SPOTS = { max: 4 };' functions/_lib/spots.js) $SV $CV $NF" "1 30 60 92"
+  SPFID=$(newid)
+  if d1 "$(mrow "$SPPID" $SPFID funded $(dplus 1) $(ago 3) $(ago 2) $(ago 1) 10 3)" >/dev/null \
+     && d1 "UPDATE missions SET spots = json_array(json_object('place_name', 'Spot two', 'lat', NULL, 'lng', NULL, 'date', '$(dplus 1)'), json_object('place_name', 'Spot three', 'lat', NULL, 'lng', NULL, 'date', '$(dplus 2)'), json_object('place_name', 'Spot four', 'lat', NULL, 'lng', NULL, 'date', '$(dplus 3)')) WHERE id = '$SPFID'" >/dev/null; then
+    FULL=""
+    for k in 1 2 3 4; do for i in 1 2 3 4; do
+      if [ $k = 1 ]; then FULL="$FULL,$(upk $SPT before),$(upk $SPT after)"; else FULL="$FULL,$(upks $SPT before $k),$(upks $SPT after $k)"; fi
+    done; done
+    for ((i = 0; i < SV; i++)); do FULL="$FULL,$(upv $SPT before),$(upv $SPT after)"; done
+    for ((i = 0; i < NV; i++)); do FULL="$FULL,$(upv $SPT)"; done  # not seq: on macOS seq 1 0 counts 1 and 0
+    FULL=${FULL#,}; TD3="[\"$TODAY\", \"$TODAY\", \"$TODAY\"]"
+    VST="['before'] * $SV + ['after'] * $SV + [None] * $NV"
+    [ "$(echo "$FULL" | tr ',' '\n' | grep -cE '^[0-9a-f]{32}$')" = $NF ] && ok "a crew uploads 32 photos (4 before and 4 after at each of 4 spots) and $CV videos ($SV before, $SV after)" \
+      || bad "the $NF uploads of the biggest cleanup" "$(echo "$FULL" | tr ',' '\n' | grep -cE '^[0-9a-f]{32}$') keys"
+    st=$(ssub $SPT "$SPFID" "$FULL" "$TD3"); SPF=$(mj "d.get('id')")
+    st="$st $(ssub $SPT "$SPFID" "$FULL" "$TD3")/$(mj "(d.get('id') == '${SPF:-none}', d.get('repeated'))")"
+    check "the cleanup of a mission with 4 spots with all $NF files -> 200, and its resend -> 200 with the same id" "$st" "200 200/(True, True)"
+    check "all $NF files are its own now" "$(d1 "SELECT COUNT(*) AS n FROM uploads WHERE submission_id = '${SPF:-none}'" | jget "d[0]['results'][0]['n']")" $NF
+    check "PENDING: 16 before and 16 after photos at spots 1 to 4, the $SV videos before then the $SV after, its 4 spots" \
+      "$(curl -s "$B/api/admin/submissions?status=pending" -H "$A" | jget "[(len(s['media']['before']), len(s['media']['after']), sorted(set(p['spot'] for p in s['media']['before'] + s['media']['after'])), [v['stage'] for v in s['media']['videos']] == $VST, len(s['spots'])) for s in d['submissions'] if s['id']=='${SPF:-none}']")" \
+      "[(16, 16, [1, 2, 3, 4], True, 4)]"
+    check "approve the biggest cleanup" "$(sdec "{\"id\":\"${SPF:-none}\",\"action\":\"approve\",\"paid_eur\":175}")" approved
+    check "GET /api/events: its receipt with 4 spots, 16 and 16 photos at spots 1 to 4, and $CV videos, $SV before then $SV after" \
+      "$(curl -s $B/api/events | jget "[(len(e['spots']), len(e['media']['before']), len(e['media']['after']), sorted(set(e['media']['before_spots'] + e['media']['after_spots'])), len(e['media']['videos']), e['media']['video_stages'] == $VST) for e in d if e['id']=='${SPF:-none}']")" \
+      "[(4, 16, 16, [1, 2, 3, 4], $CV, True)]"
+    check "UNPUBLISH it: all $NF files deleted, the mission removed, the receipt gone" \
+      "$(curl -s -X POST $B/api/admin/decide -H "$A" -H 'content-type: application/json' -d "{\"id\":\"${SPF:-none}\",\"action\":\"reject\",\"review_note\":\"e2e\"}" | jget "(d['status'], d['deleted_media'], d.get('mission', {}).get('status'))") $(curl -s $B/api/events | grep -c "${SPF:-none}") $(code $B/media/${FULL##*,})" \
+      "('rejected', $NF, 'removed') 0 404"
+  else
+    bad "write a funded mission with 4 spots into the local D1 in $STATE" "$(tail -3 "$T/d1.err")"
   fi
 
   # Deploy order: before migration 0008 every page and API works, and every mission has one spot. The three columns

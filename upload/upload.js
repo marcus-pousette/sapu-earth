@@ -7,8 +7,9 @@
    funded mission's card with what the mission already says, or without a mission. The two forms share the
    upload pipeline. Each screen is a history entry of its own, so the phone's back button goes back to the
    crew page (docs/upload-flow.md, On the pages).
-   Videos: the cleanup has one field for a video before the cleanup and one for a video after it (sent
-   with their stage), the mission one for a video of the spot now. One clip per field. */
+   Videos: the cleanup has one field for its videos before the cleanup and one for its videos after it, up to 30
+   clips each (sent with their stage, listed one line per clip), the mission one for a video of the spot now (one
+   clip). */
 (function () {
   "use strict";
   const $ = (s, el = document) => el.querySelector(s);
@@ -117,10 +118,11 @@
       before_h: "BEFORE THE CLEANUP", before_hint: "1 to 4 photos before you start, from where you can see the whole spot.",
       after_h: "AFTER THE CLEANUP", after_hint: "1 to 4 photos at the end, from the same spots and the same angles as the before photos.",
       before: "Photos before the cleanup", after: "Photos after the cleanup",
-      add_photos: "+ Add photos", add_video: "+ Add video",
-      video_before: "Video before the cleanup (optional)",
-      video_after: "Video after the cleanup (optional)",
-      videos_hint: "One video before and one after the cleanup. Short vertical clips of 15 to 30 seconds work best and send faster. Limit: 90 seconds and 95 MB each.",
+      add_photos: "+ Add photos", add_video: "+ Add video", add_videos: "+ Add videos",
+      video_before: "Videos before the cleanup (optional)",
+      video_after: "Videos after the cleanup (optional)",
+      videos_hint: "Up to 30 videos before the cleanup and 30 after it. Short vertical clips of 15 to 30 seconds work best and send faster. Limit: 90 seconds and 95 MB each.",
+      watch_video: "Watch video {n}",
       date: "Cleanup date", place: "Place name", place_ph: "Canggu river mouth",
       location: "Location", use_location: "Use my location now", locating: "Finding your location…",
       geo_hint: "Only tap this while you are at the cleanup spot.",
@@ -265,7 +267,9 @@
       e_fix: "Some fields still need fixing. See the fields marked in orange.",
       e_decode: "This photo could not be opened on this phone. Please choose a JPG photo. If your camera saves photos as HEIF or HEIC, turn that off in the camera settings and take the photo again.",
       e_photo_big: "This photo file is too big. Please choose another photo.",
-      e_max_photos: "At most 4 photos here.", e_max_videos: "Only one video here. Remove it first to choose another.",
+      e_max_photos: "At most 4 photos here.", e_max_videos: "At most 30 videos here.",
+      e_max_videos_1: "Only one video here. Remove it first to choose another.",
+      e_video_twice: "This video is already added.",
       e_video_type: "This video type is not supported. Please use MP4, MOV or WebM.",
       e_video_big: "This video is larger than 95 MB. Please trim it to about 30 seconds, or record again at 720p.",
       e_video_long: "This video is too long. Please keep it under 90 seconds.",
@@ -279,7 +283,7 @@
       waiting_online: "You are offline. Waiting for the connection to come back…",
       sending: "Sending the details…",
       e_upload: "A file could not be uploaded. Your form is saved. Tap TRY AGAIN.",
-      e_upload_video: "The video could not be uploaded. Your form is saved. Tap TRY AGAIN, or remove the video to send without it. Videos are optional.",
+      e_upload_video: "A video could not be uploaded. Your form is saved. Tap TRY AGAIN, or remove the video marked in orange to send without it. Videos are optional.",
       e_upload_fatal: "One file could not be sent. Remove the file marked in orange, then tap TRY AGAIN.",
       e_limit: "You sent many files today. Please try again tomorrow. Your form is saved.",
       e_media: "Some files need to be sent again. Your form is saved. Tap TRY AGAIN.",
@@ -395,10 +399,11 @@
       before_h: "SEBELUM DIBERSIHKAN", before_hint: "1 sampai 4 foto sebelum mulai, dari tempat yang memperlihatkan seluruh lokasinya.",
       after_h: "SESUDAH DIBERSIHKAN", after_hint: "1 sampai 4 foto di akhir, dari tempat dan sudut yang sama seperti foto sebelum dibersihkan.",
       before: "Foto sebelum dibersihkan", after: "Foto sesudah dibersihkan",
-      add_photos: "+ Tambah foto", add_video: "+ Tambah video",
+      add_photos: "+ Tambah foto", add_video: "+ Tambah video", add_videos: "+ Tambah video",
       video_before: "Video sebelum dibersihkan (tidak wajib)",
       video_after: "Video sesudah dibersihkan (tidak wajib)",
-      videos_hint: "Satu video sebelum dan satu sesudah dibersihkan. Klip vertikal pendek 15 sampai 30 detik paling bagus dan lebih cepat terkirim. Batasnya 90 detik dan 95 MB per video.",
+      videos_hint: "Maksimal 30 video sebelum dibersihkan dan 30 video sesudah dibersihkan. Klip vertikal pendek 15 sampai 30 detik paling bagus dan lebih cepat terkirim. Batasnya 90 detik dan 95 MB per video.",
+      watch_video: "Tonton video {n}",
       date: "Tanggal aksi bersih", place: "Nama tempat", place_ph: "Muara sungai Canggu",
       location: "Lokasi", use_location: "Pakai lokasi saya sekarang", locating: "Sedang mencari lokasi kamu…",
       geo_hint: "Tekan tombol ini hanya kalau kamu sedang berada di lokasi aksi bersih.",
@@ -529,7 +534,9 @@
       e_fix: "Masih ada isian yang perlu diperbaiki. Lihat kolom yang ditandai oranye.",
       e_decode: "Foto ini tidak bisa dibuka di HP ini. Pilih foto berformat JPG. Kalau kamera kamu menyimpan foto sebagai HEIF atau HEIC, matikan pengaturan itu di kamera, lalu foto ulang.",
       e_photo_big: "File foto ini terlalu besar. Coba pilih foto lain.",
-      e_max_photos: "Maksimal 4 foto di sini.", e_max_videos: "Hanya bisa satu video di sini. Hapus dulu video yang sudah ada kalau mau memilih yang lain.",
+      e_max_photos: "Maksimal 4 foto di sini.", e_max_videos: "Maksimal 30 video di sini.",
+      e_max_videos_1: "Hanya bisa satu video di sini. Hapus dulu video yang sudah ada kalau mau memilih yang lain.",
+      e_video_twice: "Video ini sudah ditambahkan.",
       e_video_type: "Format video ini tidak didukung. Pakai MP4, MOV, atau WebM.",
       e_video_big: "Video ini lebih dari 95 MB. Potong jadi sekitar 30 detik, atau rekam ulang dengan resolusi 720p.",
       e_video_long: "Video ini terlalu panjang. Maksimal 90 detik.",
@@ -543,7 +550,7 @@
       waiting_online: "Kamu sedang offline. Menunggu koneksi tersambung lagi…",
       sending: "Sedang mengirim data…",
       e_upload: "Ada file yang gagal terunggah. Isian kamu tetap tersimpan. Tekan COBA LAGI.",
-      e_upload_video: "Videonya gagal terunggah. Isian kamu tetap tersimpan. Tekan COBA LAGI, atau hapus videonya supaya terkirim tanpa video. Video tidak wajib.",
+      e_upload_video: "Ada video yang gagal terunggah. Isian kamu tetap tersimpan. Tekan COBA LAGI, atau hapus video yang ditandai oranye supaya laporannya terkirim tanpa video itu. Video tidak wajib.",
       e_upload_fatal: "Ada satu file yang tidak bisa dikirim. Hapus file yang ditandai oranye, lalu tekan COBA LAGI.",
       e_limit: "Hari ini kamu sudah mengirim banyak file. Coba lagi besok, ya. Isian kamu tetap tersimpan.",
       e_media: "Beberapa file perlu dikirim ulang. Isian kamu tetap tersimpan. Tekan COBA LAGI.",
@@ -636,10 +643,19 @@
     return own.length === 1 ? own[0] : "";
   }
   const VIDEO_EXT = { mp4: "video/mp4", m4v: "video/mp4", mov: "video/quicktime", qt: "video/quicktime", webm: "video/webm" };
-  // photos and videos: per field. A cleanup takes at most 2 videos, one in each of its two video fields.
-  const LIMIT = { photos: 4, videos: 1, videoBytes: 95 * 1024 * 1024, videoSecs: 95, photoInputBytes: 60 * 1024 * 1024 };
+  // photos and videos: per field. A cleanup takes up to 30 videos before and 30 after (60 in all, the server's
+  // LIMITS.stageVideos and LIMITS.cleanupVideos since 2026-11-19, 1 and 2 before); the mission's video of the spot now
+  // stays 1 (the server's MISSION_LIMITS.videos).
+  const LIMIT = { photos: 4, videos: 30, missionVideos: 1, videoBytes: 95 * 1024 * 1024, videoSecs: 95, photoInputBytes: 60 * 1024 * 1024 };
   // The video fields: before and after the cleanup, and the mission's video of the spot now.
   const VIDEO_KINDS = ["video_before", "video_after", "now_video"];
+  // The cleanup's two video fields list their clips one line each (addPreview), not as pictures.
+  const LIST_KINDS = ["video_before", "video_after"];
+  // A picked clip's name, size and last change, the same for a second pick of that file on the same phone. A clip already
+  // in either of those two fields is turned away (addVideo).
+  const clipSig = (file) => `${file.name}|${file.size}|${file.lastModified}`;
+  // The most files a field takes.
+  const maxOf = (kind) => (kind === "now_video" ? LIMIT.missionVideos : VIDEO_KINDS.includes(kind) ? LIMIT.videos : LIMIT.photos);
   const STALL_MS = 60000; // abort and retry an upload when no progress arrives for this long
   // The server takes a planned day up to 120 days after its own (UTC) date. One day less is safe in every time zone.
   const MISSION_AHEAD_DAYS = 119;
@@ -842,12 +858,13 @@
   const form = $("#form");
   const mform = $("#mform");
   // "now" are the mission's photos of the spot. They go up as before photos (docs/missions.md), its video
-  // (now_video) as a video. The cleanup's two videos go up as videos with their stage (putFile).
+  // (now_video) as a video. The cleanup's videos (up to 30 in each of its two video fields) go up as videos with their
+  // stage (putFile).
   const files = { before: [], after: [], video_before: [], video_after: [], now: [], now_video: [] };
   // A mission with several spots (docs/missions.md, Spots): the cleanup asks the before and after photos of spots 2 to
   // SPOT_MAX in fields of their own, before_2, after_2, ... (spot 1 keeps before and after), and the day of each in
-  // spot_date_2, ... (spot 1's is cleanup_date). The videos stay two, for the whole mission. A spot's photos go up with
-  // &spot= (putFile).
+  // spot_date_2, ... (spot 1's is cleanup_date). The videos stay up to 30 before and 30 after, for the whole mission,
+  // never per spot. A spot's photos go up with &spot= (putFile).
   const SPOT_KINDS = [];
   for (let k = 2; k <= SPOT_MAX; k++) SPOT_KINDS.push(`before_${k}`, `after_${k}`);
   for (const k of SPOT_KINDS) files[k] = [];
@@ -856,7 +873,9 @@
   const kindSpot = (kind) => { const x = /^(before|after)_([2-9])$/.exec(kind); return x ? [x[1], Number(x[2])] : [kind, 1]; };
   // The cleanup's files: every field's, also the fields of spots its mission does not have (what was picked there for
   // another mission stays on the phone until this cleanup is sent or deleted). sendItems: only those that go with it.
-  const allItems = () => [...files.before, ...files.after, ...files.video_before, ...files.video_after, ...SPOT_KINDS.flatMap((k) => files[k])];
+  // This is the order they go up in: every photo first, then the videos (up to 60, which can take an hour on slow data),
+  // before then after, each field's in its order, which is the order the receipt numbers them in (BEFORE · VIDEO 2/30).
+  const allItems = () => [...files.before, ...files.after, ...SPOT_KINDS.flatMap((k) => files[k]), ...files.video_before, ...files.video_after];
   const spotCount = () => spotsOf(pickedMission()).length || 1;
   const sendItems = () => allItems().filter((it) => kindSpot(it.kind)[1] <= spotCount());
   // The fields of spots 2 to SPOT_MAX, made once from spot 1's (its photos before and after, its day) and hidden until
@@ -981,6 +1000,7 @@
     $$("[data-i18n-aria]").forEach((el) => el.setAttribute("aria-label", t(el.dataset.i18nAria)));
     $$(".lang button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.lang === lang)));
     $$(".thumb .rm").forEach((b) => b.setAttribute("aria-label", t("remove")));
+    LIST_KINDS.forEach(rowLabels); // the clip lines: "Watch video 2", and the size as this language writes it (0,4 MB)
     if (partner) setWho(`${t("uploading_as")} ${partner.name}`);
     else if (whoKey) setWhoKey(whoKey);
     fillCountries();
@@ -1130,6 +1150,9 @@
       u.form.hidden = view !== g || doneShown[g];
       $(u.done).hidden = view !== g || !doneShown[g];
     }
+    // A clip being watched in the cleanup's lists (peek) stops with its form: on the crew page, POST A MISSION or
+    // THANK YOU it would go on playing, with its sound, where nobody sees it.
+    if (form.hidden) closePeek();
     $("#viewBar").hidden = view === "home" || !!doneShown[view];
     renderTitle();
     if (view === "home") renderHome();
@@ -1292,7 +1315,7 @@
     const safe = (p, dflt) => p.catch(() => dflt);
     return {
       put: (it) => safe(run("readwrite", (st) => st.put({
-        id: it.id, tag: tokenTag, kind: it.kind, type: it.type, blob: it.blob, key: it.key, dur: it.dur || null,
+        id: it.id, tag: tokenTag, kind: it.kind, type: it.type, blob: it.blob, key: it.key, dur: it.dur || null, sig: it.sig || null,
       }))),
       del: (id) => safe(run("readwrite", (st) => st.delete(id))),
       all: () => safe(run("readonly", (st) => st.getAll()), []),
@@ -1307,10 +1330,11 @@
     const n = { cleanup: 0, mission: 0 };
     for (const r of recs.sort((a, b) => a.id - b.id)) {
       if (r.tag !== tokenTag || !r.blob || !files[r.kind]) { idb.del(r.id); continue; }
-      const max = VIDEO_KINDS.includes(r.kind) ? LIMIT.videos : LIMIT.photos;
-      if (files[r.kind].length >= max) continue;
+      if (files[r.kind].length >= maxOf(r.kind)) continue;
       seq = Math.max(seq, r.id);
-      const item = { id: r.id, kind: r.kind, type: r.type, blob: r.blob, key: r.key || null, dur: r.dur, progress: r.key ? 1 : 0 };
+      // sig: a clip's name, size and last change (clipSig), so picking it again is turned away; none on a photo, or on a
+      // clip kept before 2026-11-19.
+      const item = { id: r.id, kind: r.kind, type: r.type, blob: r.blob, key: r.key || null, dur: r.dur, progress: r.key ? 1 : 0, sig: r.sig || null };
       files[r.kind].push(item);
       showItem(item);
       if (item.key) { item.el.classList.add("done"); setProgress(item, 1); }
@@ -1471,6 +1495,9 @@
     refusedKinds[formOfKind(kind)].push(kind);
     fieldMsg(kind, key, vars, around);
   }
+  // Picked files of each form done so far, added or turned away (addPicked): SEND's wait (filesReady) starts its minute
+  // again after each, so a pick of 30 clips is waited for to its end.
+  const prepared = { cleanup: 0, mission: 0 };
 
   // The pickers of the two forms. The logo's picker (#logoInput) has no data-kind and is no form's: it has its own.
   $$('input[type="file"][data-kind]').forEach((input) => input.addEventListener("change", () => {
@@ -1501,6 +1528,7 @@
       if (sends[g] !== gen) break;
       if (VIDEO_KINDS.includes(kind)) await addVideo(kind, file, gen);
       else await addPhoto(kind, file, gen);
+      prepared[g]++;
     }
     syncDrops();
     if (sends[g] === gen) saveDraftOf(g);
@@ -1527,10 +1555,16 @@
     }
   }
 
-  // kind: the video field (VIDEO_KINDS), one clip each.
+  // kind: the video field (VIDEO_KINDS): up to 30 clips in each of the cleanup's two, 1 in the mission's (maxOf).
+  // A clip already in either of the cleanup's two fields (picked again one by one, or again after the reload note while
+  // it came back) is turned away: it would go up twice and show twice on the receipt, and its line looks like any other.
   async function addVideo(kind, file, gen) {
     const g = formOfKind(kind);
-    if (files[kind].length >= LIMIT.videos) { refuse(kind, "e_max_videos"); return; }
+    const full = maxOf(kind) === 1 ? "e_max_videos_1" : "e_max_videos";
+    const sig = LIST_KINDS.includes(kind) ? clipSig(file) : null;
+    const twice = () => !!sig && LIST_KINDS.some((k) => files[k].some((it) => it.sig === sig));
+    if (files[kind].length >= maxOf(kind)) { refuse(kind, full); return; }
+    if (twice()) { refuse(kind, "e_video_twice"); return; }
     const type = videoType(file);
     if (!type) { refuse(kind, "e_video_type"); return; }
     if (file.size > LIMIT.videoBytes) { refuse(kind, "e_video_big"); return; }
@@ -1544,15 +1578,31 @@
       : window.SapuVideoClean ? await window.SapuVideoClean.stripVideoLocation(file) : { ok: false };
     if (sends[g] !== gen) return; // its form was sent while this video was being prepared
     if (clean.ok === false) { refuse(kind, "e_video_check"); return; }
-    // Another clip picked in this field while this one was being prepared got in first: still one per field.
-    if (files[kind].length >= LIMIT.videos) { refuse(kind, "e_max_videos"); return; }
-    const item = { id: ++seq, kind, type, blob: clean.blob, key: null, progress: 0, dur };
+    // Other clips picked in this field while this one was being prepared got in first: still at most maxOf(kind) here,
+    // and the same clip, picked twice at once, only once.
+    if (files[kind].length >= maxOf(kind)) { refuse(kind, full); return; }
+    if (twice()) { refuse(kind, "e_video_twice"); return; }
+    const item = { id: ++seq, kind, type, blob: clean.blob, key: null, progress: 0, dur, sig };
     files[kind].push(item);
     showItem(item);
     idb.put(item);
   }
 
+  // A clip of the cleanup's video fields is one line in its list (LIST_KINDS): its number in the field, which is the
+  // number the receipt gives it (BEFORE · VIDEO 2/30), its length and its size, with ▶ to watch it. Only the clip being
+  // watched has a player and a link to its file (peek), so 60 clips keep no video open on the phone. The mission's one
+  // clip, and every photo, show as a picture.
   function addPreview(item) {
+    if (LIST_KINDS.includes(item.kind)) {
+      item.el.classList.add("vrow");
+      const play = document.createElement("button");
+      play.type = "button"; play.className = "vlabel";
+      play.setAttribute("aria-expanded", "false");
+      play.addEventListener("click", () => togglePeek(item, play));
+      item.el.append(play);
+      rowLabels(item.kind);
+      return;
+    }
     item.url = URL.createObjectURL(item.blob);
     if (VIDEO_KINDS.includes(item.kind)) {
       const v = document.createElement("video");
@@ -1571,6 +1621,44 @@
     }
   }
   function showItem(item) { renderThumb(item); addPreview(item); }
+  // The lines of a clip list, numbered in the field's order: "▶ 2 · 23 s · 41 MB", read out as "Watch video 2, 23 s, 41 MB".
+  // Short enough for one line on a 320 px phone, with ✓ and ✕ beside it (site/forms.css, .vrow).
+  function rowLabels(kind) {
+    files[kind].forEach((it, i) => {
+      const b = it.el && it.el.querySelector(".vlabel");
+      if (!b) return;
+      const info = [it.dur ? `${Math.round(it.dur)} s` : "", `${mb(it.blob.size)} MB`].filter(Boolean);
+      b.textContent = `▶ ${i + 1} · ${info.join(" · ")}`;
+      b.setAttribute("aria-label", `${t("watch_video", { n: i + 1 })}, ${info.join(", ")}`);
+    });
+  }
+  // The clip being watched, { item, box, url, btn }, or null. ▶ on its line again, or on another line, closes it, and
+  // so does removing it: the player lets go of the file and its link is revoked.
+  let peek = null;
+  function closePeek() {
+    if (!peek) return;
+    const v = peek.box.querySelector("video");
+    v.pause(); v.removeAttribute("src"); v.load();
+    URL.revokeObjectURL(peek.url);
+    peek.box.remove();
+    peek.btn.setAttribute("aria-expanded", "false");
+    peek = null;
+  }
+  function togglePeek(item, btn) {
+    const again = peek && peek.item === item;
+    closePeek();
+    if (again || !item.blob) return;
+    const box = document.createElement("div");
+    box.className = "vpeek";
+    const v = document.createElement("video");
+    v.controls = true; v.playsInline = true; v.preload = "metadata";
+    const url = URL.createObjectURL(item.blob);
+    v.src = url;
+    box.append(v);
+    item.el.after(box);
+    btn.setAttribute("aria-expanded", "true");
+    peek = { item, box, url, btn };
+  }
 
   function renderThumb(item) {
     const el = document.createElement("div");
@@ -1588,15 +1676,17 @@
     return el;
   }
   function removeItem(item) {
+    if (peek && peek.item === item) closePeek();
     files[item.kind] = files[item.kind].filter((x) => x !== item);
     if (item.url) URL.revokeObjectURL(item.url);
     if (item.el) item.el.remove();
     idb.del(item.id);
   }
+  // A full field hides its drop zone, and a clip list numbers its lines again (one was removed).
   function syncDrops() {
     for (const k of Object.keys(files)) {
-      const max = VIDEO_KINDS.includes(k) ? LIMIT.videos : LIMIT.photos;
-      $(`#f-${k} .drop`).classList.toggle("full", files[k].length >= max);
+      $(`#f-${k} .drop`).classList.toggle("full", files[k].length >= maxOf(k));
+      if (LIST_KINDS.includes(k)) rowLabels(k);
     }
   }
   function setProgress(item, frac) {
@@ -1897,13 +1987,14 @@
   // go on with the same tap. Nobody has to guess that a second tap was needed. Returns false when a file of this
   // form was refused meanwhile (too big, too long, unreadable); the handler then points at that field. Only time
   // the page is on screen counts toward the minute after which a conversion that never ends stops the wait; such
-  // a batch is not waited for again, and its busy thumbnail holds the send until it is removed.
+  // a batch is not waited for again, and its busy thumbnail holds the send until it is removed. The minute starts
+  // again whenever one more file of the form is done (prepared), so a pick of 30 clips is waited for to its end.
   async function filesReady(g) {
     const pending = () => [...working].filter(([job, w]) => w.g === g && !stale.has(job)).map(([job]) => job);
     if (!pending().length) return [];
     // A refusal counts from the start of every pick still being prepared, also when it came before the tap.
     const seen = Math.min(refusedKinds[g].length, ...pending().map((job) => working.get(job).seen));
-    let left = 60000;
+    let left = 60000, ready = prepared[g];
     waitingFiles = true;
     status("preparing_files");
     try {
@@ -1911,6 +2002,7 @@
         const t0 = performance.now(); // not Date.now(): a clock set back must not stretch the wait
         await Promise.race([Promise.all(pending().map((p) => p.catch(() => {}))), sleep(Math.min(left, 1000))]);
         if (document.visibilityState === "visible") left -= Math.min(performance.now() - t0, 1000);
+        if (prepared[g] !== ready) { ready = prepared[g]; left = 60000; }
       }
       pending().forEach((job) => stale.add(job));
     } finally {
@@ -1922,7 +2014,9 @@
   }
   // Files were refused while SEND waited for them: mark their fields and go to the first, the way fields to fix
   // are shown, so the crew sees why nothing was sent. Each field keeps its own note. A full field hides its drop
-  // zone, so its thumbnails carry the mark then.
+  // zone, so its thumbnails carry the mark then. A field taller than the screen (a video field with many clips: its
+  // note stands above its list, under + Add videos) is shown from its top, so its label and its note are in view;
+  // centred, 30 clips put both off the screen.
   function showRefused(g, kinds) {
     const fields = [...new Set(kinds)].map((k) => document.getElementById(`f-${k}`)).filter(Boolean);
     for (const f of fields) {
@@ -1931,7 +2025,7 @@
     }
     setMsg($(UI[g].err), "e_fix");
     fields.sort((a, b) => (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1));
-    if (fields[0]) fields[0].scrollIntoView({ behavior: "smooth", block: "center" });
+    if (fields[0]) fields[0].scrollIntoView({ behavior: "smooth", block: fields[0].offsetHeight > innerHeight ? "start" : "center" });
   }
   const mb = (bytes) => (bytes / 1048576).toLocaleString(lang === "id" ? "id-ID" : "en-US", { maximumFractionDigits: 1, minimumFractionDigits: bytes < 10485760 ? 1 : 0 });
 
@@ -2131,6 +2225,24 @@
     $$('input[type="file"]').forEach((i) => (i.disabled = on || (i.id === "logoInput" && !!logoPhase)));
     $(".cl-pick").classList.toggle("off", $("#logoInput").disabled);
   }
+  // The screen stays on while a send runs, where the browser can (the Wake Lock API: Chrome on Android, Safari since
+  // iOS 16.4; not in every app's own browser): a cleanup with 60 videos can take an hour on slow data, and a phone that
+  // locks its screen stops the upload. The browser lets go of the lock while the page is hidden, so it is asked for again
+  // when the page shows during the send. keep_open still asks for the same.
+  let wake = null, awake = false, asking = false;
+  function keepAwake(on) {
+    awake = on;
+    if (!on) { if (wake) wake.release().catch(() => {}); wake = null; return; }
+    if (wake || asking || !navigator.wakeLock || document.visibilityState !== "visible") return;
+    asking = true;
+    navigator.wakeLock.request("screen").then((w) => {
+      asking = false;
+      if (!awake) { w.release().catch(() => {}); return; } // the send ended meanwhile
+      wake = w;
+      w.addEventListener("release", () => { if (wake === w) wake = null; });
+    }, () => { asking = false; /* refused (battery saver, a hidden page): the page goes on without it */ });
+  }
+  document.addEventListener("visibilitychange", () => { if (awake && document.visibilityState === "visible") keepAwake(true); });
   // Uploads the form's files that are not on the server yet, one at a time with retries, then posts
   // the form with post(keys). Returns the answer, or null after showing what went wrong.
   async function runSend(g, post) {
@@ -2139,6 +2251,7 @@
     sending = g;
     busy = true;
     lockForms(true);
+    keepAwake(true);
     $(u.progress).hidden = false;
     $(u.keep).hidden = false;
     try {
@@ -2175,10 +2288,16 @@
       else if (e instanceof Fatal) setMsg($(u.err), e.msgKey, e.vars);
       else setMsg($(u.err), "e_submit");
       setMsg($(u.send), "try_again");
+      // A message that asks to remove the file marked in orange brings that file into view, as fields to fix are (the
+      // message stays above SEND): with 30 clips in each video field it can be thousands of pixels above SEND. Only the
+      // file that just failed carries the mark (uploadWithRetry clears it at every try).
+      const marked = e instanceof Fatal && (e.msgKey === "e_upload_fatal" || e.msgKey === "e_upload_video") && all.find((x) => x.el && x.el.classList.contains("failed"));
+      if (marked) marked.el.scrollIntoView({ behavior: "smooth", block: "center" });
       return null;
     } finally {
       busy = false;
       lockForms(false);
+      keepAwake(false);
       $(u.keep).hidden = true;
     }
   }

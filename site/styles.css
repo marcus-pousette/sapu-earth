@@ -625,7 +625,11 @@ body.post-open { overflow: hidden; }
 .post-clips { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 14px 0; }
 .post-clips a { font-size: 11px; font-weight: 700; color: var(--hivis); }
 .post-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; padding: 8px 14px 2px; }
-.post-media .pm-video video { width: 100%; max-height: 520px; display: block; background: #000; }
+/* A post's player has a fixed height, never the clip's own shape: a receipt's videos load their size only when they come
+   near the view (lazyVideos in site/app.js), and WebKit (every iPhone browser) has no scroll anchoring, so a player that
+   grew above the reader pushed the receipt down the screen by up to 343 px. A phone's upright clip fills it on a screen
+   330 px wide or more; a wide clip gets black bars above and below (the video's own object-fit: contain). */
+.post-media .pm-video video { width: 100%; height: 520px; display: block; background: #000; }
 /* a video's tag is a caption above the player, so it never covers the player's controls (site/app.js videoBox) */
 .post-media .pm-video .tag { position: static; display: inline-block; margin: 8px 10px 6px; }
 .post-notes { font-size: 12px; line-height: 1.45; padding: 8px 14px 0; overflow-wrap: anywhere; white-space: pre-wrap; }

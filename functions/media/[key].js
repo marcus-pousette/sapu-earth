@@ -11,7 +11,8 @@ import { withLogos } from "../_lib/logos.js";
 const notFound = () => new Response("Not found", { status: 404, headers: { "content-type": "text/plain" } });
 
 // Downloads. ?dl=1 saves the file as sapu-earth-<first 8 of the key>.<ext>, as it always has. ?dl=<name> saves
-// it as sapu-earth-<name>.<ext>, so a file saved from /admin/ says what it is (sapu-earth-<receipt id>-video-before.mp4).
+// it as sapu-earth-<name>.<ext>, so a file saved from /admin/ says what it is (sapu-earth-<receipt id>-video-before.mp4,
+// or -video-before-2.mp4 when the cleanup has several videos before).
 // dl is not covered by the signature of an /admin/ link (that is over "<key>.<exp>"), so whoever holds a link can
 // change it. That is fine only because dl changes nothing but the file name, and a name is used only when it
 // matches DL_NAME_RE (lowercase letters, digits and dashes, at most 64), between the fixed "sapu-earth-" and an

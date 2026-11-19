@@ -106,6 +106,18 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
 .thumb.done::after { content: "✓"; position: absolute; bottom: 10px; right: 6px; font: 700 16px var(--font-mono); color: #fff; text-shadow: 0 0 3px #000; }
 .thumb.failed { border-color: var(--hivis); }
 .thumb.busy::before { content: "…"; position: absolute; inset: 0; display: grid; place-items: center; font: 700 22px var(--font-mono); }
+/* The upload page's two cleanup video fields take up to 30 clips each (upload.js LIST_KINDS): one line per clip, its
+   number, length and size, with ✕ and its upload bar but no picture, so a 320 px phone lists them all and keeps no
+   player open. ▶ on a line plays that clip under it (.vpeek), one clip at a time. */
+.thumbs.vlist { grid-template-columns: 1fr; gap: 6px; }
+.thumb.vrow { aspect-ratio: auto; }
+.thumb.vrow .vlabel {
+  position: static; display: block; width: 100%; min-height: 44px; padding: 7px 60px 15px 10px; text-align: left;
+  background: none; color: var(--ink); border: 0; font: 700 12.5px var(--font-mono); cursor: pointer;
+}
+.thumb.vrow .vlabel:focus-visible { outline: 3px solid var(--hivis); outline-offset: -3px; }
+.thumb.vrow.done::after { bottom: auto; top: 7px; right: 42px; color: #1a7a3a; text-shadow: none; }
+.vpeek video { width: 100%; max-height: 420px; display: block; background: #000; border: 2px solid var(--ink); }
 
 .msg { font-family: var(--font-mono); font-size: 12.5px; font-weight: 700; margin-top: 8px; line-height: 1.4; }
 .msg:empty { display: none; }

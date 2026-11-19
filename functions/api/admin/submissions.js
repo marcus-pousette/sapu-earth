@@ -2,7 +2,7 @@
 // Media URLs are short-lived signed links, so pending files are viewable here but not public.
 // media: {before, after: [{key, url, content_type}], videos: [{key, url, content_type, stage}]}, the videos
 // in the order before, after, then those without a stage (stage null: sent before the two video fields,
-// or before migration 0005).
+// or before migration 0005), up to 30 of each stage, each stage in upload order (/admin/ numbers them).
 // A cleanup sent for a mission carries mission: {id, no, status, removed_why, place_name, plan_date, task,
 // currency, price_local, crew_local, crew_size, funded_eur, advance_eur, lat, lng, now: [{key, url}], now_video: {key,
 // url} or null} (crew_size: the crew the price was added up for, so Asked can say the pay for each person), so

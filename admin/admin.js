@@ -65,6 +65,21 @@
   // A video player that loads only when played: a list of many would otherwise fetch about 3 ranges each at
   // once and pass the rate limit rule (100 requests in 10 s), which then blocks the admin for 10 s.
   const player = (u) => `<video controls playsinline preload="none" src="${esc(u)}"></video>`;
+  // A cleanup's videos (media.videos, in the server's order: before, after, then those without a stage, each in upload
+  // order), each with its title and its download name: VIDEO BEFORE and video-before for the one video before the
+  // cleanup, numbered when there are several (VIDEO BEFORE 1/30, video-before-1), so no two files save under one name;
+  // the same for VIDEO AFTER; and VIDEO for one sent without a stage (before the two video fields, or before migration
+  // 0005), whose download names are always numbered (video-1). Since 2026-11-19 a cleanup takes up to 30 of each stage.
+  function videoRows(videos) {
+    const list = Array.isArray(videos) ? videos : [];
+    const stage = (v) => (v && (v.stage === "before" || v.stage === "after") ? v.stage : null);
+    const all = list.map(stage), seen = { before: 0, after: 0, none: 0 };
+    return list.map((v, i) => {
+      const st = all[i], k = st || "none", n = all.filter((x) => x === st).length, no = ++seen[k];
+      const title = st === "before" ? "VIDEO BEFORE" : st === "after" ? "VIDEO AFTER" : "VIDEO";
+      return { v, title: n > 1 ? `${title} ${no}/${n}` : title, dl: st && n === 1 ? `video-${st}` : `video${st ? "-" + st : ""}-${no}` };
+    });
+  }
 
   let token = store.get("sapu-admin-token") || "";
   let tab = "pending";
@@ -241,15 +256,17 @@
   };
   const showsLine = (social) => (social ? `The receipt shows COMMENTS ON ${social.site === "tiktok" ? "TIKTOK" : "INSTAGRAM"}, to ${social.by === "sapu" ? "your" : "the crew's"} post.` : "The receipt shows no comments link.");
   // mis: the cleanup's mission, if any. Its "now" photos go in front of the before photos, and its video of
-  // the spot in front of the cleanup's videos. Each video has its own title: VIDEO BEFORE and VIDEO AFTER, or
-  // VIDEO for one sent without a stage (before the two video fields, or before migration 0005).
+  // the spot in front of the cleanup's videos. Each video has its own title (videoRows): VIDEO BEFORE and VIDEO AFTER,
+  // numbered when a stage has several (VIDEO BEFORE 1/3), or VIDEO for one sent without a stage. Each title stands with
+  // its player, and more than two of them stand in cells side by side (.media-vgrid, admin.css), so a card with 61
+  // players stays a few screens long; one or two keep the card's whole width.
   function mediaBlock(s, mis) {
     const imgs = (list) => list.map((m) => safeMedia(m && m.url))
       .filter(Boolean).map((u) => `<a href="${esc(u)}" target="_blank" rel="noopener"><img src="${esc(u)}" alt="" loading="lazy"></a>`).join("") || '<p class="hint">none</p>';
-    const vlabel = (st) => (st === "before" ? "VIDEO BEFORE" : st === "after" ? "VIDEO AFTER" : "VIDEO");
-    const titled = (label, url) => { const u = safeMedia(url); return u ? `<h4>${esc(label)}</h4>${player(u)}` : ""; };
-    const vids = (mis && mis.now_video ? titled(`VIDEO NOW, #${missionNo(mis)}`, mis.now_video.url) : "") +
-      s.media.videos.map((v) => titled(vlabel(v && v.stage), v && v.url)).join("");
+    const titled = (label, url) => { const u = safeMedia(url); return u ? `<div><h4>${esc(label)}</h4>${player(u)}</div>` : ""; };
+    const cells = [mis && mis.now_video ? titled(`VIDEO NOW, #${missionNo(mis)}`, mis.now_video.url) : "",
+      ...videoRows(s.media.videos).map((r) => titled(r.title, r.v && r.v.url))].filter(Boolean);
+    const vids = cells.join(""), vbox = `media-v${cells.length > 2 ? " media-vgrid" : ""}`;
     const now = mis && Array.isArray(mis.now) ? mis.now : [];
     // Several spots: the before and the after photos of each spot side by side, spot by spot, under the NOW photos.
     const spots = spotsOf(s);
@@ -262,7 +279,7 @@
       return `
       ${now.length ? `<div class="media-ba"><div><h4>NOW, #${esc(missionNo(mis))} (${now.length})</h4>${imgs(now)}</div></div>` : ""}
       <div class="media-ba">${pairs}</div>
-      ${vids ? `<div class="media-v">${vids}</div>` : ""}`;
+      ${vids ? `<div class="${vbox}">${vids}</div>` : ""}`;
     }
     return `
       <div class="media-ba${now.length ? " has-now" : ""}">
@@ -270,7 +287,7 @@
         <div><h4>BEFORE (${s.media.before.length})</h4>${imgs(s.media.before)}</div>
         <div><h4>AFTER (${s.media.after.length})</h4>${imgs(s.media.after)}</div>
       </div>
-      ${vids ? `<div class="media-v">${vids}</div>` : ""}`;
+      ${vids ? `<div class="${vbox}">${vids}</div>` : ""}`;
   }
   function osm(s) {
     if (!isNum(s.lat) || !isNum(s.lng)) {
@@ -690,8 +707,9 @@
       (ig ? " Full receipt: link in bio" : ` Full receipt: ${SITE}/r/${s.id}`) + " #sapuearth #cleanup";
   }
   // The social kit's download row: every photo and video the card shows, in its order, each saved as
-  // sapu-earth-<receipt id>-<label>.<ext> (before-1, after-1, video-before, video-after). A cleanup that closed a
-  // mission also has the mission's photos and video of the spot (now-1, now-2, video-now). The server takes a dl
+  // sapu-earth-<receipt id>-<label>.<ext> (before-1, after-1, video-before, video-after; video-before-1, video-before-2
+  // when a stage has several, videoRows). A cleanup that closed a mission also has the mission's photos and video of
+  // the spot (now-1, now-2, video-now). The server takes a dl
   // name only as lowercase letters, digits and dashes (functions/media/[key].js); dl=1 is the old name,
   // sapu-earth-<first 8 of the key>.
   const DL_NAME_RE = /^[a-z0-9][a-z0-9-]{0,63}$/;
@@ -702,7 +720,7 @@
       ...s.media.before.map((m, i) => [m, `before-${i + 1}`]),
       ...s.media.after.map((m, i) => [m, `after-${i + 1}`]),
       ...(mis && mis.now_video ? [[mis.now_video, "video-now"]] : []),
-      ...s.media.videos.map((m, i) => [m, m && m.stage === "before" ? "video-before" : m && m.stage === "after" ? "video-after" : `video-${i + 1}`]),
+      ...videoRows(s.media.videos).map((r) => [r.v, r.dl]),
     ].map(([m, label]) => {
       const u = safeMedia(m && m.url);
       const name = `${s.id}-${label}`;

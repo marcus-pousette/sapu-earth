@@ -68,7 +68,7 @@ Besides these static files, the site also loads approved partner uploads from `G
 "thanks": 47,
 "media": {
   "before": ["/media/<key>"], "after": ["/media/<key>"],
-  "videos": ["/media/<key>", "/media/<key>"], "video_stages": ["before", "after"]
+  "videos": ["/media/<key>", "/media/<key>", "/media/<key>"], "video_stages": ["before", "before", "after"]
 }
 ```
 
@@ -80,7 +80,7 @@ Besides these static files, the site also loads approved partner uploads from `G
 
 `thanks` is the number of standing thanks on this receipt from SAY TERIMA KASIH (SAY THANK YOU) in its post (docs/upload-flow.md, Thanks), a whole number of taps, not people. It is absent before migration 0007, and the homepage then shows no button and no count. A receipt of a deactivated crew keeps its count but takes no new thanks (`POST /api/thanks` answers 409 code `inactive` for it). The post shows the count under the button, and a card shows THANKED only above 0.
 
-`media.videos` play inline in the receipt. `media.video_stages` goes with them, in the same order, one for each video: `"before"` (the crew's video before the cleanup), `"after"` (after it), or `null` for one sent before the upload page had those two fields, or before migration 0005. The video before comes first, then the video after, then any without a label, and the receipt tags them BEFORE · VIDEO, AFTER · VIDEO or VIDEO. The site only accepts media URLs that start with `/media/`, `data/`, `site/` or `https://`, and escapes every text value, because partner data is untrusted.
+`media.videos` play inline in the receipt. `media.video_stages` goes with them, in the same order, one for each video: `"before"` (the crew's video before the cleanup), `"after"` (after it), or `null` for one sent before the upload page had those two fields, or before migration 0005. A cleanup has up to 30 videos before and 30 after, 60 in all (a video without a label counts toward the 60; until 2026-11-19 it was one of each). The videos before come first, then those after, then any without a label, each in upload order, and the receipt tags them BEFORE · VIDEO, AFTER · VIDEO or VIDEO, numbered like the photos when there is more than one (BEFORE · VIDEO 1/3 to BEFORE · VIDEO 3/3). The site only accepts media URLs that start with `/media/`, `data/`, `site/` or `https://`, and escapes every text value, because partner data is untrusted.
 
 ### Mission block
 
@@ -123,7 +123,7 @@ The receipt of a mission with several spots (docs/missions.md, Spots) also lists
 ```
 
 - `spots`: 2 to 4, numbered 1, 2, ... in order. Spot 1 is the receipt's own `location` and `date`; `date` is the day the crew cleaned that spot. Points rounded like `location`'s, or `null`.
-- `media.before_spots` and `media.after_spots`: one spot number for each photo of `media.before` and `media.after`, which come spot by spot. The videos stay one pair for the whole mission, without a spot.
+- `media.before_spots` and `media.after_spots`: one spot number for each photo of `media.before` and `media.after`, which come spot by spot. The videos (up to 30 before and 30 after) stay for the whole mission, without a spot.
 - The homepage shows SPOT 1, SPOT 2 rows (place, country, day) instead of LOC and DATE, a green dot at each spot, every one opening the receipt, and the photos named by their spot (BEFORE · SPOT 2). It takes the list only when it is whole (`spotList` in `site/app.js`); otherwise the receipt shows its one location.
 - A receipt with one spot has none of these keys.
 

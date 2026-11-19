@@ -295,8 +295,9 @@
   const upper = (v, dflt) => escapeHTML(String(v || dflt).toUpperCase());
   const videosOf = (e) => (Array.isArray(e.media?.videos) ? e.media.videos.map(safeSrc).filter(Boolean) : []);
   // A video in a post, with its tag above the player, never on it: Safari puts fullscreen and picture in
-  // picture at the top left of the video, and every browser its timeline at the bottom.
-  const videoBox = (src, tag) => `<div class="pm pm-video"><span class="tag">${escapeHTML(tag)}</span><video controls playsinline preload="metadata" src="${escapeHTML(src)}"></video></div>`;
+  // picture at the top left of the video, and every browser its timeline at the bottom. The tag also names the player.
+  // lazy: a receipt's videos in the one-column post, which load nothing until they come into view (lazyVideos).
+  const videoBox = (src, tag, lazy) => `<div class="pm pm-video"><span class="tag">${escapeHTML(tag)}</span><video controls playsinline preload="${lazy ? "none" : "metadata"}" src="${escapeHTML(src)}" aria-label="${escapeHTML(tag.toLowerCase())}"></video></div>`;
   // A mission's short video of the spot as the crew posted it, or null.
   const nowVideoOf = (m) => safeSrc(m?.now_video);
   // a receipt that finished a mission carries { no, url, now, now_video, funded_eur, currency, price_local, crew_local,
@@ -494,12 +495,8 @@
     stage = null;
     const clips = (Array.isArray(e.media?.clips) ? e.media.clips : []).map(safeSrc).filter(Boolean)
       .map((c, i) => `<a href="${escapeHTML(c)}" rel="noopener" target="_blank">CLIP ${String(i + 1).padStart(2, "0")} ↗</a>`).join("");
-    // video_stages goes with videos, one each: "before", "after", or null for one sent without its stage.
-    // They are compared as text only, never used as a key, since partner data is untrusted.
-    const stages = Array.isArray(e.media?.video_stages) ? e.media.video_stages : [];
-    const videos = (Array.isArray(e.media?.videos) ? e.media.videos : [])
-      .map((v, i) => [safeSrc(v), vtag(stages[i])]).filter(([v]) => v)
-      .map(([v, tag]) => videoBox(v, tag)).join("");
+    // every video of the cleanup in the order of the day, each with its tag (videosIn, in the wide post's slides)
+    const videos = videosIn(e).map((v) => videoBox(v.src, v.tag, true)).join("");
     // a cleanup that finished a mission also shows the spot as the crew posted it, its video too
     const mis = missionOf(e);
     const misNow = nowOf(mis)[0];
@@ -516,7 +513,7 @@
         <button class="post-close" aria-label="Close">✕</button>
         ${wide ? "" : stamp}
         <div class="r-head">SAPU EARTH<span>CLEANUP RECEIPT · ${dateStr(e)}</span></div>
-        ${wide ? "" : `<div class="post-media">${misNow ? phOr(misNow, "NOW · MISSION #" + mis.no, "pm") : ""}${misVideo ? videoBox(misVideo, "NOW · MISSION #" + mis.no + " · VIDEO") : ""}${spotPairs(e) || phOr(e.media?.before?.[0], "BEFORE", "pm") + phOr(e.media?.after?.[0], "AFTER", "pm")}${videos}</div>`}
+        ${wide ? "" : `<div class="post-media">${misNow ? phOr(misNow, "NOW · MISSION #" + mis.no, "pm") : ""}${misVideo ? videoBox(misVideo, "NOW · MISSION #" + mis.no + " · VIDEO", true) : ""}${spotPairs(e) || phOr(e.media?.before?.[0], "BEFORE", "pm") + phOr(e.media?.after?.[0], "AFTER", "pm")}${videos}</div>`}
         ${thanksRow(e)}
         <dl class="r-rows">
           ${spotRows(spotsE(e), cc(e)) || `<div><dt>LOC</dt><dd>${upper(e.location?.name, "TBA")} · ${cc(e)}</dd></div>`}
@@ -540,6 +537,7 @@
     overlay.innerHTML = wide ? wideHtml("Cleanup receipt", slides, stamp, paper, acts) : paper;
     showOverlay("#ev-" + encodeURIComponent(e.id));
     if (slides) startStage(slides);
+    lazyVideos(); // the one column's videos (a wide post has none in its paper)
     // partner uploads get /r/<id>, which carries link previews for social media
     const shareUrl = e.fromApi
       ? SHARE_ORIGIN + "/r/" + encodeURIComponent(e.id)
@@ -637,11 +635,45 @@
   // shuts the post or chooser and leaves the history alone: leavePost and Back see to that
   function closePost() {
     reopen = stage = null;
+    lazyStop();
     overlay.hidden = true;
     overlay.innerHTML = "";
     document.body.classList.remove("post-open");
     forgetPress();
     if (lastFocus) lastFocus.focus();
+  }
+  // A receipt's videos in the one-column post come with preload none (videoBox, lazy): a receipt can have 61 of them (60
+  // of the cleanup and its mission's), and all their first frames at once would be close to 200 /media/ requests in a
+  // second, over the rate limiting rule (100 in 10 s per address, docs/upload-flow.md), which then blocks the visitor for
+  // 10 s, and megabytes of data. A video loads its first frame (metadata) once it has been within 300 px of the paper's
+  // view for a quarter of a second, and one at most every second (also when the next one comes near only after the last
+  // started), those that came near first first, so a quick scroll past loads nothing and a long scroll down 60 of them
+  // stays near 50 requests in 10 s (Chrome asks 3 to 5 ranges of a phone's video). Without IntersectionObserver they load
+  // only when played. lazyStop ends the watch of the post before (a new post, closePost); the wide post has its own
+  // (startStage).
+  let lazyStop = () => {};
+  function lazyVideos() {
+    lazyStop();
+    const paper = overlay.querySelector(".post-paper");
+    const vids = [...overlay.querySelectorAll('.post-media video[preload="none"]')];
+    if (!paper || !vids.length || typeof IntersectionObserver !== "function") return;
+    const near = new Map(); // a video near the view -> since when
+    let timer = 0, last = -1e9; // last: when the last video started to load
+    const pump = () => {
+      timer = 0;
+      const now = performance.now(), v = now >= last + 1000 && [...near].find(([, since]) => now - since >= 250)?.[0];
+      if (v) { near.delete(v); io.unobserve(v); if (v.isConnected) { v.preload = "metadata"; last = now; } }
+      if (near.size) timer = setTimeout(pump, Math.max(100, last + 1000 - now));
+    };
+    const io = new IntersectionObserver((entries) => {
+      for (const en of entries) {
+        if (!en.isIntersecting) near.delete(en.target);
+        else if (!near.has(en.target)) near.set(en.target, performance.now());
+      }
+      if (near.size && !timer) timer = setTimeout(pump, 250);
+    }, { root: paper, rootMargin: "300px 0px" });
+    vids.forEach((v) => io.observe(v));
+    lazyStop = () => { io.disconnect(); clearTimeout(timer); near.clear(); lazyStop = () => {}; };
   }
   // ✕, the backdrop, Escape and SEE THE SPOT: shut, then go back over the step the tap took, or drop the post's address.
   // then runs once the post is shut, after the step back: going back puts the page's scroll where it was at the tap
@@ -735,9 +767,24 @@
   // On a screen at least WIDE a post is two columns: the stage on the left shows every photo and video of the post, one
   // slide at a time, and the receipt paper stands on the right as on a phone (styles.css, the wide post). A slide is a
   // list of one or two items { src, tag, video }; src null is a photo still missing (PHOTO SOON, as phOr shows it).
-  // vtag: a video's tag by its stage (video_stages, compared as text only); openPost's one-column post uses it too.
+  // vtag: a video's tag by its stage, before it is numbered (videosIn).
   const vtag = (st) => (st === "before" ? "BEFORE · VIDEO" : st === "after" ? "AFTER · VIDEO" : "VIDEO");
   const nth = (word, i, n) => (n > 1 ? `${word} ${i + 1}/${n}` : word);
+  // A receipt's videos in the order of the day, [{ src, stage, tag, video }]: those before the cleanup, those after it,
+  // then those sent without a stage, each group in the order it came in (the upload order, mediaFor) and numbered like
+  // the photos when it has more than one: BEFORE · VIDEO 1/30 to BEFORE · VIDEO 30/30, BEFORE · VIDEO for one, VIDEO 1/2
+  // without a stage. video_stages goes with videos, one each; it is compared as text only, never used as a key, since
+  // partner data is untrusted, and anything but "before" or "after" is no stage. Unsafe links are left out before the
+  // count. Both posts use it: the wide post's slides and openPost's one column.
+  const videosIn = (e) => {
+    const st = Array.isArray(e.media?.video_stages) ? e.media.video_stages : [];
+    const all = (Array.isArray(e.media?.videos) ? e.media.videos : [])
+      .map((v, i) => ({ src: safeSrc(v), stage: st[i] === "before" || st[i] === "after" ? st[i] : null })).filter((v) => v.src);
+    return ["before", "after", null].flatMap((k) => {
+      const same = all.filter((v) => v.stage === k);
+      return same.map((v, i) => ({ src: v.src, stage: k, tag: nth(vtag(k), i, same.length), video: true }));
+    });
+  };
   // A mission: NOW 1/3 to NOW 3/3 (NOW for one photo, NOW with PHOTO SOON for none), then NOW · VIDEO.
   const missionSlides = (m) => {
     const now = nowOf(m), out = (now.length ? now : [null]).map((u, i) => [{ src: u, tag: nth("NOW", i, now.length) }]);
@@ -745,9 +792,10 @@
     return out;
   };
   // A cleanup: its first before and first after side by side (PHOTO SOON for a missing one), then every photo and video
-  // alone in the order of the day: the spot as the crew posted its mission, before, the video before, after, the video
-  // after, and any video sent without a stage. The receipt of a mission with several spots (spotsE) names each photo's
-  // spot and counts it in that spot: BEFORE 1/2 · SPOT 2.
+  // alone in the order of the day: the spot as the crew posted its mission, before, the videos before, after, the videos
+  // after, and any videos sent without a stage (videosIn: placed by their stage, never by their tag, which is numbered).
+  // The receipt of a mission with several spots (spotsE) names each photo's spot and counts it in that spot: BEFORE 1/2 ·
+  // SPOT 2.
   // photosOf: a receipt's photos of media[kind] with their tags, [{ src, tag }], unsafe links left out.
   const photosOf = (e, kind, word) => {
     const n = spotsE(e).length, at = photoSpots(e, kind, n || 1);
@@ -759,18 +807,16 @@
   };
   const receiptSlides = (e) => {
     const before = photosOf(e, "before", "BEFORE"), after = photosOf(e, "after", "AFTER"), n = spotsE(e).length;
-    const st = Array.isArray(e.media?.video_stages) ? e.media.video_stages : [];
-    const vids = (Array.isArray(e.media?.videos) ? e.media.videos : [])
-      .map((v, i) => ({ src: safeSrc(v), tag: vtag(st[i]), video: true })).filter((v) => v.src);
+    const vids = videosIn(e);
     const out = [[before[0] || { src: null, tag: n ? "BEFORE · SPOT 1" : "BEFORE" }, after[0] || { src: null, tag: n ? "AFTER · SPOT 1" : "AFTER" }]];
     const mis = missionOf(e), now = nowOf(mis);
     now.forEach((u, i) => out.push([{ src: u, tag: nth("NOW", i, now.length) + " · MISSION #" + mis.no }]));
     if (nowVideoOf(mis)) out.push([{ src: nowVideoOf(mis), tag: "NOW · MISSION #" + mis.no + " · VIDEO", video: true }]);
     before.forEach((it) => out.push([it]));
-    vids.filter((v) => v.tag === "BEFORE · VIDEO").forEach((v) => out.push([v]));
+    vids.filter((v) => v.stage === "before").forEach((v) => out.push([v]));
     after.forEach((it) => out.push([it]));
-    vids.filter((v) => v.tag === "AFTER · VIDEO").forEach((v) => out.push([v]));
-    vids.filter((v) => v.tag === "VIDEO").forEach((v) => out.push([v]));
+    vids.filter((v) => v.stage === "after").forEach((v) => out.push([v]));
+    vids.filter((v) => v.stage === null).forEach((v) => out.push([v]));
     return out;
   };
   // The wide post's dialog: the frame, with the paper first (focus starts on its ✕) and the stage, which styles.css draws
@@ -809,12 +855,27 @@
       const shown = (cw, ch) => rs.reduce((s, r) => s + Math.min(cw, ch * r) ** 2 / r, 0);
       el.classList.toggle("pv-col", shown(w, (h - 14) / 2 - 30) > shown((w - 14) / 2, h - 30));
     };
+    // A shown slide's video loads its first frame (preload none, then metadata) only once the slide has stayed 300 ms, and
+    // one at most every second: Chrome asks 3 to 5 ranges of a phone's video, so holding → through 60 videos loads only
+    // where it stops, and stepping stays near 40 /media/ requests in 10 s, under the rate limiting rule (100 in 10 s). A
+    // video whose load failed (a 429 of that rule) loads again when its slide shows again. stage !== st: the post was
+    // closed or drawn again meanwhile.
+    let vt = 0, vlast = -1e9;
+    const loadShown = () => {
+      clearTimeout(vt);
+      vt = setTimeout(() => {
+        const vs = stage === st ? [...els[st.at].querySelectorAll("video")].filter((v) => v.preload === "none" || v.error) : [];
+        if (!vs.length) return;
+        vlast = performance.now();
+        vs.forEach((v) => { if (v.preload === "none") v.preload = "metadata"; else v.load(); });
+      }, Math.max(300, vlast + 1000 - performance.now()));
+    };
     st.go = (i, say) => {
       if (i < 0 || i >= els.length) return;
       els.forEach((el, j) => { el.hidden = j !== i; if (j !== i) el.querySelectorAll("video").forEach((v) => v.pause()); });
-      els[i].querySelectorAll('video[preload="none"]').forEach((v) => { v.preload = "metadata"; });
       for (const el of [els[i - 1], els[i], els[i + 1]]) el?.querySelectorAll('img[loading="lazy"]').forEach((im) => { im.loading = "eager"; });
       st.at = i;
+      loadShown();
       if (count) count.textContent = `${i + 1} / ${els.length}`;
       prev?.setAttribute("aria-disabled", String(i === 0));
       next?.setAttribute("aria-disabled", String(i === els.length - 1));

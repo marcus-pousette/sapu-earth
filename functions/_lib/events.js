@@ -82,7 +82,8 @@ export const round3 = (v) => (typeof v === "number" && Number.isFinite(v) ? Math
 // when the cleanup closed a mission. price_local and crew_local are what the crew asked when it posted
 // the mission, in its currency: price_local the whole price, crew_local the crew's pay in all, inside it. crew_size is
 // the mission's planned crew, so the receipt can say the pay for each person (it is public in /api/missions already).
-// media.video_stages goes with media.videos, one for each: 'before', 'after', or null (no stage).
+// media.video_stages goes with media.videos, one for each: 'before', 'after', or null (no stage). The videos come in
+// mediaFor's order: before (up to 30), after (up to 30), then those without a stage, each stage in upload order.
 // provider.url (the crew's website), provider.slug, provider.page (the crew's page /p/<slug>) and provider.logo (its
 // live logo, "/media/<key>") only while the crew is active: a deactivated crew has none of them, and its receipts stay
 // with the name alone (DEACTIVATE wipes the same links from the application, as personal data).

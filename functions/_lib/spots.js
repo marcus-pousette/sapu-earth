@@ -6,7 +6,8 @@
 // - submissions.spots: the cleanup of such a mission, copied from the mission by POST /api/submit, with the day the crew
 //   cleaned each spot;
 // - uploads.spot: the spot a cleanup's before or after photo shows, 2 to SPOTS.max; NULL for spot 1, for every photo of
-//   a mission with one spot, and for every video (a mission keeps one video before and one after, whatever its spots).
+//   a mission with one spot, and for every video (a mission's cleanup keeps its videos, up to 30 before and 30 after, for
+//   the whole mission, whatever its spots).
 // The points of spots 2 to SPOTS.max are kept rounded to 3 decimals (about 100 m, what the public map shows anyway), so
 // they hold nothing private: removing a mission (WIPE_PRIVATE in missions.js) and the 90-day trim (retention.js) leave
 // them as they are.
