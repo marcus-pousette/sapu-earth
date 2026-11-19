@@ -1,0 +1,20 @@
+{
+  "id": "sample-surabaya-kali",
+  "demo": true,
+  "days_ago": 4,
+  "date": "2026-12-14",
+  "location": { "name": "Kalimas riverbank", "city": "Surabaya", "country": "ID", "lat": -7.2458, "lng": 112.7378 },
+  "crew": { "size": 5, "coordinator": "demo" },
+  "result": { "sacks": 14, "kg_estimate": 95, "disposal": "Bank sampah Surabaya" },
+  "cost_eur": 72,
+  "media": {
+    "before": [
+      "site/samples/kalimas-before.svg"
+    ],
+    "after": [
+      "site/samples/kalimas-after.svg"
+    ],
+    "clips": []
+  },
+  "notes": "Sample event: replace with the first real cleanup."
+}

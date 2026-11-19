@@ -1,0 +1,99 @@
+/* ===== Sapu Earth review page: partner applications and missions. Builds on forms.css ===== */
+.tabs button.has-new[aria-selected="false"] { background: var(--tape); }
+
+.app-card .msg.err { margin: 0 0 8px; }
+.app-age.old { color: #b33a00; font-weight: 700; }
+.app-photos, .am-photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 8px; margin: 4px 0 6px; }
+.app-photos a, .am-photos a { display: block; }
+.app-photos img, .am-photos img { width: 100%; aspect-ratio: 4/3; object-fit: cover; display: block; border: 2px solid var(--ink); background: #e9e2cf; }
+.app-card .kv a, .am-card .kv a { color: var(--ink); text-decoration-color: var(--hivis); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+.app-card .decide { margin-top: 14px; border-top: 2px dashed var(--rule); padding-top: 12px; }
+.app-card .decide .hint { margin-bottom: 2px; }
+
+/* message boxes: welcome (after approve) and decline (before delete) */
+.box-head { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.box-head > span, .box-title { font-family: var(--font-mono); font-size: 13px; font-weight: 700; letter-spacing: .5px; }
+.box-title:focus { outline: 3px solid var(--hivis); outline-offset: 2px; }
+.box-title:focus:not(:focus-visible) { outline: none; }
+
+.welcome { margin-top: 14px; }
+.welcome .secret-link { display: block; font-weight: 700; margin: 8px 0 14px; }
+.welcome textarea { min-height: 240px; background: #fff; }
+.welcome .hint { color: var(--ink); margin-top: 10px; }
+
+.decline { margin-top: 14px; padding: 10px; border: 2px solid var(--ink); background: #fff1e9; overflow-wrap: anywhere; }
+.app-card .decide .decline .hint { color: var(--ink); margin: 0 0 8px; }
+.app-card .decide .decline .btn-row + .hint { margin-top: 10px; }
+.decline textarea { min-height: 170px; background: #fff; }
+/* the same box for good news (MESSAGE on a funded mission): paper, not the decline tint */
+.decline.msg-box { background: var(--paper); }
+.decline.msg-box textarea { min-height: 260px; }
+/* REJECT on PENDING: the reasons that go into the reply, then the reply */
+.sub-card .decide .decline .hint { color: var(--ink); margin: 0 0 8px; }
+.sub-card .decide .decline .btn-row + .hint { margin-top: 10px; }
+.am-why { border: 0; padding: 0; margin: 0 0 12px; min-width: 0; }
+.am-why legend { font-family: var(--font-mono); font-size: 13px; font-weight: 700; letter-spacing: .5px; padding: 0; }
+.am-why .check { margin-top: 8px; }
+
+/* ===== missions ===== */
+.am-month {
+  font-family: var(--font-mono); font-size: 14px; font-weight: 700; overflow-wrap: anywhere;
+  background: var(--tape); border: 2px solid var(--ink); box-shadow: 4px 4px 0 var(--ink); padding: 10px 12px; margin: 0 0 22px;
+}
+.am-sec > .panel-title { margin: 0 0 10px; }
+.am-sec > .hint { margin: 0 0 22px; }
+.am-badge {
+  display: inline-block; font-family: var(--font-mono); font-size: 11px; font-weight: 700; letter-spacing: 1px;
+  background: var(--ink); color: var(--paper); padding: 3px 7px; margin-bottom: 6px;
+}
+.am-card > .msg { margin: 0 0 8px; }
+.am-overdue { border-left: 6px solid #b33a00; padding-left: 8px; }
+.am-late { border-left: 6px solid var(--hivis); padding-left: 8px; }
+.am-share { margin-top: 4px; font-family: var(--font-mono); overflow-wrap: anywhere; }
+.am-share .hint { display: block; }
+.am-link { display: block; font-size: 13px; font-weight: 700; margin-top: 2px; }
+.am-actions { margin-top: 14px; border-top: 2px dashed var(--rule); padding-top: 12px; }
+.am-fund { margin-top: 14px; padding: 10px; border: 2px solid var(--ink); background: #eefaf1; }
+.am-fund .hint { color: var(--ink); margin: 4px 0 0; }
+.am-fund .field { margin-top: 10px; }
+.am-live { font-family: var(--font-mono); font-size: 13px; font-weight: 700; margin-top: 12px; min-height: 1.4em; overflow-wrap: anywhere; }
+.am-card .decline .hint { color: var(--ink); margin: 0 0 8px; }
+.am-card .decline .btn-row + .hint { margin-top: 10px; }
+/* cleanup cards of a mission: NOW photos next to BEFORE and AFTER */
+.media-ba.has-now { grid-template-columns: repeat(3, 1fr); }
+.am-facts { background: #fff8d6; border: 2px solid var(--ink); padding: 8px 10px; }
+/* PENDING: Link to mission, for a cleanup the crew sent without one */
+.am-linkbox { margin-top: 12px; padding: 10px; border: 2px dashed var(--ink); background: #fff; overflow-wrap: anywhere; }
+.am-linkbox[hidden] { display: none; }
+.am-linkbox > .hint { color: var(--ink); margin: 2px 0 0; }
+.am-linkbox .field { margin-top: 10px; }
+.am-linkbox select { max-width: 100%; }
+.am-linkbox h4 { font-family: var(--font-mono); font-size: 11px; letter-spacing: 1px; margin: 12px 0 4px; }
+.am-linkbox .am-photos { margin-bottom: 0; }
+.am-linkbox .am-facts + .hint { margin-top: 6px; }
+
+/* ===== crew logos (docs/upload-flow.md, Crew logos). Not .lg-, which the legend of the homepage uses. ===== */
+/* PARTNERS, LOGOS TO CHECK: the new logo at 96 px, what sapu.earth shows now at 40 px */
+.logo-check .lc-item { display: flex; gap: 14px; align-items: flex-start; border-top: 2px dashed var(--rule); padding: 12px 0; }
+.logo-check .lc-item:first-child { border-top: 0; }
+.lc-new { flex: 0 0 96px; width: 96px; height: 96px; object-fit: cover; border: 2px solid var(--ink); background: #fff; }
+.lc-text { min-width: 0; }
+.lc-text small { display: block; font-family: var(--font-mono); font-size: 11.5px; color: var(--dim); }
+/* a partner row's live logo, and the one in LOGOS TO CHECK */
+.p-logo { width: 40px; height: 40px; object-fit: cover; border: 2px solid var(--ink); background: #fff; vertical-align: middle; margin-right: 8px; }
+/* APPLICATIONS: the logo sent with an application */
+.app-logo { margin: 6px 0 10px; }
+.app-logo h4 { font-family: var(--font-mono); font-size: 11px; letter-spacing: 1px; }
+.app-logo img { display: block; width: 96px; height: 96px; object-fit: cover; border: 2px solid var(--ink); background: #fff; }
+
+/* ===== post links on PENDING (THE CREW'S POST) and APPROVED (COMMENTS LINK), and THANKS BY DAY (docs/upload-flow.md, Post links and thanks) ===== */
+.am-postbox { margin-top: 12px; padding: 10px; border: 2px dashed var(--ink); background: #fff; overflow-wrap: anywhere; }
+.am-postbox > .hint { color: var(--ink); margin: 6px 0 0; }
+.am-postbox .field { margin-top: 10px; }
+.am-postlink a { font-family: var(--font-mono); font-weight: 700; color: var(--ink); text-decoration-color: var(--hivis); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+.am-tdays { list-style: none; }
+.am-tdays li { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; padding: 8px 0; border-top: 2px dashed var(--rule); font-family: var(--font-mono); font-size: 13px; }
+.am-tdays li:first-child { border-top: 0; }
+/* The day's text takes its own line, so both undo buttons always sit together under it. */
+.am-tdays li > span { flex-basis: 100%; }
+.am-thanks { color: var(--ink); margin-top: 8px; }

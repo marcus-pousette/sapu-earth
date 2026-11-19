@@ -1,0 +1,11 @@
+-- The video before and the video after a cleanup (docs/upload-flow.md, Video stages): which of a cleanup's
+-- videos shows the spot before and which after it. POST /api/upload?kind=video&stage=before|after sets it
+-- once, from the field the clip was picked in (VIDEO BEFORE or VIDEO AFTER on the upload page).
+-- NULL for photos, for a mission's video of the spot now, and for every video sent before this change:
+-- those show as VIDEO, without a label.
+-- Additive, and the code works without it (withStage in functions/_lib/util.js): uploads, cleanups, /admin/
+-- and the receipts keep working, only the labels are missing. So it can run before or after the code. Before
+-- is better: a video uploaded while the column is missing stays unlabelled for good.
+-- Apply with: sh scripts/remote-migrate.sh --apply (ops/production-rules.md). Pasted into the D1 console a
+-- second time it fails with "duplicate column name: stage": it is already in then.
+ALTER TABLE uploads ADD COLUMN stage TEXT CHECK (stage IN ('before', 'after'));

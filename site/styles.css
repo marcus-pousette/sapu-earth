@@ -1,0 +1,814 @@
+/* ===== SAPU EARTH: daylight paper x hi-vis x thermal receipt ===== */
+/* No glass. No glow. Hard shadows, solid borders, paper and tape. */
+:root {
+  --page: #f2ecdd;     /* warm paper page */
+  --paper: #fdfaf1;    /* receipt / chip paper */
+  --ink: #1c1813;
+  --dim: #75705f;
+  --hivis: #ff5f00;    /* safety orange */
+  --tape: #ffd400;     /* hazard yellow */
+  --clean: #007a3d;    /* safety green: a cleaned spot (site/app.js CLEAN) */
+  --sky: #cdeef7;      /* daylight tint behind the planet */
+  --rule: #d8d0bb;     /* dashed receipt rules */
+  --font-display: "Archivo Black", "Arial Black", sans-serif;
+  --font-body: "Barlow", system-ui, sans-serif;
+  --font-mono: "Space Mono", ui-monospace, monospace;
+  /* Paper, never darkened (Marcus said 'Yes, build all 9' on 2026-11-16): a browser that darkens websites by itself
+     (Chrome's auto dark on Android) turned the ink text on the yellow buttons white, about 1.4:1. Every page loads
+     this file. */
+  color-scheme: only light;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--page);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-weight: 600;
+  overflow-x: hidden;
+}
+/* print grain over everything */
+body::after {
+  content: ""; position: fixed; inset: 0; z-index: 2147483647; pointer-events: none;
+  opacity: .05; mix-blend-mode: multiply;
+  background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="140" height="140"><filter id="n"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2"/></filter><rect width="140" height="140" filter="url(%23n)"/></svg>');
+}
+h1, h2 { font-family: var(--font-display); font-weight: 400; letter-spacing: .5px; }
+
+/* ===== hero ===== */
+.hero {
+  position: relative; height: 100vh; height: 100svh; min-height: 540px; overflow: hidden;
+  background: radial-gradient(ellipse 90% 65% at 50% 38%, var(--sky) 0%, #e3ecdf 55%, var(--page) 100%);
+}
+/* isolation: the mission tags' z-indexes (globe.gl sets 1..N by depth) stay inside the globe,
+   so the zoom buttons, stats and SEE THE RECEIPTS always draw above them and get the taps.
+   touch-action: a finger on a mission tag acts as on the planet (site/app.js, one finger on the globe): a swipe up
+   or down scrolls the page, a drag across holds the planet, where the browser took the drag for itself before */
+#globe { position: absolute; inset: 0; isolation: isolate; touch-action: pan-y; }
+#globe canvas { outline: none; }
+
+.hero-top {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 2;
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+  padding: max(16px, env(safe-area-inset-top)) 18px 0;
+  pointer-events: none;
+}
+.logo {
+  font-family: var(--font-display);
+  font-size: clamp(26px, 6vw, 44px);
+  line-height: .92;
+  color: var(--ink);
+  text-shadow: 4px 4px 0 var(--hivis);
+  transform: rotate(-2deg);
+}
+/* The broom leans on the title, on the homepage and on the small title of every other page: the same broom as the
+   tab icon, so the page shows its logo too. CSS draws it, so the title still reads "SAPU EARTH" to a screen reader and
+   no page changes. brand/sapu-sketch/broom.svg is the small mark cut to its drawing (824 x 996). Width and height are
+   both set, so it needs no aspect-ratio (Safari before 15). */
+.logo { position: relative; display: inline-block; padding-right: 1.9em; }
+.logo::after {
+  content: ""; position: absolute; right: 0; bottom: -.04em;
+  width: 1.655em; height: 2em;
+  background: url("brand/sapu-sketch/broom.svg") no-repeat center / contain;
+}
+/* On a phone narrower than 360 px the title stands alone, as it did before the broom: there the broom would push the
+   language switch of the crew pages (/apply/, /upload/) off the screen and wrap the SAMPLE DATA note to a third line. */
+@media (max-width: 359px) {
+  .logo { padding-right: 0; }
+  .logo::after { display: none; }
+}
+/* the way in for crews, on the first screen: under the logo, above the globe */
+.hero-brand { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; }
+.crew-link {
+  pointer-events: auto; display: inline-block;
+  font-family: var(--font-mono); font-size: 11px; font-weight: 700; letter-spacing: .5px; line-height: 1.2;
+  color: var(--ink); text-decoration: none;
+  background: var(--paper); border: 2px solid var(--ink); box-shadow: 3px 3px 0 var(--ink);
+  padding: 9px 10px; transform: rotate(-1deg);
+}
+.crew-link:hover, .crew-link:focus-visible { background: var(--tape); }
+.crew-link:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+.tag-demo {
+  font-family: var(--font-mono); font-size: 11px; font-weight: 700; line-height: 1.35;
+  text-align: right; color: var(--ink);
+  background: var(--tape); border: 2px solid var(--ink);
+  box-shadow: 4px 4px 0 var(--ink);
+  padding: 6px 10px; transform: rotate(1.5deg);
+}
+/* What Sapu Earth does, as the page's h1, where SAMPLE DATA stood (index.html; Marcus said 'Yes, build all 9' on
+   2026-11-16): the same small box and tilt, on paper. While SAMPLE DATA shows, it has the corner. */
+.pitch {
+  margin: 0; font-family: var(--font-mono); font-size: 11px; font-weight: 700; letter-spacing: 0; line-height: 1.35;
+  text-align: right; color: var(--ink);
+  background: var(--paper); border: 2px solid var(--ink);
+  box-shadow: 4px 4px 0 var(--ink);
+  padding: 6px 10px; transform: rotate(1.5deg);
+}
+#demoPill:not([hidden]) ~ .pitch { display: none; }
+/* solid boxes over the globe, as the stats and the legend: a tap on them never reaches a tag or dot hidden underneath
+   (the hero's top takes no taps, and a click on the pitch's words opened mission #2's tag behind it, 2026-11-17) */
+.tag-demo, .pitch { pointer-events: auto; }
+
+.hero-bottom {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 2;
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  padding: 0 14px max(18px, env(safe-area-inset-bottom));
+  pointer-events: none;
+}
+/* The tap hint stands on a strip of paper, so the globe's outline passes behind its words, never through them. The
+   outline's place follows the hero's height and the stack's does not, so no one place for the hint is clear of it at
+   every size (measured on 2026-11-17 from 320x460 to 2560x1600: with the stats row hidden the outline crossed it on
+   short phones and laptops, with the row shown on tall phones, tablets and big screens). On paper the grey words also
+   read where they lie on the green land. It still takes no taps, so a drag that starts on it spins the globe; a
+   mission tag that meets it fades (tidy in site/app.js) and a receipt's dot under it takes no click there (onStrip),
+   so a click on its words opens nothing hidden under it. The right padding is less by the letter-spacing after the
+   last letter. Below 360 px wide the letters stand closer, so it keeps to one line (it left PIN alone on a second line
+   at 320 px). With a mouse the hint is longer (⌘ + SCROLL TO ZOOM, or CTRL + ...), so in a narrow window its letters
+   stand closer sooner: one line from 349 px wide with ⌘ and from 370 px with CTRL. Should it wrap all the same (a
+   larger text setting), it wraps only after a dot (app.js keeps each part's words together), as evenly as the dots
+   allow. */
+.tap-hint {
+  font-family: var(--font-mono); font-size: 11px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--dim); text-align: center;
+  background: var(--paper); padding: 3px 7px 2px 9px; text-wrap: balance;
+}
+@media (max-width: 400px) { .tap-hint { letter-spacing: 1px; padding-right: 8px; } }
+@media (max-width: 359px) { .tap-hint { letter-spacing: 0; padding-right: 9px; } }
+@media (pointer: fine) and (max-width: 469px) { .tap-hint { letter-spacing: 1px; padding-right: 8px; } }
+@media (pointer: fine) and (max-width: 421px) { .tap-hint { letter-spacing: 0; padding-right: 9px; } }
+/* solid boxes over the globe: a tap on them never reaches a tag or dot hidden underneath. Each stat is a box of its
+   own: the gaps between them are the globe's, so a dot seen there is there to tap (site/app.js, hidden) */
+.hero-bottom .legend, .hero-bottom .stat { pointer-events: auto; }
+.stats { display: flex; gap: 10px; width: 100%; max-width: 560px; }
+.stats[hidden] { display: none; }
+/* Above 640 px wide + and - stand at the bottom right, beside the stats row. Up to 700 px wide the row keeps 112 px
+   narrower than its room, so its third stat ends clear of + and of its reach (at 641 px + covered 17 px of it, 2026-11-18) */
+@media (min-width: 641px) {
+  .stats { max-width: min(560px, calc(100% - 112px)); }
+}
+.stat {
+  flex: 1; text-align: center; padding: 10px 6px 11px;
+  background: var(--paper); border: 2px solid var(--ink);
+  box-shadow: 4px 4px 0 rgba(28, 24, 19, .9);
+}
+.stat strong { display: block; font-family: var(--font-display); font-size: clamp(19px, 5.5vw, 32px); color: var(--hivis); line-height: 1.1; }
+.stat span { font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--dim); }
+.scroll-cue {
+  pointer-events: auto; text-decoration: none;
+  font-family: var(--font-display); font-size: 14px; letter-spacing: 1px;
+  color: #fff; background: var(--hivis);
+  border: 2px solid var(--ink); box-shadow: 5px 5px 0 var(--ink);
+  padding: 11px 20px 10px; transform: rotate(-1deg);
+  transition: transform .1s ease, box-shadow .1s ease;
+}
+.scroll-cue:hover { transform: rotate(-1deg) translate(-2px, -2px); box-shadow: 7px 7px 0 var(--ink); }
+.scroll-cue:active { transform: rotate(-1deg) translate(2px, 2px); box-shadow: 2px 2px 0 var(--ink); }
+/* SEE THE RECEIPTS and SEE THE CREWS in one row (.cues in index.html), on the first screen from the start, the samples
+   included. Both are .scroll-cue, so they step aside on the satellite map with the other boxes; the second is paper,
+   tilted the other way, so the first screen keeps one loud button. On a phone each takes two lines. */
+.cues { display: flex; justify-content: center; align-items: stretch; gap: 14px; max-width: 100%; }
+.cues .scroll-cue { text-align: center; }
+.cues .scroll-cue:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+.cue-crews { color: var(--ink); background: var(--paper); transform: rotate(1deg); }
+.cue-crews:hover { background: var(--tape); transform: rotate(1deg) translate(-2px, -2px); }
+.cue-crews:active { transform: rotate(1deg) translate(2px, 2px); }
+@media (max-width: 479px) {
+  .cues .scroll-cue { line-height: 1.15; padding: 9px 16px 8px; }
+  .cues .cue-2 { display: block; }
+}
+/* the two-line row is 13 px taller than SEE THE RECEIPTS on one line: on a short phone (320x568) the boxes above it stand
+   8 px apart instead of 12, so the tap hint keeps clear of the zoom buttons */
+@media (max-width: 479px) and (max-height: 600px) {
+  .hero-bottom { gap: 8px; }
+}
+
+/* ===== hazard ticker ===== */
+.ticker {
+  overflow: hidden; background: var(--tape); padding: 10px 0;
+  border-top: 8px solid; border-bottom: 8px solid;
+  border-image: repeating-linear-gradient(-45deg, var(--ink) 0 10px, var(--tape) 10px 20px) 8;
+}
+.ticker-track {
+  display: inline-flex; gap: 0; white-space: nowrap;
+  animation: slide 26s linear infinite;
+  font-family: var(--font-display); font-size: 15px; color: var(--ink);
+}
+.ticker-track span { display: inline-block; }
+.ticker-track span::after { content: "✕"; margin: 0 22px; color: var(--hivis); }
+@keyframes slide { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+/* ===== receipts ===== */
+main { max-width: 1060px; margin: 0 auto; padding: 56px 16px 24px; }
+.receipts h2, .nextup h2, .reports h2, .cta h2 { font-size: clamp(30px, 6.5vw, 48px); color: var(--ink); }
+.receipts h2 mark, .nextup h2 mark, .reports h2 mark { background: linear-gradient(0deg, var(--tape) 0 42%, transparent 42%); color: var(--ink); padding: 0 6px; }
+.nextup { margin-bottom: 36px; }
+/* NEXT UP's head: the title, and ALL MISSIONS once its cards are real (site/app.js, the ways on), a paper tag like the
+   crew link on the first screen */
+.sec-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; }
+.all-link {
+  display: inline-flex; align-items: center; min-height: 44px; padding: 0 12px;
+  font-family: var(--font-mono); font-size: 12px; font-weight: 700; letter-spacing: .5px; color: var(--ink); text-decoration: none;
+  background: var(--paper); border: 2px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); transform: rotate(1deg);
+}
+.all-link[hidden] { display: none; }
+.all-link:hover, .all-link:focus-visible { background: var(--tape); }
+.all-link:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+.sub { font-family: var(--font-mono); font-size: 13px; font-weight: 700; color: var(--dim); margin: 10px 0 24px; }
+.cards {
+  display: flex; gap: 20px; overflow-x: auto; padding: 6px 2px 26px;
+  scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch;
+}
+.cards::-webkit-scrollbar { height: 8px; }
+.cards::-webkit-scrollbar-thumb { background: #c9c0a8; }
+.loading { font-family: var(--font-mono); font-weight: 700; color: var(--dim); }
+
+/* --- the receipt --- */
+.card {
+  position: relative; flex: 0 0 262px; scroll-snap-align: start;
+  background: var(--paper); color: var(--ink);
+  font-family: var(--font-mono);
+  border: 1px solid #e3dcc6;
+  box-shadow: 6px 6px 0 rgba(28, 24, 19, .9);
+  transform: rotate(-.6deg);
+  margin-bottom: 12px;
+  cursor: pointer;
+}
+.card:nth-child(even) { transform: rotate(.7deg); }
+.card:hover { transform: rotate(0) translateY(-3px); }
+/* perforated sawtooth bottom */
+.card::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: -9px; height: 10px;
+  background:
+    linear-gradient(135deg, var(--paper) 50%, transparent 50%) 0 0 / 14px 10px repeat-x,
+    linear-gradient(-135deg, var(--paper) 50%, transparent 50%) 7px 0 / 14px 10px repeat-x;
+}
+.card.flash { outline: 4px solid var(--hivis); outline-offset: 3px; }
+
+.r-head {
+  text-align: center; padding: 12px 12px 8px;
+  font-weight: 700; font-size: 14px; letter-spacing: 2px;
+}
+.r-head span { display: block; font-size: 9.5px; letter-spacing: 3px; color: var(--dim); margin-top: 2px; }
+
+.ba { display: grid; grid-template-columns: 1fr 1fr; height: 128px; border-top: 2px dashed var(--rule); border-bottom: 2px dashed var(--rule); }
+.ba > div { position: relative; overflow: hidden; }
+.ba img { width: 100%; height: 100%; object-fit: cover; display: block; filter: saturate(.9) contrast(1.05); }
+.ba .ph {
+  width: 100%; height: 100%; display: grid; place-items: center;
+  background: repeating-linear-gradient(45deg, #ece5d2 0 8px, #e2dac4 8px 16px);
+  color: #9a927c; font-size: 9px; font-weight: 700; letter-spacing: 1px;
+}
+.ba .b { border-right: 2px dashed var(--rule); }
+.ba .tag {
+  position: absolute; bottom: 6px; left: 50%; transform: translateX(-50%);
+  font-size: 9px; font-weight: 700; letter-spacing: 2px; padding: 2px 7px;
+  background: var(--ink); color: var(--paper);
+}
+
+.r-rows { padding: 10px 14px 4px; font-size: 12px; }
+.r-rows > div { display: flex; justify-content: space-between; gap: 8px; padding: 3px 0; }
+.r-rows dt { color: var(--dim); font-weight: 400; white-space: nowrap; }
+.r-rows dt::after { content: " ·············"; letter-spacing: -1px; color: var(--rule); }
+.r-rows dd { font-weight: 700; text-align: right; }
+.r-total { border-top: 2px dashed var(--rule); margin-top: 6px; padding-top: 7px !important; font-size: 15px; }
+.r-total dd { color: var(--hivis); }
+.r-rows .r-sub { padding-left: 12px; font-size: 11px; }
+.r-rows .r-sub dt::after { content: " ·······"; }
+/* a mission receipt's crew numbers in local money, set apart from the euro rows */
+.r-rows .r-local { border-top: 1px dashed var(--rule); margin-top: 4px; padding-top: 6px; }
+.r-rows .r-total + .r-local { border-top: 0; margin-top: 0; padding-top: 3px; }
+/* NEXT UP cards and mission posts (mMoney in site/app.js): a short leader on the total row, so ASKING IDR 3,000,000 fits
+   a 262 px card on one line, and a money amount that does not fit next to its label goes under it, on the right */
+.mcard .r-total dt::after, .mpost .r-total dt::after { content: " ····"; }
+.mcard .r-total, .mcard .r-sub, .mpost .r-total, .mpost .r-sub { flex-wrap: wrap; }
+.mcard .r-total dd, .mcard .r-sub dd, .mpost .r-total dd, .mpost .r-sub dd { margin-left: auto; }
+
+.r-note { text-align: center; font-size: 10px; font-weight: 700; letter-spacing: 1px; padding: 8px 10px 2px; }
+.barcode {
+  height: 30px; margin: 10px 18px 4px;
+  background: repeating-linear-gradient(90deg, var(--ink) 0 2px, transparent 2px 5px, var(--ink) 5px 6px, transparent 6px 11px, var(--ink) 11px 14px, transparent 14px 17px);
+}
+.r-id { text-align: center; font-size: 9px; letter-spacing: 2px; color: var(--dim); padding-bottom: 14px; }
+
+/* A receipt card's stamp sits on the photos, clear of the BEFORE and AFTER tags at their foot (2026-11-16: at 148 px they
+   cut through it) and of ▶ VIDEO and MISSION #12 at their head (at 96 px its corner touched ▶ VIDEO; 102 px leaves about
+   5 px to ▶ VIDEO and 12 px to BEFORE on the 262 px card). NEXT UP cards and posts set their own top. */
+.stamp {
+  position: absolute; top: 102px; left: 50%; z-index: 1;
+  transform: translateX(-50%) rotate(-11deg);
+  font-family: var(--font-display); font-size: 20px; letter-spacing: 2px;
+  color: var(--hivis); border: 3px solid var(--hivis); padding: 2px 10px;
+  opacity: .9; mix-blend-mode: multiply;
+}
+.stamp-ok { color: #1a7a3a; border-color: #1a7a3a; }
+.stamp-open { color: var(--ink); border-color: var(--ink); border-style: dashed; }
+
+/* --- a mission: a receipt for a cleanup that has not happened yet --- */
+.mcard::before {
+  content: ""; display: block; height: 8px;
+  background: repeating-linear-gradient(-45deg, var(--ink) 0 8px, var(--tape) 8px 16px);
+}
+.mcard-funded::before { background: var(--ink); }
+.m-head { font-family: var(--font-display); font-weight: 400; font-size: 22px; letter-spacing: 1px; line-height: 1.1; }
+.m-head span { font-family: var(--font-mono); font-weight: 700; margin-top: 4px; }
+.ba-now { grid-template-columns: 1fr; }
+.ba-now .tag { left: 8px; transform: none; }
+.mcard .stamp { top: 150px; left: auto; right: 10px; transform: rotate(-9deg); }
+.m-task {
+  font-size: 11px; line-height: 1.4; padding: 6px 14px 0; color: var(--ink);
+  white-space: pre-wrap; overflow-wrap: anywhere;
+  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+}
+.mis-tag {
+  position: absolute; top: 60px; left: 8px; z-index: 2;
+  font-size: 9px; font-weight: 700; letter-spacing: 1.5px; padding: 3px 7px;
+  background: var(--tape); color: var(--ink); border: 2px solid var(--ink);
+}
+
+/* ===== Sapu Reports: the newest story (docs/stories.md), on paper like the receipts. Its share picture on top on a
+   phone, beside the words on a wider screen. WANT IN? follows it (the three steps that stood here went on 2026-11-16;
+   their promise, filmed and located, is in THE RECEIPTS' line). ===== */
+.reports { margin: 30px 0 48px; }
+.report {
+  display: grid; background: var(--paper); color: var(--ink);
+  border: 2px solid var(--ink); box-shadow: 6px 6px 0 rgba(28, 24, 19, .9);
+  transform: rotate(-.4deg);
+}
+.report-pic { display: block; border-bottom: 2px solid var(--ink); }
+.report-pic img { display: block; width: 100%; height: auto; }
+.report-pic:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+.report-text { padding: 16px 18px 20px; font-family: var(--font-mono); }
+.report-date { font-size: 10.5px; font-weight: 700; letter-spacing: 1.5px; color: var(--dim); }
+.report h3 { font-family: var(--font-display); font-weight: 400; font-size: clamp(22px, 5.5vw, 30px); line-height: 1.05; letter-spacing: .5px; margin: 6px 0 10px; }
+.report-lede { font-size: 13px; line-height: 1.5; margin-bottom: 18px; }
+.report-id { margin-top: 18px; font-size: 12px; font-weight: 700; letter-spacing: .5px; }
+.report-id a { color: var(--ink); text-decoration-color: var(--hivis); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+@media (min-width: 900px) {
+  .report { grid-template-columns: 1.15fr 1fr; }
+  /* when the words stand taller than the picture, the picture's own paper (PAPER in sapu-sketch.html) fills the column */
+  .report-pic { display: flex; align-items: center; background: #f2ecdd; border-bottom: 0; border-right: 2px solid var(--ink); }
+  .report-text { align-self: center; padding: 20px 24px; }
+}
+
+/* ===== cta / footer ===== */
+.cta { text-align: center; padding: 10px 0 48px; }
+.socials { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; }
+.btn {
+  text-decoration: none; display: inline-block;
+  font-family: var(--font-display); font-size: 14px; letter-spacing: 1px;
+  color: var(--ink); background: var(--tape);
+  border: 2px solid var(--ink); box-shadow: 5px 5px 0 var(--ink);
+  padding: 13px 22px 12px;
+  transition: transform .1s ease, box-shadow .1s ease;
+}
+.btn:nth-child(1) { transform: rotate(-1.2deg); }
+.btn:nth-child(2) { transform: rotate(.8deg); }
+.btn:hover { transform: translate(-2px, -2px); box-shadow: 7px 7px 0 var(--ink); }
+footer { text-align: center; padding: 20px 16px 38px; }
+footer p { font-family: var(--font-mono); font-size: 10.5px; font-weight: 700; letter-spacing: 1.5px; color: var(--dim); }
+footer .foot-apply { margin-top: 10px; }
+/* EOX's credit for the satellite pictures; the map's own line (.sat-credit) links here */
+footer .foot-credit { margin: 14px auto 0; max-width: 560px; font-size: 9.5px; letter-spacing: .5px; line-height: 1.5; font-weight: 400; }
+footer a { color: var(--ink); text-decoration-color: var(--hivis); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+/* with THE MISSIONS in the line (site/app.js, the ways on) a phone would break APPLY AS A CREW in two: each link keeps to
+   one line then. While it is hidden the line wraps as it always did. */
+footer .foot-apply:has(#footMissions:not([hidden])) a { white-space: nowrap; }
+
+/* ===== partner crew call to action ===== */
+.crew-cta {
+  max-width: 520px; margin: 44px auto 0; padding: 22px 16px 26px;
+  background: var(--tape); border: 2px solid var(--ink); box-shadow: 6px 6px 0 var(--ink);
+  transform: rotate(-.6deg);
+}
+.crew-cta h3 { font-family: var(--font-display); font-weight: 400; font-size: clamp(22px, 6vw, 32px); line-height: 1.05; letter-spacing: .5px; color: var(--ink); }
+.crew-cta p { font-family: var(--font-mono); font-size: 13px; font-weight: 700; color: var(--ink); margin: 10px 0 20px; }
+.btn.btn-apply { background: var(--hivis); color: var(--ink); font-size: 16px; padding: 15px 24px 14px; transform: rotate(1deg); }
+.btn.btn-apply:hover { transform: rotate(1deg) translate(-2px, -2px); }
+.crew-cta .crew-back { font-weight: 400; margin: 22px 0 0; line-height: 1.5; }
+.crew-cta .crew-back a { color: var(--ink); text-decoration-color: var(--hivis); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+
+/* ===== zoom buttons ===== */
+/* only the buttons take taps, each with a reach 4 px past its edge (.zoomctl button::after), which meets the other's
+   about the middle of the gap between them: a finger just beside one still presses it (site/app.js, hidden) */
+.zoomctl {
+  position: absolute; right: 14px; bottom: max(18px, env(safe-area-inset-bottom)); z-index: 3;
+  display: flex; flex-direction: column; gap: 8px; pointer-events: none;
+}
+@media (max-width: 640px) {
+  .zoomctl { bottom: auto; top: 44%; right: 10px; }
+}
+.zoomctl button {
+  pointer-events: auto; width: 44px; height: 44px; font-family: var(--font-display); font-size: 20px;
+  color: var(--ink); background: var(--paper);
+  border: 2px solid var(--ink); box-shadow: 4px 4px 0 var(--ink); cursor: pointer;
+  transition: transform .1s ease, box-shadow .1s ease;
+}
+.zoomctl button:hover { transform: translate(-1px, -1px); box-shadow: 5px 5px 0 var(--ink); }
+/* A button's reach: 4 px past its edge, its shadow included. With the gap between + and - taking no taps, Chrome no
+   longer gave a finger in the gap or just beside a button to the button (Chrome, 2026-11-18). */
+.zoomctl button, .sat-btn { position: relative; }
+.zoomctl button::after, .sat-btn::after { content: ""; position: absolute; inset: -6px; }
+.zoomctl button:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+/* "ctrl + scroll to zoom" (⌘ on a Mac): shows for a moment when a plain wheel scrolls the page over the globe */
+.wheel-hint {
+  position: absolute; left: 50%; top: 50%; z-index: 2;
+  transform: translate(-50%, -50%) rotate(-1deg);
+  font-family: var(--font-mono); font-size: 12px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+  white-space: nowrap; color: var(--ink); background: var(--paper);
+  border: 2px solid var(--ink); box-shadow: 4px 4px 0 var(--ink); padding: 8px 12px 7px;
+  pointer-events: none; opacity: 0; transition: opacity .2s ease;
+  -webkit-user-select: none; user-select: none; /* unseen, its words joined a long press's selection on a mission tag (iOS) */
+}
+.wheel-hint.on { opacity: 1; }
+
+/* ===== satellite map (site/app.js, satellite map) ===== */
+/* Behind the globe canvas inside #globe (its stacking context): the canvas fades out over it. Tiles are placed by
+   a transform from their corners; marks are receipts (green dot, then a see-through area) and mission areas.
+   The background, for tiles still on their way, is about the colour of the sea in the pictures. */
+.satmap { position: absolute; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; background: #1c3448; }
+.satmap[hidden] { display: none; }
+.sat-tiles { position: absolute; inset: 0; z-index: 0; }   /* the tiles' levels stack in here, under the marks */
+.sat-tile { position: absolute; left: 0; top: 0; opacity: 0; transition: opacity .3s ease; }
+.sat-tile.on { opacity: 1; }
+.sat-tile.now { transition: none; }   /* a picture the browser already had: no fade (site/app.js, pump) */
+.sat-tile i { position: absolute; left: 0; top: 0; transform-origin: 0 0; background-size: 256px 256px; background-repeat: no-repeat; }
+.sat-pt, .sat-ms { position: absolute; left: 0; top: 0; border-radius: 50%; }
+.sat-pt { box-sizing: content-box; border: 2px solid #fff; background: var(--clean); box-shadow: 0 0 0 1.5px rgba(28, 24, 19, .85); }
+.sat-ms { border: 2px dashed var(--ink); background: rgba(255, 212, 0, .3); }
+.sat-ms-funded { border-color: var(--tape); background: rgba(28, 24, 19, .3); }
+/* BACK TO THE GLOBE and EOX's credit, while the map shows. Only the boxes take taps: the bar is wider than its button,
+   and the credit's words stand on the map, so a mark seen beside them is there to tap (site/app.js, hidden); the
+   button reaches 4 px past its edge (.sat-btn::after, with the zoom buttons) */
+.sat { pointer-events: none; display: flex; flex-direction: column; align-items: center; gap: 6px; max-width: 560px; }
+.sat-btn, .sat-note, .sat-credit a { pointer-events: auto; }
+.sat[hidden], .sat-note[hidden] { display: none; }
+.sat-btn {
+  min-height: 44px; padding: 10px 16px 9px; cursor: pointer;
+  font-family: var(--font-display); font-size: 13px; letter-spacing: 1px; color: var(--ink);
+  background: var(--tape); border: 2px solid var(--ink); box-shadow: 4px 4px 0 var(--ink); transform: rotate(-1deg);
+  transition: transform .1s ease, box-shadow .1s ease;
+}
+.sat-btn:hover { transform: rotate(-1deg) translate(-1px, -1px); box-shadow: 5px 5px 0 var(--ink); }
+.sat-btn:active { transform: rotate(-1deg) translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+.sat-btn:focus-visible { outline: 3px solid var(--ink); outline-offset: 3px; }
+.sat-note {
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700; line-height: 1.35; text-align: center; color: var(--ink);
+  background: rgba(253, 250, 241, .88); padding: 3px 7px;
+}
+.sat-note a { color: var(--ink); text-underline-offset: 2px; }
+.sat-err { color: var(--paper); background: var(--ink); letter-spacing: .5px; }
+/* one short line under BACK TO THE GLOBE: the full credit is in the footer (#credits) */
+.sat-credit { font-family: var(--font-mono); font-size: 9.5px; font-weight: 700; letter-spacing: .5px; color: #fff; text-shadow: 0 1px 2px rgba(0, 0, 0, .8); }
+.sat-credit a { color: inherit; text-underline-offset: 2px; }
+/* Zoomed into the satellite map the page's own boxes step aside so the map has the screen: they fade (map-on),
+   then leave the layout (map-gone), so BACK TO THE GLOBE drops to the bottom. Zoomed far out they come back
+   (site/app.js, setUi). The logo and the zoom buttons stay. */
+.crew-link, .tag-demo, .pitch, .tap-hint, .legend, .stats { transition: opacity .25s ease; }
+.scroll-cue { transition: transform .1s ease, box-shadow .1s ease, opacity .25s ease; }
+.hero.map-on :is(.crew-link, .tag-demo, .pitch, .tap-hint, .legend, .stats, .scroll-cue) { opacity: 0; pointer-events: none; }
+.hero.map-on .stat { pointer-events: none; }   /* each stat takes taps of its own (.hero-bottom .stat) */
+.hero.map-gone :is(.tap-hint, .legend, .stats, .scroll-cue) { display: none; }
+.hero.map-gone :is(.crew-link, .tag-demo, .pitch) { visibility: hidden; }
+/* the row of SEE THE RECEIPTS and SEE THE CREWS leaves the layout too, so it adds no gap under BACK TO THE GLOBE */
+.hero.map-gone .cues { display: none; }
+/* While they are away, one finger moves the globe and the map every way: nothing on the first screen scrolls the
+   page or pulls it to refresh (setUi does the same for the globe's canvas). BACK TO THE GLOBE or zooming far
+   out gives the page back. */
+.hero.map-on { touch-action: none; }
+/* The homepage never reloads on a pull down at its top: a finger there is on the globe, trying to turn it.
+   (Only the homepage has a .hero; the root's value is the one browsers use, body's is for older Chrome.) */
+html:has(.hero), html:has(.hero) body { overscroll-behavior-y: contain; }
+
+/* ===== globe pin tooltip ===== */
+.scene-tooltip { pointer-events: none; }
+/* a finger has no hover: no preview flashes under it before the post opens */
+.by-touch .scene-tooltip { display: none !important; }
+/* nor over the tap hint's words: a receipt's dot hidden under its strip shows no preview and no hand there, and a click
+   there opens nothing (site/app.js, onStrip) */
+#globe.on-strip .scene-tooltip { display: none !important; }
+#globe.on-strip canvas.clickable { cursor: auto; }
+.tip {
+  font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--ink);
+  background: var(--paper); border: 2px solid var(--ink); box-shadow: 5px 5px 0 var(--ink);
+  padding: 8px 10px; max-width: 220px;
+}
+.tip span { display: block; font-size: 9px; letter-spacing: 1.5px; color: var(--dim); margin-top: 6px; }
+.tip-ba { display: flex; gap: 4px; margin-top: 6px; }
+.tip-ba img { width: 96px; height: 60px; object-fit: cover; display: block; }
+.tip-ph {
+  width: 96px; height: 60px; display: grid; place-items: center; font-style: normal;
+  font-size: 8px; letter-spacing: 1px; color: #9a927c;
+  background: repeating-linear-gradient(45deg, #ece5d2 0 8px, #e2dac4 8px 16px);
+}
+
+/* ===== mission pins + legend ===== */
+/* open = hazard yellow tag, funded = ink tag with a paper rim, cleaned = safety green dot on a white rim */
+/* site/app.js (TAG_H, PTR, tagW) assumes this box and its 6px pointer. Keep them in sync. */
+.mpin-tag {
+  font-family: var(--font-mono); font-size: 11px; font-weight: 700; font-style: normal;
+  line-height: 1; letter-spacing: .5px; white-space: nowrap;
+  padding: 3px 5px 2px; border: 2px solid var(--ink); box-shadow: 2px 2px 0 var(--ink);
+  background: var(--tape); color: var(--ink);
+}
+.mpin-funded { background: var(--ink); color: var(--tape); border-color: var(--paper); }
+/* the trash bag (open) or broom (funded) that opens a mission tag, in the tag's text colour */
+.mpin-tag .gl { display: inline-block; width: .9em; height: .9em; vertical-align: -.1em; margin-right: 3px; fill: currentColor; }
+/* the tag stands on a little ink stem; its tip is the mission's spot */
+.mpin { width: 0; height: 0; pointer-events: none; }
+.mpin .mpin-tag {
+  position: absolute; left: 0; bottom: 9px;
+  transform: translateX(-50%) rotate(-3deg);
+  pointer-events: auto; cursor: pointer;
+  transition: opacity .15s ease;
+}
+.mpin .mpin-funded { transform: translateX(-50%) rotate(2deg); }
+/* the tap target: at least 44 by 44 px, centred on the tag, as wide as the tag. The glyph made tags 13 px
+   wider, so this no longer adds 7 px at each side: a tag takes the same room as before, and a receipt dot
+   beside it keeps its taps (a finger tap close to a tag goes to the tag anyway, Chrome's touch adjustment) */
+.mpin .mpin-tag::before {
+  content: ""; position: absolute; left: 50%; top: 50%;
+  width: max(44px, calc(100% + 1px)); height: 44px; transform: translate(-50%, -50%);
+}
+/* a tag that would touch another near the rim of the globe fades out until it has room (site/app.js, tidy) */
+.mpin.mpin-off .mpin-tag { opacity: 0; pointer-events: none; }
+/* With a mouse, the pointer over a mission that still waits for its cleanup (open or funded) is the broom: the visitor
+   holds it. The picture is the small mark mirrored, bristles up and to the left, on a paper rim that shows on the dark
+   satellite map too (assets/brand/sapu-sketch/render.mjs pointer); its tip, 5 px in from the corner, is the point that
+   clicks. A browser that takes no picture keeps the hand. The tag answers with one short sweep: site/app.js sets
+   .mpin-sweep when a mouse comes onto the tag and takes it off when the sweep has ended, so the sweep is not cut short
+   when the tag moves from under the pointer for a moment. No broom and no sweep for a finger. */
+@media (hover: hover) and (pointer: fine) {
+  .mpin .mpin-tag {
+    cursor: url("brand/sapu-sketch/broom-pointer-32.png") 5 5, pointer;
+    cursor: -webkit-image-set(url("brand/sapu-sketch/broom-pointer-32.png") 1x, url("brand/sapu-sketch/broom-pointer-64.png") 2x) 5 5, pointer;
+    cursor: image-set(url("brand/sapu-sketch/broom-pointer-32.png") 1x, url("brand/sapu-sketch/broom-pointer-64.png") 2x) 5 5, pointer;
+  }
+  .mpin .mpin-tag.mpin-sweep { animation: mpin-sweep .7s ease-in-out; }
+  .mpin .mpin-funded.mpin-sweep { animation-name: mpin-sweep-funded; }
+}
+/* two strokes of the broom push the tag left and right; it ends where it stood (the rotate of .mpin .mpin-tag) */
+@keyframes mpin-sweep {
+  0%, 100% { transform: translateX(-50%) rotate(-3deg); }
+  20% { transform: translateX(calc(-50% + 4px)) rotate(4deg); }
+  45% { transform: translateX(calc(-50% - 3px)) rotate(-8deg); }
+  70% { transform: translateX(calc(-50% + 2px)) rotate(1deg); }
+}
+@keyframes mpin-sweep-funded {
+  0%, 100% { transform: translateX(-50%) rotate(2deg); }
+  20% { transform: translateX(calc(-50% + 4px)) rotate(8deg); }
+  45% { transform: translateX(calc(-50% - 3px)) rotate(-4deg); }
+  70% { transform: translateX(calc(-50% + 2px)) rotate(5deg); }
+}
+.mpin .mpin-tag::after {
+  content: ""; position: absolute; left: 50%; top: calc(100% + 2px); margin-left: -5px;
+  border: 5px solid transparent; border-top: 6px solid var(--ink); border-bottom: 0;
+}
+.mtip {
+  display: none; position: absolute; left: 0; bottom: 40px; transform: translateX(-50%);
+  width: max-content; max-width: 200px; pointer-events: none;
+}
+@media (hover: hover) {
+  .mpin .mpin-tag:hover { transform: translateX(-50%) rotate(0) scale(1.12); }
+  .mpin-tag:hover + .mtip { display: block; }
+}
+
+.legend {
+  display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 4px 12px;
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: 1px; color: var(--ink);
+  background: var(--paper); border: 2px solid var(--ink); box-shadow: 3px 3px 0 var(--ink);
+  padding: 4px 10px; margin-top: -4px;
+}
+.legend[hidden] { display: none; }
+.legend span { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.legend span[hidden] { display: none; }
+.legend .mpin-tag { font-size: 9px; padding: 2px 4px 1px; box-shadow: 1px 1px 0 var(--ink); }
+.legend .mpin-funded { border-color: var(--ink); }
+.lg-dot {
+  width: 12px; height: 12px; border-radius: 50%; margin: 0 4px;
+  background: var(--clean); box-shadow: 0 0 0 2px #fff, 0 0 0 3.5px var(--ink), 1.5px 1.5px 0 3.5px var(--ink);
+}
+
+/* ===== post lightbox ===== */
+body.post-open { overflow: hidden; }
+.post-overlay[hidden] { display: none; }
+.post-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(28, 24, 19, .72);
+  display: grid; place-items: center; padding: 18px;
+  overflow-y: auto;
+}
+.post-paper {
+  position: relative; width: min(420px, 100%); max-height: calc(100vh - 36px); overflow-y: auto;
+  background: var(--paper); color: var(--ink); font-family: var(--font-mono);
+  box-shadow: 8px 8px 0 rgba(0, 0, 0, .85); transform: rotate(-.4deg);
+  padding-bottom: 4px;
+}
+.post-close {
+  position: sticky; top: 8px; float: right; margin: 8px 10px 0 0; z-index: 2;
+  width: 34px; height: 34px; font-family: var(--font-mono); font-weight: 700; font-size: 15px;
+  background: var(--ink); color: var(--paper); border: 2px solid var(--ink); cursor: pointer;
+}
+.post-stamp { top: 110px; font-size: 26px; }
+.post-media { border-top: 2px dashed var(--rule); border-bottom: 2px dashed var(--rule); }
+.post-media .pm { position: relative; }
+.post-media .pm + .pm { border-top: 2px dashed var(--rule); }
+.post-media img { width: 100%; max-height: 300px; object-fit: cover; display: block; filter: saturate(.9) contrast(1.05); }
+.post-media .ph {
+  height: 170px; display: grid; place-items: center;
+  background: repeating-linear-gradient(45deg, #ece5d2 0 8px, #e2dac4 8px 16px);
+  color: #9a927c; font-size: 10px; font-weight: 700; letter-spacing: 2px;
+}
+.post-media .tag {
+  position: absolute; bottom: 8px; left: 10px;
+  font-size: 10px; font-weight: 700; letter-spacing: 2px; padding: 3px 8px;
+  background: var(--ink); color: var(--paper);
+}
+.post-clips { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 14px 0; }
+.post-clips a { font-size: 11px; font-weight: 700; color: var(--hivis); }
+.post-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; padding: 8px 14px 2px; }
+.post-media .pm-video video { width: 100%; max-height: 520px; display: block; background: #000; }
+/* a video's tag is a caption above the player, so it never covers the player's controls (site/app.js videoBox) */
+.post-media .pm-video .tag { position: static; display: inline-block; margin: 8px 10px 6px; }
+.post-notes { font-size: 12px; line-height: 1.45; padding: 8px 14px 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+.vid-tag {
+  position: absolute; top: 60px; right: 8px; z-index: 2;
+  font-size: 9px; font-weight: 700; letter-spacing: 1.5px; padding: 3px 7px;
+  background: var(--hivis); color: #fff; border: 2px solid var(--ink);
+}
+/* a NEXT UP card's head is taller: the badge sits on its NOW picture, as on a receipt card */
+.mcard .vid-tag { top: 70px; }
+.post-link {
+  font-family: var(--font-display); font-size: 12px; letter-spacing: 1px;
+  background: var(--tape); color: var(--ink);
+  border: 2px solid var(--ink); box-shadow: 4px 4px 0 var(--ink); cursor: pointer;
+  padding: 9px 16px 8px; max-width: 100%; overflow-wrap: anywhere;
+}
+.post-link:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+/* ALL MISSIONS under the buttons of a real mission post, ALL CLEANED MISSIONS under those of a cleaned mission's receipt:
+   a plain line, quieter than SHARE, 44 px tall */
+.post-all { text-align: center; font-size: 11px; font-weight: 700; letter-spacing: 1px; }
+.post-all a {
+  display: inline-flex; align-items: center; min-height: 44px; padding: 0 10px; color: var(--ink);
+  text-decoration: underline; text-decoration-color: var(--hivis); text-decoration-thickness: 2px; text-underline-offset: 3px;
+}
+/* COMMENTS ON INSTAGRAM or TIKTOK in a receipt post (site/app.js commentsRow): a plain link, 44 px or more. The arrow is
+   a flex item of its own, whose leading space collapses, so gap keeps it apart from the words. */
+.post-comments { padding: 12px 14px 0; text-align: center; }
+.post-cbtn { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; max-width: 100%; padding: 9px 16px 8px; gap: 6px;
+  font-family: var(--font-display); font-size: 12px; letter-spacing: 1px; color: var(--ink); text-decoration: none;
+  background: var(--paper); border: 2px solid var(--ink); box-shadow: 4px 4px 0 var(--ink); overflow-wrap: anywhere; }
+.post-cbtn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+.post-cline { font-size: 11px; line-height: 1.45; color: var(--dim); padding: 6px 0 0; overflow-wrap: anywhere; }
+/* SAY TERIMA KASIH under the photos of a receipt post (site/app.js thanksRow): as wide as the post, 44 px or more;
+   once tapped a green stamp. No transition or animation, so reduced motion needs no rule. */
+.post-thanks { padding: 12px 14px 0; }
+.thanks-btn { display: block; width: 100%; min-height: 44px; padding: 10px 14px 9px; cursor: pointer;
+  font-family: var(--font-display); font-size: 15px; letter-spacing: 1px; color: var(--ink); background: var(--hivis);
+  border: 2px solid var(--ink); box-shadow: 4px 4px 0 var(--ink); overflow-wrap: anywhere; }
+.thanks-btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+.thanks-btn.thanks-done, .thanks-btn.thanks-done:active { cursor: default; color: var(--clean); background: var(--paper); border: 3px solid var(--clean); box-shadow: none; transform: rotate(-1deg); }
+.thanks-line { font-size: 11px; line-height: 1.45; color: var(--dim); padding: 6px 0 0; overflow-wrap: anywhere; }
+
+/* mission post */
+.mpost::before {
+  content: ""; display: block; height: 10px;
+  background: repeating-linear-gradient(-45deg, var(--ink) 0 10px, var(--tape) 10px 20px);
+}
+.mpost-funded::before { background: var(--ink); }
+/* chooser for a globe tag that stands for several missions */
+.mchooser { width: min(320px, 100%); }
+.mchooser .m-head { padding-top: 16px; }
+.mch { list-style: none; padding: 4px 14px 12px; border-top: 2px dashed var(--rule); }
+.mch li + li { border-top: 2px dashed var(--rule); }
+.mch button {
+  display: flex; align-items: center; gap: 12px; width: 100%; min-height: 52px; padding: 8px 2px;
+  background: none; border: 0; cursor: pointer; text-align: left;
+  font-family: var(--font-mono); font-size: 10px; font-weight: 700; letter-spacing: 1px; color: var(--dim);
+}
+.mch button b { display: block; font-size: 12px; letter-spacing: .5px; color: var(--ink); overflow-wrap: anywhere; }
+.mch button:hover b, .mch button:focus-visible b { text-decoration: underline; text-decoration-color: var(--hivis); text-decoration-thickness: 2px; }
+.mch .mpin-tag { flex: none; min-width: 36px; text-align: center; }
+.mch .mpin-funded { border-color: var(--ink); }
+/* the same list for receipt dots that sit too close together for a finger */
+.mch .rdot { flex: none; width: 14px; height: 14px; margin: 0 11px; border-radius: 50%; background: var(--clean); box-shadow: 0 0 0 2px #fff, 0 0 0 3.5px var(--ink), 1.5px 1.5px 0 3.5px var(--ink); }
+.mch-more { padding: 0 16px 14px; font-size: 10px; font-weight: 700; letter-spacing: 1px; color: var(--dim); }
+.post-task { font-size: 12px; line-height: 1.45; padding: 8px 14px 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+.post-task span { display: block; font-size: 10px; font-weight: 700; letter-spacing: 2px; color: var(--dim); }
+.r-rows dd a { color: inherit; text-decoration-color: var(--hivis); text-decoration-thickness: 2px; text-underline-offset: 2px; }
+/* the crew's logo next to its name in a receipt post (CLEANED BY) and a mission post (BY) */
+.r-logo { width: 20px; height: 20px; object-fit: cover; border: 1.5px solid var(--ink); background: #fff; vertical-align: -5px; margin-right: 6px; }
+.m-link { text-align: center; font-family: var(--font-display); font-size: 18px; letter-spacing: 1px; padding: 4px 14px 2px; overflow-wrap: anywhere; }
+/* SEE THE SPOT ON SATELLITE in a post */
+.post-sat { display: flex; justify-content: center; padding: 12px 14px 0; }
+
+/* ===== the wide post (site/app.js WIDE, wideHtml, startStage): on a screen at least 900 px wide and 520 px tall,
+   (min-width: 900px) and (min-height: 520px), a post opens in two columns as tall as the screen. On the left the stage
+   shows every photo and video of the post whole (never cropped or enlarged), one slide at a time, each with its tag above
+   it, the stamp, the arrows and the post's own links (COPY LINK, SHARE, ALL MISSIONS) under them; on the right the
+   receipt paper as on a phone (420 px, its tilt, its shadow, its own scroll, its bottom fading while more is below). The
+   frame around both is the dialog. Its empty parts take no clicks, so a click there reaches the backdrop and closes the
+   post. Only the wide post has these classes, so no rule here reaches a phone, and site/app.js alone decides which post
+   opens. No transition or animation, so reduced motion needs no rule. ===== */
+.post-frame {
+  display: flex; align-items: flex-start; gap: 22px;
+  width: min(1760px, 100%); height: calc(100vh - 36px); height: calc(100dvh - 36px);
+  pointer-events: none;
+}
+.post-frame > * { pointer-events: auto; }
+.post-frame .post-paper { flex: none; max-height: 100%; }
+/* while more of the paper is below its edge (pv-more, set by startStage in site/app.js), its bottom fades into the paper,
+   so a window too short for it shows that it scrolls (a Mac shows no scrollbar until then). A sticky box stops at the
+   paper's padding, so bottom: -4px takes it over the paper's own 4 px. */
+.post-frame .post-paper.pv-more::after {
+  content: ""; position: sticky; bottom: -4px; display: block; height: 48px; margin-top: -48px; pointer-events: none;
+  background: linear-gradient(rgba(253, 250, 241, 0), var(--paper) 85%);
+}
+/* the paper's ✕ and its yellow button (SEE THE SPOT ON SATELLITE) keep their look; here their hit areas reach 44 px (a
+   tablet is touched). An absolute box is placed from the padding box, inside the 2 px border: 30 + 2 x 7 = 44 for ✕, and
+   the yellow button 46. The bar's buttons are 44 px tall themselves. */
+.post-frame .post-link { position: relative; }
+.post-frame .post-close::after { content: ""; position: absolute; inset: -7px; }
+.post-frame .post-paper .post-link::after { content: ""; position: absolute; inset: -7px 0; }
+.pv-stage {
+  order: -1; position: relative; flex: 1 1 0; min-width: 0; align-self: stretch; container-type: inline-size;
+  display: flex; flex-direction: column;
+  background: var(--ink); color: var(--paper); font-family: var(--font-mono);
+  box-shadow: 8px 8px 0 rgba(0, 0, 0, .85);
+}
+.pv-slides { position: relative; flex: 1 1 0; min-height: 0; touch-action: pan-y pinch-zoom; }
+/* A slide is a size container: --w and --h are the most a picture may take in it under its 30 px tag (a 22 px chip and
+   8 px), so it shows whole and never larger than its own size. Two on a slide (.pv-two) stand side by side, or one above
+   the other (.pv-col, set by lay in site/app.js when that shows them larger; it uses these same numbers). */
+.pv-slide {
+  position: absolute; inset: 0; padding: 14px; container-type: size;
+  display: flex; align-items: center; justify-content: center; gap: 14px;
+  --w: 100cqw; --h: calc(100cqh - 30px);
+}
+.pv-slide[hidden] { display: none; }
+.pv-two { --w: calc((100cqw - 14px) / 2); }
+.pv-two.pv-col { flex-direction: column; --w: 100cqw; --h: calc((100cqh - 14px) / 2 - 30px); }
+.pv-item { flex: none; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; }
+.pv-tag {
+  height: 22px; margin-bottom: 8px; padding: 0 8px; max-width: var(--w);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 10px; font-weight: 700; line-height: 22px; letter-spacing: 2px; background: var(--paper); color: var(--ink);
+}
+.pv-item img { display: block; max-width: var(--w); max-height: var(--h); filter: saturate(.9) contrast(1.05); }
+/* a video fills its place until its size is known (metadata), then takes its own shape, so its controls are as wide as
+   its picture */
+.pv-item video { display: block; width: var(--w); height: var(--h); background: #000; }
+.pv-item video.pv-fit { width: auto; height: auto; max-width: var(--w); max-height: var(--h); }
+.pv-item video:focus-visible { outline: 3px solid var(--tape); outline-offset: 3px; }
+.pv-item .ph {
+  width: min(var(--w), var(--h) * 4 / 3); aspect-ratio: 4 / 3; display: grid; place-items: center;
+  background: repeating-linear-gradient(45deg, #ece5d2 0 8px, #e2dac4 8px 16px);
+  color: #9a927c; font-size: 10px; font-weight: 700; letter-spacing: 2px;
+}
+@supports not (container-type: size) {
+  .pv-two { flex-direction: column; }
+  .pv-item img, .pv-item video, .pv-item video.pv-fit { width: auto; height: auto; max-width: 40vw; max-height: 60vh; }
+  .pv-two .pv-item img { max-height: 28vh; }
+  .pv-item .ph { width: 40vw; }
+}
+/* under the photos: the stamp at the start, ← 1 / 8 → in the middle, and the post's own links (.pv-acts, below) */
+.pv-bar { flex: none; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px 16px; min-height: 60px; padding: 0 16px 16px; }
+.pv-bar .stamp {
+  grid-column: 1; justify-self: start; position: static; z-index: auto; transform: rotate(-4deg);
+  font-size: 18px; background: var(--paper); opacity: 1; mix-blend-mode: normal;
+}
+.pv-nav { grid-column: 2; display: flex; align-items: center; gap: 14px; }
+.pv-nav button {
+  width: 56px; height: 44px; padding: 0; cursor: pointer;
+  font-family: var(--font-display); font-size: 20px; line-height: 1; color: var(--ink);
+  background: var(--paper); border: 2px solid var(--paper); box-shadow: 4px 4px 0 var(--tape);
+}
+.pv-nav button:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--tape); }
+.pv-nav button[aria-disabled="true"] { opacity: .3; cursor: default; transform: none; box-shadow: none; }
+.pv-nav button:focus-visible { outline: 3px solid var(--tape); outline-offset: 3px; }
+/* as wide as 16 / 16 with its letter spacing (7 glyphs, 2 px each), so the arrows stay put from 9 / 12 to 10 / 12 */
+.pv-count { min-width: calc(7ch + 16px); text-align: center; font-size: 12px; font-weight: 700; letter-spacing: 2px; }
+/* The post's own links (COPY LINK, SHARE, ALL MISSIONS or ALL CLEANED MISSIONS; none on a sample mission) on a row of
+   their own under the stamp and the arrows. On a stage wide enough for all of them on one row (860 px: the stamp 138,
+   the arrows 208, a receipt's three links 422, and the gaps) they stand at its end, the arrows midway between them and
+   the stamp, so the photos keep their height. A browser without container queries keeps the two rows. */
+.pv-acts {
+  grid-column: 1 / -1; justify-self: center;
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px 14px;
+}
+@container (min-width: 860px) {
+  .pv-bar { grid-template-columns: auto 1fr auto; }
+  .pv-nav { justify-self: center; }
+  .pv-acts { grid-column: 3; justify-self: end; justify-content: flex-end; }
+}
+.pv-acts .post-actions { padding: 0; gap: 12px; }
+.pv-acts .post-link { min-height: 44px; border-color: var(--tape); box-shadow: 4px 4px 0 var(--paper); }
+.pv-acts .post-link:active { box-shadow: 1px 1px 0 var(--paper); }
+.pv-acts .post-all a { color: var(--paper); }
+.pv-acts :focus-visible { outline: 3px solid var(--tape); outline-offset: 3px; }
+.pv-live { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ticker-track { animation: none; }
+  html { scroll-behavior: auto; }
+  .mpin .mpin-tag, .wheel-hint, .sat-tile, .sat-btn, .crew-link, .tag-demo, .pitch, .tap-hint, .legend, .stats, .scroll-cue { transition: none; }
+  .mpin .mpin-tag.mpin-sweep { animation: none; }
+}

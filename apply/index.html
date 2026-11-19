@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Become a partner crew · Sapu Earth</title>
+<meta name="description" content="Do you clean beaches, rivers or streets with a team? Sapu Earth pays local crews for cleanups and shows every one on a public map. Apply in about 3 minutes.">
+<meta property="og:title" content="Become a partner crew · Sapu Earth">
+<meta property="og:description" content="Sapu Earth pays local crews for cleanups and shows every one on a public map. Tell us about your crew. It takes about 3 minutes.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://sapu.earth/apply/">
+<!-- the homepage's link preview picture, the broom (index.html says why it is square and named so) -->
+<meta property="og:image" content="https://sapu.earth/site/social/sapu-earth-mark.png">
+<meta property="og:image:width" content="1024">
+<meta property="og:image:height" content="1024">
+<meta property="og:image:alt" content="Sapu Earth's logo, a hand-drawn yellow broom">
+<meta name="twitter:card" content="summary">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="theme-color" content="#f2ecdd">
+<link rel="icon" href="/site/brand/sapu-sketch/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="/site/brand/sapu-sketch/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/site/brand/sapu-sketch/apple-touch-icon.png">
+<link rel="stylesheet" href="/site/fonts.css">
+<link rel="stylesheet" href="/site/styles.css">
+<link rel="stylesheet" href="/site/forms.css">
+</head>
+<body class="form-page">
+<header class="fp-top">
+  <a class="logo logo-sm" href="/">SAPU<br>EARTH</a>
+  <div class="lang" role="group" aria-label="Language">
+    <button type="button" data-lang="en" aria-pressed="true" lang="en">English</button>
+    <button type="button" data-lang="id" aria-pressed="false" lang="id">Indonesia</button>
+  </div>
+</header>
+
+<main class="fp-main">
+  <h1 class="fp-title"><mark data-i18n="title">BECOME A PARTNER CREW</mark></h1>
+  <div id="intro">
+    <p class="fp-lead" data-i18n="lead">Do you clean beaches, rivers or streets with a team? Sapu Earth pays local crews for cleanups and shows every one on a public map. Tell us about your crew. It takes about 3 minutes.</p>
+    <!-- Free, and how the money goes, before a crew types its number (Marcus said 'Yes, build all 9' on 2026-11-16): a
+         foreign site that offers money is where a registration fee or an OTP scam is expected. The no-fees line is the
+         one in the join box of /crews and /missions (JOIN in functions/_lib/crews.js), the steps the welcome message's. -->
+    <p class="fp-note" data-i18n="free">There are no fees, and we never ask for a PIN, a password or an OTP code.</p>
+    <h2 class="fp-how" data-i18n="how_h">HOW IT WORKS</h2>
+    <ol class="cp-steps fp-steps">
+      <li data-i18n="how_1">You post a dirty spot as a mission, with your own price in local money.</li>
+      <li data-i18n="how_2">We check it. Only funded missions are paid, so wait for our OK before you start.</li>
+      <li data-i18n="how_3">We send an advance to one person's own bank account or e-wallet, and the rest after we approve your cleanup.</li>
+    </ol>
+    <p class="fp-note" data-i18n="already">Already a crew with us? You don't need to apply again: open the private link from our WhatsApp or email message. Lost it? Write to hello@sapu.earth and we send you a new one.</p>
+    <p class="fp-note" data-i18n="honest">We fund a few crews at a time, so we can't say yes to everyone. We reply to every application on WhatsApp or email, usually within a week. No calls needed.</p>
+  </div>
+
+  <form id="form" method="post" novalidate>
+    <section class="panel">
+      <h2 class="panel-title" data-i18n="crew_h">YOUR CREW</h2>
+      <label class="field" id="f-org_name">
+        <span><b data-i18n="org_name">Crew or group name</b> <i class="req">*</i></span>
+        <input type="text" name="org_name" maxlength="80" required autocomplete="organization">
+      </label>
+      <label class="field" id="f-country">
+        <span><b data-i18n="country">Country</b> <i class="req">*</i></span>
+        <select name="country" required autocomplete="country"></select>
+      </label>
+      <label class="field" id="f-area">
+        <span><b data-i18n="area">City or area where you clean</b> <i class="req">*</i></span>
+        <input type="text" name="area" maxlength="120" required autocomplete="off" data-ph="area_ph" placeholder="Canggu, Bali">
+      </label>
+      <label class="field" id="f-about">
+        <span><b data-i18n="about">What do you clean, and how often?</b> <i class="req">*</i></span>
+        <textarea name="about" maxlength="1000" required data-ph="about_ph" placeholder="Example: every Saturday 6 of us clean the river mouth in Canggu. We started in 2023."></textarea>
+      </label>
+      <div class="field" id="f-links">
+        <span id="links-label" data-i18n="links">Where can we see your cleanups?</span>
+        <p class="hint" data-i18n="links_hint">Instagram, TikTok, Facebook or a website.</p>
+        <label class="field link-line" id="f-link1">
+          <input type="text" name="link1" maxlength="200" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" data-ph="link_ph" aria-labelledby="links-label" placeholder="instagram.com/yourcrew or @yourcrew">
+        </label>
+        <label class="field link-line" id="f-link2">
+          <input type="text" name="link2" maxlength="200" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" data-ph="link_ph" aria-labelledby="links-label" placeholder="instagram.com/yourcrew or @yourcrew">
+        </label>
+        <label class="field link-line" id="f-link3">
+          <input type="text" name="link3" maxlength="200" autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" data-ph="link_ph" aria-labelledby="links-label" placeholder="instagram.com/yourcrew or @yourcrew">
+        </label>
+      </div>
+    </section>
+
+    <!-- The crew's logo (docs/upload-flow.md, Crew logos). Its hint belongs to the panel, not right before the picker. -->
+    <section class="panel">
+      <h2 class="panel-title" data-i18n="logo_h">LOGO (OPTIONAL)</h2>
+      <p class="hint" data-i18n="logo_hint">If your crew has a logo, add it here: the logo itself, or a close-up photo of the logo on your banner or shirt. If we work together, we can show it next to your crew's name on sapu.earth. No photos of people.</p>
+      <div class="field" id="f-logo">
+        <label class="drop"><span data-i18n="add_logo">+ Add logo</span><input type="file" accept="image/*"></label>
+        <div class="thumbs" id="logoThumb"></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2 class="panel-title" data-i18n="photos_h">PHOTOS (OPTIONAL)</h2>
+      <p class="hint" data-i18n="photos_hint">Up to 3 photos of your crew at a cleanup. Only the Sapu Earth team sees them, and we delete them once we decide.</p>
+      <div class="field" id="f-photos">
+        <label class="drop"><span data-i18n="add_photos">+ Add photos</span><input type="file" accept="image/*" multiple></label>
+        <div class="thumbs" id="thumbs"></div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2 class="panel-title" data-i18n="reach_h">HOW DO WE REACH YOU?</h2>
+      <label class="field" id="f-contact_name">
+        <span><b data-i18n="contact_name">Your name</b> <i class="req">*</i></span>
+        <input type="text" name="contact_name" maxlength="80" required autocomplete="name">
+      </label>
+      <div class="field" id="f-contact">
+        <p class="hint" data-i18n="reach_hint">Fill in at least one. We reply by message or email, no calls.</p>
+        <label class="field" id="f-whatsapp">
+          <span data-i18n="whatsapp">WhatsApp number</span>
+          <input type="tel" name="whatsapp" inputmode="tel" autocomplete="tel" maxlength="30" placeholder="+62 812 3456 7890">
+          <small class="echo" id="waEcho" aria-live="polite"></small>
+        </label>
+        <label class="field" id="f-email">
+          <span data-i18n="email">Email</span>
+          <input type="email" name="email" inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false" maxlength="120">
+        </label>
+      </div>
+    </section>
+
+    <section class="panel">
+      <label class="field" id="f-heard_from">
+        <span data-i18n="heard">How did you hear about Sapu Earth?</span>
+        <input type="text" name="heard_from" maxlength="120" autocomplete="off" data-ph="heard_ph" placeholder="TikTok, Instagram, a friend">
+      </label>
+      <label class="check" id="f-consent">
+        <input type="checkbox" name="consent" value="1">
+        <span><span data-i18n="consent">Sapu Earth may store these details to review my application and to contact me about it. If we don't go ahead together, or haven't decided within 3 months, the application is deleted. If we work together, we keep my contact details for as long as we do.</span> <i class="req">*</i></span>
+      </label>
+      <div class="msg err fmsg" data-fmsg="f-consent"></div>
+      <details class="privacy" id="privacy">
+        <summary data-i18n="pv_sum">How we handle your details</summary>
+        <ul>
+          <li><b data-i18n="pv_who_h">Who:</b> <span data-i18n="pv_who">Sapu Earth is run by Marcus Pousette in Innsbruck, Austria. Contact:</span> <a href="mailto:hello@sapu.earth">hello@sapu.earth</a>.</li>
+          <li><b data-i18n="pv_what_h">What we store:</b> <span data-i18n="pv_what">your answers, your contact details, up to 3 photos, your crew's logo if you add one, and for about a day a scrambled code made from your internet address, to stop spam. Until you send, the answers you type stay on this phone as a draft. After sending, the phone keeps only your language choice.</span></li>
+          <li><b data-i18n="pv_why_h">Why:</b> <span data-i18n="pv_why">to review your application and reply to you, and if we work together, to show your crew on sapu.earth from the first day: its name, country and logo in the list of crews at sapu.earth/crews, and on its public page also one of the links you gave us. Legal basis: your consent and steps before working together (GDPR Art. 6(1)(a) and (b)).</span></li>
+          <li><b data-i18n="pv_where_h">Where:</b> <span data-i18n="pv_where">on Cloudflare servers (database and file storage), which may be outside the EU. Cloudflare stores them for us as our processor. It is certified under the EU-US Data Privacy Framework and uses the EU standard contractual clauses for other countries. This page loads all its files, fonts included, from sapu.earth.</span></li>
+          <li><b data-i18n="pv_long_h">How long:</b> <span data-i18n="pv_long">photos are deleted once we decide, and so is your crew's logo, unless we work together and show it on sapu.earth: then it stays there until a newer one replaces it or we stop working together. Applications we don't take forward are deleted, and so is any application we haven't decided on within 3 months. If we work together, we keep your contact details while we do and delete them when we stop.</span></li>
+          <li><b data-i18n="pv_rights_h">Your rights:</b> <span data-i18n="pv_rights">ask to see, correct or delete your details, or withdraw your consent, by emailing</span> <a href="mailto:hello@sapu.earth">hello@sapu.earth</a>. <span data-i18n="pv_complain">You can also complain to the Austrian data protection authority</span> (<a href="https://www.dsb.gv.at/" target="_blank" rel="noopener noreferrer">dsb.gv.at</a>).</li>
+        </ul>
+      </details>
+      <!-- /apply/#privacy (linked from /impressum/) opens the notice. -->
+      <div class="hp" aria-hidden="true">
+        <label>Website <input type="text" name="website" tabindex="-1" autocomplete="off"></label>
+      </div>
+    </section>
+
+    <div class="msg err" id="formErr" aria-live="assertive"></div>
+    <button type="submit" class="b b-go" id="send" data-i18n="send">SEND APPLICATION</button>
+    <div class="keep-open" id="keepOpen" data-i18n="keep_open" hidden>Keep this page open until you see THANK YOU.</div>
+    <div class="status-line" id="status" aria-live="polite"></div>
+  </form>
+
+  <section class="panel done-screen" id="done" hidden>
+    <h2 class="big" id="doneTitle" tabindex="-1" data-i18n="thanks">THANK YOU!</h2>
+    <p data-i18n="thanks_body">We got your application. We read every one and reply on WhatsApp or email, usually within a week.</p>
+    <div class="ref" id="ref"></div>
+    <p class="follow" data-i18n="follow">Meanwhile, follow us:</p>
+    <div class="btn-row center">
+      <a class="b" href="https://www.tiktok.com/@sapu.earth" target="_blank" rel="noopener noreferrer">TIKTOK</a>
+      <a class="b" href="https://www.instagram.com/sapu.earth" target="_blank" rel="noopener noreferrer">INSTAGRAM</a>
+    </div>
+    <div class="btn-row center" style="margin-top:18px">
+      <a class="b b-ghost" href="/" data-i18n="globe">BACK TO THE GLOBE</a>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <p><a href="/impressum/">IMPRESSUM</a></p>
+</footer>
+
+<script src="/apply/apply.js"></script>
+</body>
+</html>

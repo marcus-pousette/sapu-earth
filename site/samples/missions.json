@@ -1,0 +1,53 @@
+[
+  {
+    "no": 3,
+    "status": "open",
+    "lat": -6.2,
+    "lng": 106.84,
+    "place_name": "Ciliwung riverbank",
+    "country": "ID",
+    "in_days": 12,
+    "crew_size": 8,
+    "currency": "IDR",
+    "price_local": 2000000,
+    "crew_local": 1600000,
+    "funded_eur": null,
+    "partner": { "name": "Sample crew" },
+    "task": "Fish the plastic out of the bend under the footbridge before the next rain carries it to the sea.",
+    "now": ["site/samples/ciliwung-now.svg"]
+  },
+  {
+    "no": 5,
+    "status": "open",
+    "lat": -5.14,
+    "lng": 119.41,
+    "place_name": "Losari beach",
+    "country": "ID",
+    "in_days": 19,
+    "crew_size": 6,
+    "currency": "IDR",
+    "price_local": 1200000,
+    "crew_local": 900000,
+    "funded_eur": null,
+    "partner": { "name": "Sample crew" },
+    "task": "Clear the sand below the sea wall: bottles, cans and a suspicious number of flip-flops.",
+    "now": ["site/samples/losari-now.svg"]
+  },
+  {
+    "no": 8,
+    "status": "funded",
+    "lat": 14.55,
+    "lng": 120.98,
+    "place_name": "Manila Bay sea wall",
+    "country": "PH",
+    "in_days": 6,
+    "crew_size": 5,
+    "currency": "PHP",
+    "price_local": 5000,
+    "crew_local": 4000,
+    "funded_eur": 80,
+    "partner": { "name": "Sample crew" },
+    "task": "Scoop the floating trash along the sea wall at low tide and sort what we find. The fish have been asking.",
+    "now": ["site/samples/manila-now.svg"]
+  }
+]

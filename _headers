@@ -1,0 +1,16 @@
+# Security headers for every static page Cloudflare Pages serves (copied into dist/ by scripts/build-site.sh).
+# No other site may show sapu.earth inside a frame (clickjacking, for example on /admin/), browsers must not
+# guess content types, and a link to another site carries only the origin, never a crew's ?k= upload token.
+# Scripts only from this site (script-src 'self': our files and Cloudflare's /cdn-cgi/ email decoder), so a slip in
+# escaping crew text could not run a script that reads the admin token: no page has an inline script or handler.
+# Pages built by Functions (/r, /m, /p, /crews, /missions) set their own headers, since this file does not reach them.
+/*
+  X-Frame-Options: DENY
+  Content-Security-Policy: frame-ancestors 'none'; script-src 'self'; object-src 'none'; base-uri 'none'
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+
+# /admin/ holds the admin token: on top of the line above (browsers enforce both), nothing but this site at all.
+# Inline styles stay allowed for the style attributes admin.js writes.
+/admin/*
+  Content-Security-Policy: default-src 'none'; script-src 'self'; connect-src 'self'; img-src 'self' data:; media-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <title>Sapu</title>
+  <defs><clipPath id="head"><circle cx="32" cy="32" r="25"/></clipPath></defs>
+  <g transform="translate(32 32) scale(1.12) translate(-32 -32)">
+  <circle cx="32" cy="32" r="27" fill="#1c1813"/>
+  <circle cx="32" cy="32" r="25" fill="#bde6f2"/>
+  <g clip-path="url(#head)" fill="#2bb673">
+    <path d="M4 4H28Q32 12 24 15Q19 16 19 20Q18 25 10 25H4Z"/>
+    <path d="M50 5Q42 10 49 16Q53 19 51 24L63 29V3Z"/>
+    <path d="M4 37Q14 31 17 40Q19 45 14 50L10 57H3Z"/>
+    <path d="M63 36Q50 34 50 43Q48 47 52 53H63Z"/>
+  </g>
+  <g fill="#1c1813">
+    <ellipse cx="23" cy="30" rx="3" ry="5"/>
+    <ellipse cx="41" cy="30" rx="3" ry="5"/>
+    <path d="M24 41Q32 44 40 41Q39 50 32 50Q25 50 24 41Z"/>
+  </g>
+  </g>
+</svg>

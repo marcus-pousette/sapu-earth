@@ -1,0 +1,8 @@
+# sapu.earth: every public page may be crawled. A crew's page and the admin need a private link, so they stay out.
+# scripts/build-site.sh writes the sitemap on every build. (Cloudflare may add its own content signals above this.)
+User-agent: *
+Disallow: /admin/
+Disallow: /upload/
+Disallow: /api/
+
+Sitemap: https://sapu.earth/sitemap.xml

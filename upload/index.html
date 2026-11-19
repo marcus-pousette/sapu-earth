@@ -1,0 +1,487 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Crew page · Sapu Earth</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#f2ecdd">
+<link rel="icon" href="/site/brand/sapu-sketch/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="/site/brand/sapu-sketch/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/site/brand/sapu-sketch/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-title" content="Sapu Crew">
+<link rel="stylesheet" href="/site/fonts.css">
+<link rel="stylesheet" href="/site/styles.css">
+<link rel="stylesheet" href="/site/forms.css">
+</head>
+<body class="form-page">
+<header class="fp-top">
+  <a class="logo logo-sm" href="/">SAPU<br>EARTH</a>
+  <div class="lang" role="group" aria-label="Language">
+    <button type="button" data-lang="en" aria-pressed="true" lang="en">English</button>
+    <button type="button" data-lang="id" aria-pressed="false" lang="id">Indonesia</button>
+  </div>
+</header>
+
+<main class="fp-main">
+  <!-- Three screens on one address: the crew page (#home), POST A MISSION (#mform, then #mdone) and a cleanup
+       (#form, then #done). upload.js shows one at a time; the phone's back button goes from a form to the crew page. -->
+  <p class="view-bar" id="viewBar" hidden><button type="button" class="b b-ghost b-back" id="back"><span aria-hidden="true">← </span><span data-i18n="back">CREW PAGE</span></button></p>
+  <h1 class="fp-title" tabindex="-1"><mark data-i18n="title">YOUR CREW PAGE</mark></h1>
+  <div class="who" id="who" data-i18n="checking">Checking your link…</div>
+  <div class="msg err" id="reloadNote" role="status"></div>
+
+  <section id="home" hidden>
+    <section class="panel save-link" id="saveLink" hidden>
+      <h2 class="panel-title" data-i18n="save_h" tabindex="-1">SAVE THIS LINK</h2>
+      <p data-i18n="save_body">This page is your private key to Sapu Earth. Save it now so you can open it again any time. Don't post it in public: anyone with this link can post missions and send cleanups in your name.</p>
+      <p class="save-tip" id="saveTip" data-i18n="tip_other">Bookmark this page.</p>
+      <div class="btn-row">
+        <button type="button" class="b" id="saveShare" data-i18n="save_share" hidden>SEND TO MYSELF</button>
+        <button type="button" class="b b-ghost" id="saveCopy" data-i18n="save_copy">COPY LINK</button>
+        <button type="button" class="b b-ok" id="saveDone" data-i18n="save_done">DONE, I SAVED IT</button>
+      </div>
+    </section>
+
+    <section class="panel cp-intro" id="intro" hidden>
+      <h2 class="panel-title" data-i18n="intro_h">FIRST STEP: POST A MISSION</h2>
+      <p data-i18n="intro_body">Find a dirty spot near you, take photos of it, and post it here as a mission with your price. Sapu Earth checks it and tells you if it is funded. Only funded missions are paid.</p>
+      <ol class="cp-steps">
+        <li data-i18n="intro_1">Post a mission</li>
+        <li data-i18n="intro_2">Wait until it is funded</li>
+        <li data-i18n="intro_3">Clean, then send the cleanup</li>
+      </ol>
+      <button type="button" class="b b-go" data-go="mission" data-i18n="mode_mission">POST A MISSION</button>
+    </section>
+
+    <h2 class="cp-h" id="cardsH" data-i18n="my_missions_h" hidden>YOUR MISSIONS</h2>
+    <div class="cp-cards" id="cards"></div>
+    <div class="msg err" id="missionMsg" aria-live="polite"></div>
+
+    <div class="cp-post" id="postBox" hidden>
+      <button type="button" class="b" id="postMission" data-go="mission" data-i18n="mode_mission">POST A MISSION</button>
+      <p class="hint" id="postSub" data-i18n="mode_mission_sub">A dirty spot you want to clean. Ask Sapu Earth to fund it.</p>
+      <p class="hint cp-limit" id="limitNote" data-i18n="m_limit_home" hidden>You have 5 missions that are waiting for Sapu Earth, on sapu.earth or funded. You can post a new one once we approve the cleanup of a funded one, or after you withdraw one that is not funded yet.</p>
+    </div>
+
+    <div class="cp-plain" id="plainBox" hidden>
+      <button type="button" class="text-btn" id="plainGo" data-go="plain" data-i18n="plain_btn">SEND A CLEANUP WITHOUT A MISSION</button>
+      <p class="hint" id="plainSub" data-i18n="plain_sub">Only funded missions are paid. Use this for a cleanup that was not one of your missions.</p>
+    </div>
+
+    <section class="panel" id="past" hidden>
+      <h2 class="panel-title" data-i18n="past_h">PAST MISSIONS</h2>
+      <ul class="mine-list" id="pastList"></ul>
+      <details class="cp-removed" id="removedBox" hidden>
+        <summary id="removedSum"></summary>
+        <ul class="mine-list" id="removedList"></ul>
+      </details>
+    </section>
+
+    <!-- YOUR CLEANUPS, with the thanks visitors gave the crew's receipts (docs/upload-flow.md, Thanks): the total above the
+         list once there is one, and what the button is under it once the crew has a published cleanup, both from
+         GET /api/partner (renderMine in upload.js). -->
+    <section class="panel" id="mine" hidden>
+      <h2 class="panel-title" data-i18n="mine_h">YOUR CLEANUPS</h2>
+      <p class="hint cp-thanks" id="thanksTotal" aria-live="polite" hidden></p>
+      <ul class="mine-list" id="mineList"></ul>
+      <p class="hint cp-tnote" id="thanksNote" hidden></p>
+    </section>
+
+    <!-- The crew's logo (docs/upload-flow.md, Crew logos): the tile and its line, the rules, then the picker, so the
+         rules are read before the pick. upload.js shows it once GET /api/partner says logos are on. -->
+    <section class="panel cp-logo" id="logoBox" hidden>
+      <h2 class="panel-title" data-i18n="logo_h">YOUR LOGO</h2>
+      <div class="cl-row">
+        <span class="cl-tile" id="logoTile" data-state="none" aria-hidden="true"><img id="logoImg" alt="" width="64" height="64" hidden><b class="cl-mono" id="logoMono"></b></span>
+        <p class="cl-line" id="logoLine" aria-live="polite"></p>
+      </div>
+      <p class="hint cl-rules" data-i18n="logo_rules">Your crew's own logo, or a close-up photo of the logo on your banner or shirt, with the logo filling the picture. No photos of people, no phone or bank account numbers, no QR codes, and no other organization's logo.</p>
+      <label class="b b-row b-ghost cl-pick"><span id="logoBtn" data-i18n="logo_add">+ ADD YOUR LOGO</span><input type="file" id="logoInput" accept="image/*" data-i18n-aria="logo_pick" aria-label="Your crew's logo"></label>
+      <div class="msg err" id="logoMsg" aria-live="polite"></div>
+    </section>
+
+    <!-- The crew's public page, once the crew is in the list of crews (GET /api/partner's listed, the rule of /crews).
+         SEE ALL CREWS opens that list; the no-referrer meta above keeps ?k= out of the request. -->
+    <section class="panel" id="pubPage" hidden>
+      <h2 class="panel-title" data-i18n="page_h">YOUR PUBLIC PAGE</h2>
+      <p class="cp-pub"><a id="pubLink" href="/" target="_blank" rel="noopener"></a></p>
+      <p class="hint" id="crewsHint" data-i18n="crews_listed" hidden>Your crew is also in the list of all crews on sapu.earth.</p>
+      <div class="btn-row">
+        <button type="button" class="b" id="sharePub" data-i18n="share_page">SHARE YOUR PAGE</button>
+        <a class="b b-ghost" id="crewsLink" href="/crews" target="_blank" rel="noopener" data-i18n="crews_open">SEE ALL CREWS</a>
+      </div>
+    </section>
+
+    <p class="save-again" id="saveAgain" hidden><button type="button" class="text-btn" data-i18n="save_again">How to save this link</button></p>
+  </section><!-- /home -->
+
+  <form id="form" novalidate hidden>
+    <section class="panel cp-mission" id="missionBox" hidden>
+      <div id="missionSum">
+        <p class="cp-kicker" data-i18n="sum_kicker">MISSION</p>
+        <p class="cp-title" id="sumTitle"></p>
+        <p class="cp-line" id="sumFacts"></p>
+        <button type="button" class="b b-ghost b-row" id="sumChange" data-i18n="sum_change" aria-expanded="false" aria-controls="f-mission wherePanel">CHANGE</button>
+      </div>
+      <label class="field" id="f-mission" hidden>
+        <span data-i18n="mission_pick">Which mission is this cleanup for?</span>
+        <select name="mission_id"></select>
+      </label>
+      <div class="cp-guard" id="guard" hidden>
+        <p id="guardQ"></p>
+        <button type="button" class="b" id="guardYes"></button>
+      </div>
+      <p class="msg err" id="goneNote"></p>
+    </section>
+
+    <section class="panel" id="wherePanel">
+      <h2 class="panel-title" data-i18n="m_where_h">WHERE</h2>
+      <label class="field" id="f-place">
+        <span><b data-i18n="place">Place name</b> <i class="req">*</i></span>
+        <input type="text" name="place_name" maxlength="120" required autocomplete="off" data-ph="place_ph" placeholder="Canggu river mouth">
+      </label>
+      <div class="chips" id="placeChipsC" role="group" aria-labelledby="placeChipsCLab" hidden><span id="placeChipsCLab" data-i18n="chips_place">Places you used before:</span></div>
+      <label class="field" id="f-country">
+        <span><b data-i18n="country">Country</b> <i class="req">*</i></span>
+        <select name="country"></select>
+      </label>
+    </section>
+
+    <section class="panel step" id="beforePanel">
+      <h2 class="panel-title" data-i18n="before_h">BEFORE THE CLEANUP</h2>
+      <p class="hint" data-i18n="before_hint">1 to 4 photos before you start, from where you can see the whole spot.</p>
+      <div class="paper-hint" id="paperHint" hidden>
+        <span class="paper-no" id="paperNo" aria-hidden="true"></span>
+        <span id="paperText"></span>
+      </div>
+      <div class="field" id="f-before">
+        <span><b data-i18n="before">Photos before the cleanup</b> <i class="req">*</i></span>
+        <label class="drop"><span data-i18n="add_photos">+ Add photos</span><input type="file" accept="image/*" multiple data-kind="before" data-i18n-aria="before" aria-label="Photos before the cleanup"></label>
+        <div class="thumbs" data-list="before"></div>
+        <div class="msg err" data-msg="before"></div>
+      </div>
+
+      <div class="field" id="f-video_before">
+        <span data-i18n="video_before">Video before the cleanup (optional)</span>
+        <p class="hint" data-i18n="videos_hint">One video before and one after the cleanup. Short vertical clips of 15 to 30 seconds work best and send faster. Limit: 90 seconds and 95 MB each.</p>
+        <label class="drop"><span data-i18n="add_video">+ Add video</span><input type="file" accept="video/mp4,video/quicktime,video/webm,video/*" data-kind="video_before" data-i18n-aria="video_before" aria-label="Video before the cleanup (optional)"></label>
+        <div class="thumbs" data-list="video_before"></div>
+        <div class="msg err" data-msg="video_before"></div>
+      </div>
+
+      <div class="field" id="f-geo">
+        <span data-i18n="location">Location</span>
+        <p class="hint" id="geoHint" data-i18n="geo_hint">Only tap this while you are at the cleanup spot.</p>
+        <button type="button" class="b b-ghost" id="geo" data-i18n="use_location">Use my location now</button>
+        <div class="coords" id="coords"></div>
+        <div class="msg" id="geoMsg"></div>
+      </div>
+    </section>
+
+    <section class="panel step" id="afterPanel">
+      <h2 class="panel-title" data-i18n="after_h">AFTER THE CLEANUP</h2>
+      <p class="hint" data-i18n="after_hint">1 to 4 photos at the end, from the same spots and the same angles as the before photos.</p>
+      <div class="field" id="f-after">
+        <span><b data-i18n="after">Photos after the cleanup</b> <i class="req">*</i></span>
+        <label class="drop"><span data-i18n="add_photos">+ Add photos</span><input type="file" accept="image/*" multiple data-kind="after" data-i18n-aria="after" aria-label="Photos after the cleanup"></label>
+        <div class="thumbs" data-list="after"></div>
+        <div class="msg err" data-msg="after"></div>
+      </div>
+
+      <div class="field" id="f-video_after">
+        <span data-i18n="video_after">Video after the cleanup (optional)</span>
+        <label class="drop"><span data-i18n="add_video">+ Add video</span><input type="file" accept="video/mp4,video/quicktime,video/webm,video/*" data-kind="video_after" data-i18n-aria="video_after" aria-label="Video after the cleanup (optional)"></label>
+        <div class="thumbs" data-list="video_after"></div>
+        <div class="msg err" data-msg="video_after"></div>
+      </div>
+    </section>
+
+    <section class="panel step">
+      <h2 class="panel-title" data-i18n="result_h">RESULT</h2>
+      <p class="hint" data-i18n="result_hint">Fill in sacks, kg, or both. Estimates are fine, just be honest.</p>
+      <label class="field" id="f-date">
+        <span><b data-i18n="date">Cleanup date</b> <i class="req">*</i></span>
+        <input type="date" name="cleanup_date" required>
+      </label>
+      <p class="cp-chiprow" id="planDayRow" hidden><button type="button" class="chip" id="planDay"></button></p>
+      <div class="row2">
+        <label class="field" id="f-sacks">
+          <span data-i18n="sacks">Number of full sacks</span>
+          <input type="number" name="sacks" inputmode="numeric" min="0" max="10000" step="1">
+        </label>
+        <label class="field" id="f-kg">
+          <span data-i18n="kg">Trash weight (kg)</span>
+          <input type="text" name="kg" inputmode="decimal" autocomplete="off" maxlength="12">
+          <small class="echo" data-echo="kg" aria-live="polite"></small>
+        </label>
+      </div>
+      <div class="row2">
+        <label class="field" id="f-crew">
+          <span><b data-i18n="crew">Crew size</b> <i class="req">*</i></span>
+          <input type="number" name="crew_size" inputmode="numeric" min="1" max="1000" step="1" required>
+          <small class="src" id="crewSrc" hidden></small>
+        </label>
+        <label class="field" id="f-hours">
+          <span data-i18n="hours">How many hours did the cleanup take?</span>
+          <input type="text" name="hours" inputmode="decimal" autocomplete="off" maxlength="6">
+        </label>
+      </div>
+      <label class="field" id="f-disposal">
+        <span data-i18n="disposal">Where did the trash go?</span>
+        <input type="text" name="disposal" maxlength="200" data-ph="disposal_ph" placeholder="Waste bank, collector, landfill">
+      </label>
+      <div class="chips" id="dispChips" role="group" aria-labelledby="dispChipsLab">
+        <span id="dispChipsLab" data-i18n="chips_disposal">Tap to fill in:</span>
+        <button type="button" class="chip" data-i18n="disp_bank">Waste bank</button>
+        <button type="button" class="chip" data-i18n="disp_collector">Collector</button>
+        <button type="button" class="chip" data-i18n="disp_official">Official collection point</button>
+      </div>
+    </section>
+
+    <section class="panel" id="costPanel">
+      <h2 class="panel-title" data-i18n="money_h">COSTS</h2>
+      <p class="hint cp-cost" id="costLine" hidden><span id="costPaid"></span> <span id="costReceipt"></span> <span id="costCrew"></span></p>
+      <button type="button" class="b b-ghost b-row" id="costToggle" data-i18n="cost_toggle" aria-expanded="false" aria-controls="costFields" hidden>THE COSTS WERE DIFFERENT</button>
+      <div id="costFields">
+        <p class="hint" data-i18n="money_hint">In your local currency. These numbers make our reports transparent.</p>
+        <div class="row2">
+          <label class="field" id="f-currency">
+            <span data-i18n="currency">Currency</span>
+            <select name="currency"></select>
+          </label>
+          <label class="field" id="f-currency-other" hidden>
+            <span data-i18n="currency_code">Currency code</span>
+            <input type="text" name="currency_other" maxlength="3" autocapitalize="characters" placeholder="MYR">
+          </label>
+        </div>
+        <label class="field" id="f-each">
+          <span data-i18n="got_each">What each person got</span>
+          <input type="text" name="crew_each_local" inputmode="decimal" autocomplete="off" maxlength="20" aria-describedby="fEachLine fSumParts">
+          <small class="echo" id="fEachLine" aria-live="polite"></small>
+        </label>
+        <div class="field" id="f-other">
+          <span id="fOtherLab" data-i18n="other_costs">Other costs</span>
+          <p class="hint" id="fOtherHint" data-i18n="other_hint">Everything besides the pay: gloves, sacks, drinking water, a small first aid kit and transport. One amount for all of it.</p>
+          <input type="text" name="other_local" inputmode="decimal" autocomplete="off" maxlength="20" aria-labelledby="fOtherLab" aria-describedby="fOtherHint fOtherLine fSumParts">
+          <small class="echo" id="fOtherLine" aria-live="polite"></small>
+        </div>
+        <div class="sum-box" id="fSum" hidden>
+          <span class="sum-h" data-i18n="c_sum_h">TOTAL COST</span>
+          <b class="sum-total" id="fSumTotal"></b>
+          <small class="sum-parts" id="fSumParts" aria-live="polite"></small>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <label class="field">
+        <span data-i18n="notes">Notes (shown on the public receipt)</span>
+        <textarea name="notes" maxlength="1000" data-ph="notes_ph" placeholder="A short story about the day"></textarea>
+      </label>
+      <div class="field" id="f-post" hidden>
+        <span id="postLab" data-i18n="post">Link to your post about this cleanup (optional)</span>
+        <p class="hint" id="postHint" data-i18n="post_hint">Posted this cleanup on Instagram or TikTok? Paste the link here, so the receipt can link your post and people can comment there. Instagram: tap Share, then Copy link. TikTok: the app copies a short link we cannot check, so paste it into your browser's address bar first, then copy the full address from there.</p>
+        <p class="hint" id="postRules" data-i18n="post_rules">Only your own post about this cleanup: no request for money or bank numbers, and only people who agreed to be shown. Otherwise we take the link off and tell you why.</p>
+        <input type="url" name="post_url" id="postUrl" inputmode="url" maxlength="300" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://www.instagram.com/p/..." aria-labelledby="postLab" aria-describedby="postHint postRules postEcho">
+        <small class="echo" id="postEcho" data-echo="post_url" aria-live="polite"></small>
+      </div>
+      <label class="field">
+        <span data-i18n="private_note">Message to Sapu Earth (private)</span>
+        <textarea name="private_note" maxlength="1000" data-ph="private_note_ph" placeholder="Only the Sapu Earth team reads this."></textarea>
+      </label>
+      <label class="check" id="f-consent">
+        <input type="checkbox" name="consent">
+        <span><b data-i18n="consent">Everyone in these photos and videos agreed to be shown on sapu.earth, on social media and in Sapu Earth's marketing, and no children appear in them. Sapu Earth may use, edit and share these photos and videos to show and promote its work.</b> <i class="req">*</i></span>
+      </label>
+      <div class="msg err fmsg" data-fmsg="f-consent"></div>
+      <p class="pv-link"><a href="#privacy" data-i18n="pv_sum">How we handle your photos, videos and details</a></p>
+    </section>
+
+    <div class="msg err" id="formErr" aria-live="assertive"></div>
+    <button type="submit" class="b b-go" id="send" data-i18n="send">SEND CLEANUP</button>
+    <div class="keep-open" id="keepOpen" data-i18n="keep_open" hidden>Keep this page open and the screen on until you see THANK YOU.</div>
+    <div class="progress-all" id="progress" hidden><i></i></div>
+    <div class="status-line" id="status" aria-live="polite"></div>
+  </form>
+
+  <form id="mform" novalidate hidden>
+    <section class="panel step">
+      <h2 class="panel-title" data-i18n="m_photos_h">THE SPOT NOW</h2>
+      <p class="hint" data-i18n="m_photos_hint">1 to 4 photos of the dirty spot as it looks today. They are shown on sapu.earth with your mission.</p>
+      <div class="field" id="f-now">
+        <span><b data-i18n="now">Photos of the spot now</b> <i class="req">*</i></span>
+        <label class="drop"><span data-i18n="add_photos">+ Add photos</span><input type="file" accept="image/*" multiple data-kind="now" data-i18n-aria="now" aria-label="Photos of the spot now"></label>
+        <div class="thumbs" data-list="now"></div>
+        <div class="msg err" data-msg="now"></div>
+      </div>
+
+      <div class="field" id="f-now_video">
+        <span data-i18n="now_video">Video of the spot now (optional)</span>
+        <p class="hint" data-i18n="now_video_hint">One short vertical clip. 15 to 30 seconds work best and send faster. Limit: 90 seconds and 95 MB. It is shown on sapu.earth with your mission.</p>
+        <label class="drop"><span data-i18n="add_video">+ Add video</span><input type="file" accept="video/mp4,video/quicktime,video/webm,video/*" data-kind="now_video" data-i18n-aria="now_video" aria-label="Video of the spot now (optional)"></label>
+        <div class="thumbs" data-list="now_video"></div>
+        <div class="msg err" data-msg="now_video"></div>
+      </div>
+    </section>
+
+    <section class="panel step">
+      <h2 class="panel-title" data-i18n="m_where_h">WHERE</h2>
+      <label class="field" id="m-place">
+        <span><b data-i18n="place">Place name</b> <i class="req">*</i></span>
+        <input type="text" name="place_name" maxlength="120" required autocomplete="off" data-ph="place_ph" placeholder="Canggu river mouth">
+      </label>
+      <div class="chips" id="placeChipsM" role="group" aria-labelledby="placeChipsMLab" hidden><span id="placeChipsMLab" data-i18n="chips_place">Places you used before:</span></div>
+      <div class="field">
+        <span data-i18n="location">Location</span>
+        <p class="hint" data-i18n="m_geo_hint">Only tap this while you are at the spot. Without a location the mission is not shown on the map.</p>
+        <button type="button" class="b b-ghost" id="mgeo" data-i18n="use_location">Use my location now</button>
+        <div class="coords" id="mcoords"></div>
+        <div class="msg" id="mgeoMsg"></div>
+      </div>
+      <label class="field" id="m-country">
+        <span><b data-i18n="country">Country</b> <i class="req">*</i></span>
+        <select name="country"></select>
+      </label>
+    </section>
+
+    <section class="panel step">
+      <h2 class="panel-title" data-i18n="m_plan_h">THE PLAN</h2>
+      <p class="hint" data-i18n="m_plan_hint">What you write here is shown on sapu.earth with your mission. One or two sentences are enough.</p>
+      <label class="field" id="m-task">
+        <span><b data-i18n="task">What will you do?</b> <i class="req">*</i></span>
+        <textarea name="task" maxlength="600" data-ph="task_ph" placeholder="Pick up the plastic at the river mouth and on the beach next to it, sort it, bring it to the waste bank."></textarea>
+      </label>
+      <p class="cp-chiprow" id="taskChipRow" hidden><button type="button" class="chip" id="taskChip"></button></p>
+      <label class="field" id="m-date">
+        <span><b data-i18n="plan_date">Planned day</b> <i class="req">*</i></span>
+        <input type="date" name="plan_date" required>
+      </label>
+      <p class="hint" data-i18n="plan_date_hint">Pick a day at least a week ahead, so Sapu Earth has time to check the mission before the day.</p>
+    </section>
+
+    <section class="panel safety">
+      <h2 class="panel-title" data-i18n="safety_h">SAFETY FIRST</h2>
+      <ul class="safety-list">
+        <li data-i18n="safety_1">Gloves and closed shoes for everyone. Bring drinking water and take breaks in the shade.</li>
+        <li data-i18n="safety_2">Nobody goes into water deeper than the knee or into fast water. Watch the tide and the waves. No work in heavy rain or thunder, or right after heavy rain.</li>
+        <li data-i18n="safety_5">Cover any cuts, and wash your hands with soap before you eat or drink. River and flood water can make people sick.</li>
+        <li data-i18n="safety_3">Leave needles, medical waste, chemicals and batteries alone. Say where they are in your message to Sapu Earth.</li>
+        <li data-i18n="safety_4">Only adults (18 or older) on the crew. Children stay away from the water and out of the photos and videos.</li>
+        <li data-i18n="safety_6">Bring the trash to a waste bank, a collector or the official collection point. Never burn it, and don't leave full sacks by the water.</li>
+        <li data-i18n="safety_7">If anything feels unsafe, stop.</li>
+      </ul>
+      <p class="hint" data-i18n="safety_price">Put gloves, sacks, drinking water, a small first aid kit and transport in OTHER COSTS, under PRICE.</p>
+    </section>
+
+    <section class="panel step">
+      <h2 class="panel-title" data-i18n="m_money_h">PRICE</h2>
+      <p class="hint" data-i18n="m_money_hint">In your local currency. The page works out your price: the number of people × the pay for each person, plus the other costs. Your price and how it adds up are shown with your mission. Sapu Earth decides if and how much it funds.</p>
+      <div class="row2">
+        <label class="field" id="m-currency">
+          <span><b data-i18n="currency">Currency</b> <i class="req">*</i></span>
+          <select name="currency"></select>
+        </label>
+        <label class="field" id="m-currency-other" hidden>
+          <span data-i18n="currency_code">Currency code</span>
+          <input type="text" name="currency_other" maxlength="3" autocapitalize="characters" placeholder="MYR">
+        </label>
+      </div>
+      <p class="cp-chiprow" id="priceChipRow" hidden><button type="button" class="chip" id="priceChip"></button></p>
+      <label class="field" id="m-crew">
+        <span><b data-i18n="m_crew">How many people will work?</b> <i class="req">*</i></span>
+        <input type="number" name="crew_size" inputmode="numeric" min="1" max="1000" step="1" required>
+        <small class="src" id="mCrewSrc" hidden></small>
+      </label>
+      <label class="field" id="m-each">
+        <span><b data-i18n="m_each">Pay for each person</b> <i class="req">*</i></span>
+        <input type="text" name="crew_each_local" inputmode="decimal" autocomplete="off" maxlength="20" aria-describedby="mEachLine mSumParts">
+        <small class="echo" id="mEachLine" aria-live="polite"></small>
+      </label>
+      <div class="field" id="m-other">
+        <span id="mOtherLab" data-i18n="other_costs">Other costs</span>
+        <p class="hint" id="mOtherHint" data-i18n="other_hint">Everything besides the pay: gloves, sacks, drinking water, a small first aid kit and transport. One amount for all of it.</p>
+        <input type="text" name="other_local" inputmode="decimal" autocomplete="off" maxlength="20" aria-labelledby="mOtherLab" aria-describedby="mOtherHint mOtherLine mSumParts">
+        <small class="echo" id="mOtherLine" aria-live="polite"></small>
+      </div>
+      <div class="sum-box" id="mSum">
+        <span class="sum-h" data-i18n="m_sum_h">YOUR PRICE, IN ALL</span>
+        <b class="sum-total" id="mSumTotal"></b>
+        <small class="sum-parts" id="mSumParts" aria-live="polite"></small>
+      </div>
+    </section>
+
+    <section class="panel">
+      <label class="field">
+        <span data-i18n="private_note">Message to Sapu Earth (private)</span>
+        <textarea name="private_note" maxlength="1000" data-ph="private_note_ph" placeholder="Only the Sapu Earth team reads this."></textarea>
+      </label>
+      <label class="check" id="m-consent">
+        <input type="checkbox" name="consent">
+        <span><b data-i18n="m_consent">Everyone in these photos and videos agreed to be shown on sapu.earth, on social media and in Sapu Earth's marketing, no children appear in them, and everyone we pay is 18 or older. Sapu Earth may use, edit and share these photos and videos to show and promote its work.</b> <i class="req">*</i></span>
+      </label>
+      <div class="msg err fmsg" data-fmsg="m-consent"></div>
+      <p class="pv-link"><a href="#privacy" data-i18n="pv_sum">How we handle your photos, videos and details</a></p>
+    </section>
+
+    <div class="msg err" id="mformErr" aria-live="assertive"></div>
+    <button type="submit" class="b b-go" id="msend" data-i18n="m_send">POST MISSION</button>
+    <div class="keep-open" id="mkeepOpen" data-i18n="m_keep_open" hidden>Keep this page open and the screen on until you see your mission number.</div>
+    <div class="progress-all" id="mprogress" hidden><i></i></div>
+    <div class="status-line" id="mstatus" aria-live="polite"></div>
+  </form>
+
+  <section class="panel done-screen" id="done" hidden style="scroll-margin-top:12px">
+    <div class="big" data-i18n="thanks" tabindex="-1">THANK YOU!</div>
+    <p data-i18n="thanks_body">Your cleanup was sent. We check every upload and publish it on sapu.earth, usually within a few days.</p>
+    <div class="ref" id="ref"></div>
+    <div class="page-box" id="pageBox" hidden>
+      <p data-i18n="page_note">When it is approved, your cleanup will appear on your page:</p>
+      <a id="pageLink" href="/" target="_blank" rel="noopener"></a>
+      <div class="btn-row" style="justify-content:center">
+        <button type="button" class="b" id="sharePage" data-i18n="share_page">SHARE YOUR PAGE</button>
+      </div>
+    </div>
+    <div class="btn-row" style="justify-content:center;margin-top:18px">
+      <button type="button" class="b b-ghost" id="again" data-i18n="to_home">BACK TO YOUR CREW PAGE</button>
+    </div>
+  </section>
+
+  <section class="panel done-screen" id="mdone" hidden style="scroll-margin-top:12px">
+    <div class="big" id="mdoneBig" tabindex="-1"></div>
+    <p id="mdoneBody"></p>
+    <p id="mdonePrice" hidden></p>
+    <p class="follow" data-i18n="m_done_share">Once it is on sapu.earth, you can share it from your crew page.</p>
+    <div class="btn-row center" style="margin-top:18px">
+      <button type="button" class="b b-ghost" id="mAgain" data-i18n="to_home">BACK TO YOUR CREW PAGE</button>
+    </div>
+  </section>
+
+  <!-- Outside the forms, so it shows without a valid link too. The text is in upload.js (EN and ID). -->
+  <details class="privacy" id="privacy">
+    <summary data-i18n="pv_sum">How we handle your photos, videos and details</summary>
+    <ul>
+      <li><b data-i18n="pv_who_h">Who:</b> <span data-i18n="pv_who">Sapu Earth is run by Marcus Pousette in Innsbruck, Austria. Contact:</span> <a href="mailto:hello@sapu.earth">hello@sapu.earth</a>.</li>
+      <li><b data-i18n="pv_what_h">What you send:</b> <span data-i18n="pv_what">photos and videos (they may show people), the date, the place and the country, the exact location if you tap Use my location now, the numbers (kg, sacks, crew size, hours, costs and pay), where the trash went, your notes, the link to your post about the cleanup on Instagram or TikTok if you add one, and your message to Sapu Earth. For a mission also your plan, the day and the price. And your crew's logo, if you add one.</span></li>
+      <li><b data-i18n="pv_public_h">What is public:</b> <span data-i18n="pv_public">once we approve a cleanup, it is a public receipt on sapu.earth with everything you sent, except your message to Sapu Earth and the exact location. The location is shown rounded to about 100 m. The receipt also shows your crew's name, website and page, and what Sapu Earth paid. A mission is public in the same way once we publish or fund it. It is also in the list of missions at sapu.earth/missions, and once it is cleaned it stays there with its receipt, also after we stop working together. Once we approve your crew's logo, it shows next to your crew's name on sapu.earth. If you add the link to your post with a cleanup, its receipt can link to it, so people can comment there, unless we link our own post about the cleanup instead. Visitors can thank your crew with one tap under each receipt. The number of thanks shows on the receipt, on your crew's page and in the list of crews. Nobody signs in to do that, and we keep nothing about who tapped, so the counts cannot show who thanked. Your crew is also in the list of crews at sapu.earth/crews from the day we start working together, with its name, logo and country. Its name there links to your crew's public page on sapu.earth, which also shows your crew's website. Once your crew has a receipt or a mission on sapu.earth, the list also shows the totals of its receipts (cleanups, kilograms, sacks and what Sapu Earth paid), its newest receipt and its open and funded missions. It leaves the list when we stop working together.</span></li>
+      <li><b data-i18n="pv_promo_h">Marketing:</b> <span data-i18n="pv_promo">we also use your photos and videos, edited or as they are, to promote Sapu Earth, for example in posts, videos and ads on social media and other websites, and in print. We may name your crew and the place with them. Social networks also process what we post there, under their own rules.</span></li>
+      <li><b data-i18n="pv_private_h">What stays private:</b> <span data-i18n="pv_private">your message to Sapu Earth, the exact location, and everything we have not approved or published. Only the Sapu Earth team sees them.</span></li>
+      <li><b data-i18n="pv_phone_h">On your phone:</b> <span data-i18n="pv_phone">photos and your crew's logo are saved again as JPEG on your phone. This removes the camera data, including the location, before they are sent. The page also tries to remove the location and the phone brand and model from MP4 and MOV videos. WebM videos are sent as they are. Until you send, what you typed and picked stays on this phone, so nothing is lost if the page reloads. After a successful send it is deleted from the phone. The phone also remembers your language and whether you saved this link.</span></li>
+      <li><b data-i18n="pv_why_h">Why:</b> <span data-i18n="pv_why">to check your cleanups and missions, to decide what we fund, to pay your crew, to show your work on sapu.earth so anyone can see where the money goes, and to promote Sapu Earth. Legal basis: our agreement to fund your crew's cleanups (GDPR Art. 6(1)(b)), the consent of everyone shown in the photos and videos (GDPR Art. 6(1)(a)), and our legitimate interest in public receipts and in making Sapu Earth known (GDPR Art. 6(1)(f)). Without the photos and the numbers we cannot fund or show a cleanup.</span></li>
+      <li><b data-i18n="pv_where_h">Where:</b> <span data-i18n="pv_where">on Cloudflare servers (database and file storage), which may be outside the EU. Cloudflare stores them for us as our processor. It is certified under the EU-US Data Privacy Framework and uses the EU standard contractual clauses for other countries. This page loads all its files, fonts included, from sapu.earth.</span></li>
+      <li><b data-i18n="pv_long_h">How long:</b> <span data-i18n="pv_long">photos and videos you upload but never send are deleted after 48 hours. Approved cleanups stay on sapu.earth as public receipts, also after we stop working together. If we don't approve a cleanup, or take it off the site later, we delete its photos and videos. A mission nobody funds is removed after 28 days waiting for us, or after 28 days on sapu.earth. When a mission is removed for any reason, for example because you withdraw it, its photos and video, your message and its exact location are deleted. 90 days after we decide on a cleanup, or after a mission is done, we delete your message to Sapu Earth and round the exact location to about 100 m. Your crew's logo is deleted when we do not use it, when it waits 90 days without our check, when a newer one replaces it, and when we stop working together. The link to your post is deleted when we take it off the receipt, with its cleanup when we do not approve it or take it off the site, and when we stop working together. The thanks stay with their receipt, but we may take off the thanks of a day that looks inflated. We keep the rest, such as places, dates and numbers, as our record for as long as Sapu Earth runs.</span></li>
+      <li><b data-i18n="pv_rights_h">Your rights:</b> <span data-i18n="pv_rights">ask to see, correct or delete your details, withdraw a consent, or object to how we use them, by emailing</span> <a href="mailto:hello@sapu.earth">hello@sapu.earth</a>. <span data-i18n="pv_people">Anyone shown in a photo or video can ask us the same way to take it down. We then stop using it and remove it where we can.</span> <span data-i18n="pv_complain">You can also complain to the Austrian data protection authority</span> (<a href="https://www.dsb.gv.at/" target="_blank" rel="noopener noreferrer">dsb.gv.at</a>).</li>
+    </ul>
+  </details>
+  <!-- /upload/#privacy (linked from /impressum/) opens the notice. -->
+</main>
+
+<footer>
+  <p><a href="/impressum/">IMPRESSUM</a> · <a href="#privacy" data-i18n="pv_foot">PRIVACY</a></p>
+</footer>
+
+<script src="/upload/videoclean.js"></script>
+<script src="/upload/upload.js"></script>
+</body>
+</html>

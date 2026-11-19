@@ -1,0 +1,20 @@
+{
+  "id": "sample-mandaue-coast",
+  "demo": true,
+  "days_ago": 11,
+  "date": "2026-12-09",
+  "location": { "name": "Mandaue coastline", "city": "Cebu", "country": "PH", "lat": 10.346, "lng": 123.939 },
+  "crew": { "size": 5, "coordinator": "demo" },
+  "result": { "sacks": 31, "kg_estimate": 240, "disposal": "Barangay MRF" },
+  "cost_eur": 81,
+  "media": {
+    "before": [
+      "site/samples/mandaue-before.svg"
+    ],
+    "after": [
+      "site/samples/mandaue-after.svg"
+    ],
+    "clips": []
+  },
+  "notes": "Sample event: replace with the first real cleanup."
+}

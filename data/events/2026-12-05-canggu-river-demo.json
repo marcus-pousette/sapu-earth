@@ -1,0 +1,20 @@
+{
+  "id": "sample-canggu-river",
+  "demo": true,
+  "days_ago": 18,
+  "date": "2026-12-05",
+  "location": { "name": "Canggu river mouth", "city": "Canggu", "country": "ID", "lat": -8.6594, "lng": 115.13 },
+  "crew": { "size": 5, "coordinator": "demo" },
+  "result": { "sacks": 23, "kg_estimate": 180, "disposal": "TPS3R Canggu" },
+  "cost_eur": 78,
+  "media": {
+    "before": [
+      "site/samples/canggu-before.svg"
+    ],
+    "after": [
+      "site/samples/canggu-after.svg"
+    ],
+    "clips": []
+  },
+  "notes": "Sample event: replace with the first real cleanup."
+}

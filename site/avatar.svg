@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <!-- paper backdrop (visible only outside circular crop) -->
+  <rect width="1024" height="1024" fill="#f2ecdd"/>
+  <!-- hi-vis ring -->
+  <circle cx="512" cy="512" r="500" fill="#ff5f00"/>
+  <circle cx="512" cy="512" r="432" fill="#1c1813"/>
+  <!-- toy ocean -->
+  <circle cx="512" cy="512" r="416" fill="#bde6f2"/>
+  <!-- hex-dot continents -->
+  <g fill="#2bb673">
+    <circle cx="330" cy="320" r="34"/><circle cx="408" cy="300" r="34"/><circle cx="370" cy="388" r="34"/>
+    <circle cx="448" cy="372" r="34"/><circle cx="292" cy="398" r="30"/>
+    <circle cx="700" cy="420" r="34"/><circle cx="760" cy="488" r="30"/><circle cx="688" cy="500" r="30"/>
+    <circle cx="420" cy="740" r="30"/><circle cx="492" cy="768" r="30"/><circle cx="560" cy="736" r="26"/>
+  </g>
+  <!-- swept-away dust -->
+  <g fill="#1c1813">
+    <circle cx="238" cy="690" r="14"/>
+    <circle cx="286" cy="760" r="11"/>
+    <circle cx="218" cy="596" r="9"/>
+  </g>
+  <!-- the broom -->
+  <g transform="rotate(-34 512 512)">
+    <rect x="484" y="128" width="56" height="470" rx="28" fill="#1c1813"/>
+    <rect x="448" y="560" width="128" height="74" rx="16" fill="#ff5f00" stroke="#1c1813" stroke-width="12"/>
+    <path d="M452 634 L572 634 L612 836 L412 836 Z" fill="#ffd400" stroke="#1c1813" stroke-width="12" stroke-linejoin="round"/>
+    <g stroke="#1c1813" stroke-width="10" stroke-linecap="round">
+      <line x1="472" y1="668" x2="452" y2="810"/>
+      <line x1="512" y1="668" x2="512" y2="814"/>
+      <line x1="552" y1="668" x2="572" y2="810"/>
+    </g>
+  </g>
+</svg>

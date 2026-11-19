@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Review · Sapu Earth</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" href="/site/brand/sapu-sketch/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="/site/brand/sapu-sketch/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/site/brand/sapu-sketch/apple-touch-icon.png">
+<link rel="stylesheet" href="/site/fonts.css">
+<link rel="stylesheet" href="/site/styles.css">
+<link rel="stylesheet" href="/site/forms.css">
+<link rel="stylesheet" href="/admin/admin.css">
+</head>
+<body class="form-page">
+<header class="fp-top">
+  <a class="logo logo-sm" href="/">SAPU<br>EARTH</a>
+  <button type="button" class="b b-sm b-ghost" id="logout" hidden>FORGET TOKEN</button>
+</header>
+<main class="fp-main">
+  <h1 class="fp-title"><mark>REVIEW</mark></h1>
+
+  <form class="panel" id="login" hidden>
+    <label class="field">
+      <span>Admin token</span>
+      <input type="password" name="token" autocomplete="current-password" required>
+    </label>
+    <div class="btn-row"><button class="b" type="submit">OPEN</button></div>
+    <div class="msg err" id="loginErr"></div>
+  </form>
+
+  <div id="app" hidden>
+    <div class="tabs" role="tablist">
+      <button class="b b-sm b-ghost" role="tab" data-tab="applications" aria-selected="false">APPLICATIONS</button>
+      <button class="b b-sm b-ghost" role="tab" data-tab="missions" aria-selected="false">MISSIONS</button>
+      <button class="b b-sm b-ghost" role="tab" data-tab="pending" aria-selected="true">PENDING</button>
+      <button class="b b-sm b-ghost" role="tab" data-tab="approved" aria-selected="false">APPROVED</button>
+      <button class="b b-sm b-ghost" role="tab" data-tab="partners" aria-selected="false">PARTNERS</button>
+    </div>
+    <div class="msg" id="flash" aria-live="polite"></div>
+    <div id="view"><p class="hint">Loading…</p></div>
+  </div>
+</main>
+<script src="/admin/admin.js"></script>
+</body>
+</html>

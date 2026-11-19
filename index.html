@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sapu Earth</title>
+<meta name="description" content="Trash gets picked. People get paid. You watch it happen.">
+<meta property="og:title" content="SAPU EARTH">
+<meta property="og:description" content="Trash gets picked. People get paid. You watch it happen.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://sapu.earth">
+<!-- The link preview's picture (Marcus said 'Yes, build all 9' on 2026-11-16): the broom of the profile pictures, square,
+     so a small card (summary). /apply/, /crews and /missions use the same file. A new picture needs a new file name:
+     WhatsApp keeps a preview by its address. -->
+<meta property="og:image" content="https://sapu.earth/site/social/sapu-earth-mark.png">
+<meta property="og:image:width" content="1024">
+<meta property="og:image:height" content="1024">
+<meta property="og:image:alt" content="Sapu Earth's logo, a hand-drawn yellow broom">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="site/brand/sapu-sketch/favicon-32.png" sizes="32x32" type="image/png">
+<link rel="icon" href="site/brand/sapu-sketch/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="site/brand/sapu-sketch/apple-touch-icon.png">
+<link rel="stylesheet" href="site/fonts.css">
+<link rel="stylesheet" href="site/styles.css">
+</head>
+<body>
+
+<!-- ===== Screen 1: the globe IS the pitch ===== -->
+<header class="hero">
+  <div id="globe" aria-hidden="true"></div>
+
+  <div class="hero-top">
+    <div class="hero-brand">
+      <div class="logo">SAPU<br>EARTH</div>
+      <a class="crew-link" href="/apply/">CLEANUP CREW?<br>APPLY →</a>
+    </div>
+    <div class="tag-demo" id="demoPill" hidden>SAMPLE DATA.<br>FIRST CLEANUP SOON</div>
+    <!-- What Sapu Earth does, in words on the first screen, and the page's heading (Marcus said 'Yes, build all 9' on
+         2026-11-16). The words are the approved Instagram caption's. If samples ever show again, SAMPLE DATA takes this
+         corner back (.pitch in site/styles.css). A space before each <br>, so the words stay apart where the line
+         breaks do not count, as in the page's plain text. -->
+    <h1 class="pitch">WE PAY LOCAL CREWS <br>TO CLEAN UP. EVERY <br>CLEANUP GETS A <br>PUBLIC RECEIPT.</h1>
+  </div>
+
+  <div class="hero-bottom">
+    <!-- Satellite map (site/app.js, satellite map): shown while the map is, with a short credit that links to EOX's
+         full credit in the footer (#credits), which the licence asks for. /impressum/#privacy says when the pictures
+         load from EOX. Change them together. -->
+    <div class="sat" id="satBar" hidden>
+      <button type="button" class="sat-btn" id="satBack">↑ BACK TO THE GLOBE</button>
+      <p class="sat-note sat-err" id="satErr" hidden>THE SATELLITE PICTURES DID NOT LOAD. TRY AGAIN LATER.</p>
+      <p class="sat-credit">satellite <a href="#credits">© EOX · Copernicus Sentinel-2</a></p>
+    </div>
+    <p class="tap-hint" id="tapHint">drag to spin · tap a dot</p>
+    <div class="legend" id="legend" hidden>
+      <span id="lgOpen"><i class="mpin-tag mpin-open"><svg class="gl" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 7h6c2 1.5 2.6 4.5 1.4 6.6-.5.8-1.2 1.2-2 1.2H5.6c-.8 0-1.5-.4-2-1.2C2.4 11.5 3 8.5 5 7z"/><path d="M6.6 7l.7-2h1.4l.7 2M7.3 5L5.6 3M8.7 5l1.7-2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>#</i>OPEN</span>
+      <span id="lgFunded"><i class="mpin-tag mpin-funded"><svg class="gl" viewBox="0 0 16 16" aria-hidden="true"><g transform="rotate(35 8 8)"><rect x="7.1" y=".6" width="1.8" height="8.2" rx=".9"/><path fill-rule="evenodd" d="M5.4 8.2h5.2l1.8 6.2H3.6zM5.2 9.9h5.6v.9H5.2z"/></g></svg>#</i>FUNDED</span>
+      <span id="lgDot"><i class="lg-dot"></i>CLEANED</span>
+    </div>
+    <!-- The stats count approved receipts only. They stay hidden until there is one to count (site/app.js, stats), so the
+         first screen never says 0 KG REMOVED next to a funded mission; a failed load shows ? instead (Marcus said 'Yes,
+         build all 9' on 2026-11-16). -->
+    <div class="stats" id="stats" hidden>
+      <div class="stat"><strong data-stat="kg">0</strong><span>kg removed</span></div>
+      <div class="stat"><strong data-stat="events">0</strong><span>cleanups</span></div>
+      <div class="stat"><strong data-stat="paid">€0</strong><span>funded</span></div>
+    </div>
+    <!-- The ways on (docs/upload-flow.md, Homepage): SEE THE RECEIPTS and SEE THE CREWS in one row from the start, also
+         next to the samples, without JavaScript and when the data failed to load (Marcus decided on 2026-11-11). /crews
+         always answers honestly, with its own empty state while no crew is listed. On a phone each link takes two lines
+         (.cue-2 in site/styles.css). SEE THE RECEIPTS goes to the top of <main> (2026-11-16): NEXT UP while a mission is
+         listed, so it no longer skips the missions, and THE RECEIPTS when none is. -->
+    <div class="cues">
+      <a class="scroll-cue" href="#main">SEE THE <span class="cue-2">RECEIPTS&nbsp;↓</span></a>
+      <a class="scroll-cue cue-crews" id="crewsCue" href="/crews">SEE THE <span class="cue-2">CREWS&nbsp;→</span></a>
+    </div>
+  </div>
+
+  <div class="zoomctl">
+    <button id="zin" aria-label="Zoom in">+</button>
+    <button id="zout" aria-label="Zoom out">−</button>
+  </div>
+</header>
+
+<!-- ===== Hazard ticker ===== -->
+<div class="ticker" aria-hidden="true">
+  <div class="ticker-track" id="tickerTrack">
+    <span>TRASH GETS PICKED</span><span>PEOPLE GET PAID</span><span>YOU WATCH IT HAPPEN</span><span>NO MIDDLEMEN</span><span>EVERY EURO LOGGED</span>
+    <span>TRASH GETS PICKED</span><span>PEOPLE GET PAID</span><span>YOU WATCH IT HAPPEN</span><span>NO MIDDLEMEN</span><span>EVERY EURO LOGGED</span>
+  </div>
+</div>
+
+<!-- ===== Screen 2: receipts ===== -->
+<main id="main">
+  <section class="nextup" id="nextup" hidden>
+    <div class="sec-head">
+      <h2><mark>NEXT UP</mark></h2>
+      <a class="all-link" id="nextupAll" href="/missions" hidden>ALL MISSIONS →</a>
+    </div>
+    <p class="sub">// dirty spots posted by local crews. funded = it happens. open = waiting for funding.</p>
+    <div class="cards" id="mcards"></div>
+  </section>
+
+  <section class="receipts" id="receipts">
+    <h2><mark>THE RECEIPTS</mark></h2>
+    <p class="sub">// every cleanup. filmed before and after, location logged, who got paid.</p>
+    <div class="cards" id="cards">
+      <p class="loading">loading cleanups…</p>
+    </div>
+  </section>
+
+  <!-- Sapu Reports (docs/stories.md): the newest story, so a visitor who comes from the Instagram bio link finds the
+       stories here and not only in the footer (Marcus said 'Yes, add it' on 2026-11-16). Plain HTML, no script, so it
+       shows with or without the receipts' data. A new story takes this card's place; ALL STORIES lists them all. -->
+  <section class="reports" id="reports">
+    <div class="sec-head">
+      <h2><mark>SAPU REPORTS</mark></h2>
+      <a class="all-link" href="/stories/">ALL STORIES →</a>
+    </div>
+    <p class="sub">// sapu, our tired field reporter, is also the planet, and takes all of this personally.</p>
+    <article class="report">
+      <a class="report-pic" href="/stories/trash-with-a-passport/"><img src="/stories/trash-with-a-passport/img/card-en.jpg" width="1200" height="630" loading="lazy" alt="262,900 tonnes of plastic waste imported in 2024. Sapu, a tired cartoon planet in a high-vis vest, looks on."></a>
+      <div class="report-text">
+        <p class="report-date">16 NOVEMBER 2026</p>
+        <h3>TRASH WITH A PASSPORT</h3>
+        <p class="report-lede">262,900 tonnes of plastic waste were shipped to Indonesia in 2024, mostly from Europe. Indonesia said no, and from 21 November the EU says no too.</p>
+        <a class="btn" href="/stories/trash-with-a-passport/">READ THE STORY →</a>
+        <p class="report-id"><a href="/stories/trash-with-a-passport/id/" hreflang="id" lang="id">BACA DALAM BAHASA INDONESIA →</a></p>
+      </div>
+    </article>
+  </section>
+
+  <section class="cta">
+    <h2>WANT IN?</h2>
+    <p class="sub">// tipping opens soon. for now, follow along.</p>
+    <!-- Instagram first: it has the posts (Marcus said 'Yes, build all 9' on 2026-11-16, also for dropping the dashed
+         TIPPING SOON box, which looked like a broken button; the line above still says tipping opens soon) -->
+    <div class="socials">
+      <a class="btn" href="https://www.instagram.com/sapu.earth" rel="noopener">INSTAGRAM</a>
+      <a class="btn" href="https://www.tiktok.com/@sapu.earth" rel="noopener">TIKTOK</a>
+    </div>
+    <div class="crew-cta">
+      <h3>RUN A CLEANUP CREW?</h3>
+      <p>// we pay local crews to clean. tell us about yours.</p>
+      <a class="btn btn-apply" href="/apply/">APPLY AS A CREW →</a>
+      <p class="crew-back crew-list">// crews we work with show up at <a href="/crews">sapu.earth/crews</a>, with their missions and receipts.</p>
+      <p class="crew-back">// already a crew with us? open the private link from our whatsapp or email message. lost it? write to <a href="mailto:hello@sapu.earth">hello@sapu.earth</a> and we send you a new one.</p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <p>SAPU = BROOM (INDONESIAN) · 100% TRANSPARENT</p>
+  <p class="foot-apply"><a href="/crews">THE CREWS</a><span id="footMissions" hidden> · <a href="/missions">THE MISSIONS</a></span> · <a href="/stories/">STORIES</a> · <a href="/apply/">APPLY AS A CREW</a> · <a href="/impressum/">IMPRESSUM</a> · <a href="/impressum/#privacy">PRIVACY</a></p>
+  <p class="foot-credit" id="credits">Satellite pictures on the globe: <a href="https://cloudless.eox.at" rel="noopener" target="_blank">EOxCloudless 2025</a> by <a href="https://maps.eox.at" rel="noopener" target="_blank">EOX IT Services GmbH</a> (contains modified Copernicus Sentinel data 2025), <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="noopener" target="_blank">CC BY-NC-SA 4.0</a></p>
+</footer>
+
+<div id="post" class="post-overlay" hidden></div>
+
+<script src="site/vendor/globe.gl-2.32.0.min.js"></script>
+<script src="site/app.js"></script>
+</body>
+</html>

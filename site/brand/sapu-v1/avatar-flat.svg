@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">Sapu, Earth's field reporter</title>
+  <desc id="desc">A smiling blue globe with green land patches and an orange work vest on a plain cream background.</desc>
+  <defs>
+    <clipPath id="globe"><circle cx="512" cy="454" r="344"/></clipPath>
+    <clipPath id="smile"><path d="M418 596 Q512 624 606 596 Q594 698 512 700 Q430 698 418 596Z"/></clipPath>
+  </defs>
+  <rect width="1024" height="1024" fill="#f2ecdd"/>
+  <g transform="translate(512 454) scale(1.18) translate(-512 -454)">
+    <!-- Larger ring-free portrait; shoulders extend to the bottom edge. -->
+    <path d="M274 972 L292 868 Q310 786 410 774 H614 Q714 786 732 868 L750 972Z" fill="#ff5f00" stroke="#1c1813" stroke-width="20" stroke-linejoin="round"/>
+    <path d="M294 884 Q304 824 350 802 L352 972 H274Z M730 884 Q720 824 674 802 L672 972 H750Z" fill="#bde6f2" stroke="#1c1813" stroke-width="16" stroke-linejoin="round"/>
+    <path d="M410 792 L434 924 M614 792 L590 924 M356 914 H668" fill="none" stroke="#fdfaf1" stroke-width="34"/>
+    <path d="M464 786 L512 834 L560 786 M512 834 V974" fill="none" stroke="#1c1813" stroke-width="18" stroke-linejoin="round"/>
+    <circle cx="512" cy="454" r="344" fill="#bde6f2"/>
+    <g clip-path="url(#globe)" fill="#2bb673">
+      <!-- Fixed stylized land patches: identity marks, not a geographic map. -->
+      <path d="M160 116 H418 Q444 154 405 190 Q388 204 354 210 Q320 215 318 244 Q318 270 285 274 Q244 274 226 312 Q205 346 160 326Z"/>
+      <path d="M704 118 Q666 158 676 194 Q680 214 709 225 Q740 237 738 272 Q742 302 780 307 Q806 310 824 338 L879 330 V100Z"/>
+      <path d="M165 505 Q191 480 222 500 Q247 519 240 553 Q236 574 271 584 Q307 598 298 632 Q291 658 263 668 Q245 679 248 715 L173 752Z"/>
+      <path d="M856 510 Q821 503 805 529 Q794 548 799 565 Q805 585 780 600 Q748 621 761 649 Q776 675 802 684 Q826 696 824 722 L874 728Z"/>
+    </g>
+    <circle cx="512" cy="454" r="344" fill="none" stroke="#1c1813" stroke-width="18"/>
+    <g fill="none" stroke="#1c1813" stroke-width="19" stroke-linecap="round">
+      <path d="M338 360 Q373 319 412 340"/>
+      <path d="M612 340 Q651 319 686 360"/>
+    </g>
+    <g fill="#1c1813">
+      <ellipse cx="386" cy="463" rx="34" ry="66"/>
+      <ellipse cx="638" cy="463" rx="34" ry="66"/>
+      <path d="M418 596 Q512 624 606 596 Q594 698 512 700 Q430 698 418 596Z"/>
+    </g>
+    <g fill="#fdfaf1">
+      <ellipse cx="394" cy="435" rx="10" ry="16"/>
+      <ellipse cx="646" cy="435" rx="10" ry="16"/>
+    </g>
+    <ellipse cx="512" cy="698" rx="73" ry="42" fill="#ff5f00" clip-path="url(#smile)"/>
+    <path d="M418 596 Q512 624 606 596 Q594 698 512 700 Q430 698 418 596Z" fill="none" stroke="#1c1813" stroke-width="12" stroke-linejoin="round"/>
+  </g>
+</svg>

@@ -1,0 +1,505 @@
+/* ===== Sapu Earth forms: upload page, admin, partner pages. Builds on styles.css ===== */
+body.form-page { min-height: 100vh; }
+.fp-top {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: max(14px, env(safe-area-inset-top)) 16px 0; max-width: 760px; margin: 0 auto;
+}
+.logo-sm { font-size: 24px; text-decoration: none; display: inline-block; padding-right: 1.62em; }
+/* the small title's broom (site/styles.css, .logo::after) is a little smaller, so the title and the language switch
+   fit a 360 px phone with a few px to spare; narrower than that there is no broom */
+.logo-sm::after { width: 1.406em; height: 1.7em; }
+@media (max-width: 359px) { .logo-sm { padding-right: 0; } }
+.fp-main { max-width: 760px; margin: 0 auto; padding: 22px 16px 60px; }
+.fp-title { font-size: clamp(26px, 7vw, 40px); line-height: 1.05; }
+.fp-title mark { background: linear-gradient(0deg, var(--tape) 0 42%, transparent 42%); color: var(--ink); padding: 0 6px; }
+.fp-stats { margin: 4px 0 22px; }
+/* one button, or a row of them that wraps with room between (SEE THE GLOBE and ALL CREWS on /p/<slug>) */
+.fp-foot { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; text-align: center; margin-top: 30px; }
+.sub a { color: var(--hivis); }
+
+.lang { display: flex; gap: 0; border: 2px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); background: var(--paper); }
+.lang button {
+  font-family: var(--font-mono); font-weight: 700; font-size: 12px; letter-spacing: 1px;
+  border: 0; background: transparent; color: var(--ink); padding: 8px 10px; cursor: pointer; min-height: 36px;
+}
+.lang button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+
+.who {
+  font-family: var(--font-mono); font-size: 13px; font-weight: 700;
+  background: var(--tape); border: 2px solid var(--ink); box-shadow: 4px 4px 0 var(--ink);
+  padding: 10px 12px; margin: 14px 0 18px; overflow-wrap: anywhere;
+}
+.who.bad { background: #ffd9c7; }
+
+.panel {
+  background: var(--paper); border: 2px solid var(--ink); box-shadow: 5px 5px 0 rgba(28, 24, 19, .9);
+  padding: 16px 14px 18px; margin: 0 0 20px;
+}
+.panel-title { font-family: var(--font-display); font-weight: 400; font-size: 17px; letter-spacing: .5px; margin-bottom: 4px; }
+.hint { font-family: var(--font-mono); font-size: 12px; font-weight: 400; color: var(--dim); line-height: 1.45; }
+
+.field { display: block; margin-top: 14px; }
+.field > span, .field > legend {
+  display: block; font-family: var(--font-mono); font-size: 12px; font-weight: 700; letter-spacing: .5px;
+  text-transform: uppercase; margin-bottom: 6px;
+}
+.field .req { color: var(--hivis); }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; align-items: end; }
+@media (max-width: 360px) { .row2 { grid-template-columns: 1fr; } }
+
+input[type="text"], input[type="number"], input[type="date"], input[type="url"], input[type="password"],
+input[type="tel"], input[type="email"], select, textarea {
+  width: 100%; font: 600 16px/1.3 var(--font-body); color: var(--ink);
+  background: #fff; border: 2px solid var(--ink); border-radius: 0; padding: 10px 10px; min-height: 46px;
+  -webkit-appearance: none; appearance: none;
+}
+select { background-image: linear-gradient(45deg, transparent 50%, var(--ink) 50%), linear-gradient(135deg, var(--ink) 50%, transparent 50%);
+  background-position: calc(100% - 18px) 50%, calc(100% - 12px) 50%; background-size: 6px 6px; background-repeat: no-repeat; padding-right: 30px; }
+textarea { min-height: 90px; resize: vertical; }
+input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible { outline: 3px solid var(--hivis); outline-offset: 2px; }
+.field.invalid input, .field.invalid select, .field.invalid textarea, .drop.invalid, .field.invalid .drop { border-color: var(--hivis); box-shadow: 0 0 0 2px var(--hivis); }
+
+.check { display: flex; gap: 10px; align-items: flex-start; font-size: 15px; line-height: 1.35; margin-top: 12px; cursor: pointer; }
+.check input { width: 24px; height: 24px; flex: 0 0 24px; accent-color: var(--hivis); margin-top: 1px; }
+.check.invalid input { outline: 3px solid var(--hivis); outline-offset: 2px; }
+
+.btn-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; align-items: center; }
+.b {
+  font-family: var(--font-display); font-size: 14px; letter-spacing: .5px;
+  color: var(--ink); background: var(--tape); border: 2px solid var(--ink); box-shadow: 4px 4px 0 var(--ink);
+  padding: 11px 16px 10px; cursor: pointer; min-height: 46px; text-decoration: none; display: inline-block;
+}
+.b:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+.b[disabled] { opacity: .55; cursor: default; }
+.b-go { background: var(--hivis); color: #fff; width: 100%; font-size: 18px; padding: 15px 16px 14px; }
+.b-ghost { background: var(--paper); }
+.b-red { background: #ffd9c7; }
+.b-ok { background: #c9f0d6; }
+.b-sm { font-size: 12px; padding: 7px 10px 6px; min-height: 36px; box-shadow: 3px 3px 0 var(--ink); }
+
+/* file pickers */
+.drop {
+  position: relative; display: grid; place-items: center; text-align: center; gap: 4px;
+  border: 2px dashed var(--ink); background: repeating-linear-gradient(45deg, #f7f2e4 0 8px, #efe8d5 8px 16px);
+  padding: 16px 10px; cursor: pointer; min-height: 70px;
+  font-family: var(--font-mono); font-size: 13px; font-weight: 700;
+}
+.drop input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+.drop.full { display: none; }
+/* A hint right above a picker (the upload page's video fields) gets the same 6px a field's label has above the dashed
+   border (.field > span). Both lines leave about the same room under their text, so on a phone the hint's text sits
+   7.5 to 10px above the box, as a label's does (8 to 9.5px). */
+.field > .hint + .drop { margin-top: 6px; }
+.thumbs { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; margin-top: 10px; }
+.thumbs:empty { display: none; }
+.thumbs.invalid { outline: 2px solid var(--hivis); outline-offset: 4px; } /* a full field refused a photo while SEND waited */
+.thumb { position: relative; background: #e9e2cf; border: 2px solid var(--ink); aspect-ratio: 1; overflow: hidden; }
+.thumb img, .thumb video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.thumb .vlabel { position: absolute; top: 4px; left: 4px; background: var(--ink); color: var(--paper); font: 700 10px var(--font-mono); padding: 2px 5px; }
+.thumb .rm {
+  position: absolute; top: 3px; right: 3px; width: 30px; height: 30px; border: 2px solid var(--ink);
+  background: var(--paper); font: 700 14px var(--font-mono); cursor: pointer; color: var(--ink);
+}
+.thumb .bar { position: absolute; left: 0; right: 0; bottom: 0; height: 8px; background: rgba(28, 24, 19, .4); }
+.thumb .bar i { display: block; height: 100%; width: 0; background: var(--hivis); transition: width .2s; }
+.thumb.done .bar i { background: #1a9a4a; }
+.thumb.done::after { content: "✓"; position: absolute; bottom: 10px; right: 6px; font: 700 16px var(--font-mono); color: #fff; text-shadow: 0 0 3px #000; }
+.thumb.failed { border-color: var(--hivis); }
+.thumb.busy::before { content: "…"; position: absolute; inset: 0; display: grid; place-items: center; font: 700 22px var(--font-mono); }
+
+.msg { font-family: var(--font-mono); font-size: 12.5px; font-weight: 700; margin-top: 8px; line-height: 1.4; }
+.msg:empty { display: none; }
+.msg.err { color: #b33a00; }
+.msg.ok { color: #1a7a3a; }
+.coords { font-family: var(--font-mono); font-size: 13px; margin-top: 8px; }
+
+.progress-all { height: 14px; border: 2px solid var(--ink); background: var(--paper); margin-top: 14px; }
+.progress-all i { display: block; height: 100%; width: 0; background: var(--hivis); transition: width .2s; }
+.status-line { font-family: var(--font-mono); font-size: 13px; font-weight: 700; margin-top: 8px; min-height: 1.4em; }
+
+.done-screen { text-align: center; padding: 26px 14px 30px; }
+.done-screen .big { font-family: var(--font-display); font-size: 34px; color: #1a7a3a; }
+.done-screen p { font-size: 17px; line-height: 1.45; margin: 12px auto 20px; max-width: 32em; }
+.done-screen .ref { font-family: var(--font-mono); font-size: 13px; color: var(--dim); }
+
+/* admin */
+.tabs { display: flex; gap: 8px; flex-wrap: wrap; margin: 6px 0 18px; }
+.tabs button[aria-selected="true"] { background: var(--ink); color: var(--paper); }
+.sub-card { background: var(--paper); border: 2px solid var(--ink); box-shadow: 5px 5px 0 rgba(28, 24, 19, .9); padding: 14px; margin-bottom: 22px; }
+.sub-card h3 { font-family: var(--font-display); font-weight: 400; font-size: 18px; overflow-wrap: anywhere; }
+.sub-meta { font-family: var(--font-mono); font-size: 12px; color: var(--dim); margin: 4px 0 10px; overflow-wrap: anywhere; }
+.media-ba { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.media-ba h4, .media-v h4 { font-family: var(--font-mono); font-size: 11px; letter-spacing: 1px; margin: 4px 0; }
+.media-ba img { width: 100%; aspect-ratio: 4/3; object-fit: cover; display: block; border: 2px solid var(--ink); margin-bottom: 6px; background: #e9e2cf; }
+.media-v { margin-top: 8px; }
+.media-v video { width: 100%; max-height: 420px; background: #000; display: block; margin-bottom: 6px; }
+.kv { display: grid; grid-template-columns: max-content 1fr; gap: 3px 12px; font-family: var(--font-mono); font-size: 12.5px; margin: 10px 0; }
+.kv dt { color: var(--dim); }
+.kv dd { font-weight: 700; overflow-wrap: anywhere; white-space: pre-wrap; }
+.edit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 10px; }
+.edit-grid .wide { grid-column: 1 / -1; }
+.caption { width: 100%; min-height: 96px; font: 400 14px/1.4 var(--font-mono); }
+.dl-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.dl-list a { font: 700 12px var(--font-mono); color: var(--hivis); }
+.p-row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; align-items: center; border-top: 2px dashed var(--rule); padding: 10px 0; }
+.p-row:first-child { border-top: 0; }
+.p-row .p-name { font-family: var(--font-display); font-size: 15px; }
+.p-row small { display: block; font-family: var(--font-mono); font-size: 11.5px; color: var(--dim); font-weight: 400; overflow-wrap: anywhere; }
+.secret { font-family: var(--font-mono); font-size: 13px; background: var(--tape); border: 2px solid var(--ink); padding: 10px; margin-top: 10px; overflow-wrap: anywhere; }
+.inactive { opacity: .55; }
+
+/* partner page list */
+.p-list { list-style: none; }
+.p-list li + li { border-top: 2px dashed var(--rule); }
+.p-list a { display: flex; gap: 12px; align-items: center; padding: 10px 0; color: var(--ink); text-decoration: none; }
+.p-list img, .p-list .noimg { width: 72px; height: 54px; object-fit: cover; flex: 0 0 72px; border: 2px solid var(--ink); background: #e9e2cf; }
+.p-list .row-text { display: block; min-width: 0; }
+.p-list b { display: block; font-family: var(--font-display); font-weight: 400; font-size: 15px; overflow-wrap: anywhere; }
+.p-list small { font-family: var(--font-mono); font-size: 11.5px; color: var(--dim); }
+/* partner page: the crew's live logo next to its name */
+.ph-hero { display: flex; gap: 14px; align-items: center; }
+.ph-hero .fp-title { min-width: 0; }
+.ph-logo { flex: 0 0 96px; width: 96px; height: 96px; object-fit: cover; border: 2px solid var(--ink); background: #fff; box-shadow: 4px 4px 0 var(--ink); }
+@media (max-width: 399px) { .ph-logo { flex-basis: 72px; width: 72px; height: 72px; } }
+
+/* the list of crews, /crews (functions/crews/index.js): country chips, one card per crew, JUST JOINED under its own
+   title, how the list works, the join box. Every link inside main is at least 44 px tall; the card's words are
+   upper-cased here, not in the HTML. */
+.cx-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 18px; }
+.cx-chips a {
+  display: inline-flex; align-items: center; min-height: 44px; padding: 0 12px; font-family: var(--font-mono); font-size: 12px;
+  font-weight: 700; color: var(--ink); background: var(--paper); border: 2px solid var(--ink); text-decoration: none;
+}
+.cx-chips a[aria-current="page"] { background: var(--ink); color: var(--paper); }
+.cx-list { list-style: none; display: grid; gap: 16px; margin: 0 0 22px; }
+.cx-card { background: var(--paper); border: 2px solid var(--ink); box-shadow: 5px 5px 0 var(--ink); padding: 12px 14px 14px; overflow-wrap: anywhere; }
+.cx-head { display: flex; gap: 12px; align-items: center; min-height: 56px; color: var(--ink); text-decoration: none; }
+.cx-logo, .cx-mono { flex: 0 0 56px; width: 56px; height: 56px; border: 2px solid var(--ink); background: #fff; object-fit: cover; }
+.cx-mono { display: grid; place-items: center; background: var(--tape); font-family: var(--font-display); font-size: 22px; }
+.cx-name { min-width: 0; }
+.cx-name b { display: block; font-family: var(--font-display); font-weight: 400; font-size: 18px; line-height: 1.15; text-transform: uppercase; }
+.cx-name small {
+  display: block; margin-top: 4px; font-family: var(--font-mono); font-size: 11.5px; font-weight: 700; color: var(--dim);
+  text-transform: uppercase;
+}
+.cx-last { margin-top: 10px; font-family: var(--font-mono); font-size: 12px; font-weight: 700; text-transform: uppercase; }
+/* LAST CLEANUP and its day and place are one link, laid out like a mission row: the label never sits alone on a line */
+.cx-last a { display: flex; gap: 8px; align-items: center; min-height: 44px; color: var(--ink); text-decoration: none; }
+.cx-last b { flex: none; font-weight: 700; }
+.cx-last a > span { text-decoration: underline; text-decoration-color: var(--hivis); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+.cx-ms { list-style: none; margin-top: 8px; border-top: 2px dashed var(--rule); }
+.cx-ms li + li { border-top: 2px dashed var(--rule); }
+.cx-ms a {
+  display: flex; gap: 8px; align-items: center; min-height: 44px; font-family: var(--font-mono); font-size: 12px; font-weight: 700;
+  text-transform: uppercase; color: var(--ink); text-decoration: none;
+}
+/* the underline goes on the words only: on the link it would also run through the #12 tag */
+.cx-ms a > span { text-decoration: underline; text-decoration-color: var(--hivis); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+.cx-ms .mpin-tag { flex: none; min-width: 36px; text-align: center; }
+.cx-ms .mpin-funded { border-color: var(--ink); }
+/* JUST JOINED: the crews with no mission or cleanup on sapu.earth yet, below the others, titled like a section of /missions.
+   Each half of the title wraps as a block, so a phone breaks it after the dot; a half wider than the line still wraps. */
+.cx-title { font-size: 19px; line-height: 1.15; margin: 4px 0 12px; }
+.cx-title span { display: inline-block; }
+.cx-how ul { padding-left: 20px; }
+.cx-how li { font-size: 14px; line-height: 1.45; margin-top: 8px; }
+.cx-empty p, .cx-join p { font-size: 15px; margin-top: 8px; }
+.cx-join .btn-apply { display: inline-block; margin-top: 16px; }
+/* the list of missions, /missions (functions/missions/index.js): the chips and cards of /crews, a section per state
+   titled with the legend's mark, and on each card the mission's #12 tag above its place. The head (tag, place, the
+   facts and the money) is one link to the mission post or the receipt, BY another to the crew's page; both at least
+   44 px tall. A card the address points at (#m-12, from a post's ALL MISSIONS) is outlined. */
+.mx-title { display: flex; align-items: center; gap: 10px; font-size: 19px; line-height: 1.15; margin: 4px 0 12px; }
+.mx-title small { font-family: var(--font-mono); font-size: 13px; color: var(--dim); }
+.mx-title .mpin-tag, .mx-title .lg-dot { flex: none; }
+.mx-head { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-height: 44px; color: var(--ink); text-decoration: none; }
+.mx-head .mpin-tag { font-size: 12px; padding: 4px 6px 3px; }
+.mx-head .cx-name b { text-decoration: underline; text-decoration-color: var(--hivis); text-decoration-thickness: 2px; text-underline-offset: 4px; }
+.mx-head .cx-name small.mx-money { color: var(--ink); }
+.mx-title .mpin-funded, .mx-head .mpin-funded { border-color: var(--ink); }
+.mx-done { background: var(--paper); }
+/* the green dot in a cleaned card's tag: its rings reach up to 5 px past it, so it stands clear of "#" and the border */
+.mx-done .lg-dot { display: inline-block; width: 8px; height: 8px; margin: 0 9px 0 4px; vertical-align: 1px; }
+.mx-by { display: flex; gap: 8px; align-items: center; min-height: 44px; }
+.mx-by b { flex: none; }
+.mx-more { margin: -6px 0 22px; font-family: var(--font-mono); font-size: 12px; font-weight: 700; text-transform: uppercase; }
+.mx-more a {
+  display: inline-flex; align-items: center; min-height: 44px; color: var(--ink);
+  text-decoration: underline; text-decoration-color: var(--hivis); text-decoration-thickness: 2px; text-underline-offset: 3px;
+}
+.mx-cap { margin: -8px 0 22px; }
+.mx-card { scroll-margin-top: 16px; }
+.mx-card:target { outline: 3px solid var(--hivis); outline-offset: 3px; }
+/* /p/<slug>: ALL MISSIONS ON SAPU.EARTH under the crew's NEXT UP rows */
+.p-all { margin-top: 0; border-top: 2px dashed var(--rule); }
+
+[hidden] { display: none !important; }
+
+/* upload page: review fixes */
+.echo { display: block; font-family: var(--font-mono); font-size: 12px; font-weight: 700; color: #1a7a3a; margin-top: 4px; min-height: 0; }
+.echo:empty { display: none; }
+.fmsg { display: block; }
+.field > .fmsg { text-transform: none; letter-spacing: 0; font-size: 12.5px; margin: 6px 0 0; }
+.keep-open {
+  font-family: var(--font-mono); font-size: 13px; font-weight: 700; line-height: 1.4;
+  background: var(--tape); border: 2px solid var(--ink); padding: 10px 12px; margin-top: 14px;
+}
+#formErr { margin: 0 0 10px; }
+.page-box { margin-top: 18px; }
+.page-box p { font-size: 15px; margin: 0 auto 6px; }
+.page-box a { font-family: var(--font-mono); font-weight: 700; color: var(--hivis); overflow-wrap: anywhere; display: inline-block; margin-bottom: 4px; }
+.mine-list { list-style: none; }
+.mine-list li { display: flex; gap: 10px; align-items: center; justify-content: space-between; padding: 10px 0; border-top: 2px dashed var(--rule); }
+.mine-list li:first-child { border-top: 0; }
+.mine-list b { display: block; font-family: var(--font-display); font-weight: 400; font-size: 15px; overflow-wrap: anywhere; }
+.mine-list small { font-family: var(--font-mono); font-size: 11.5px; color: var(--dim); overflow-wrap: anywhere; }
+.mine-list li[data-status="approved"] small { color: #1a7a3a; font-weight: 700; }
+.kv dd.private { background: #fff3c4; }
+
+/* apply page */
+.fp-lead { font-size: 17px; line-height: 1.45; margin: 14px 0 10px; max-width: 34em; }
+.fp-note {
+  font-family: var(--font-mono); font-size: 12.5px; font-weight: 700; line-height: 1.5;
+  border-left: 6px solid var(--hivis); padding: 2px 0 2px 10px; margin: 0 0 22px; max-width: 46em;
+}
+/* HOW IT WORKS on /apply/ (2026-11-16): a small mono label over the crew page's numbered steps (.cp-steps) */
+.fp-how { font-family: var(--font-mono); font-size: 12.5px; font-weight: 700; letter-spacing: 1px; margin: 0; }
+.cp-steps.fp-steps { margin: 6px 0 22px; max-width: 34em; line-height: 1.4; }
+.field .link-line { margin-top: 8px; }
+.link-line input::placeholder { font-size: 14px; }
+.check .req { color: var(--hivis); }
+.fp-title + .panel, .fp-main > .done-screen { margin-top: 18px; }
+.check a, .privacy a {
+  color: var(--ink); overflow-wrap: anywhere;
+  text-decoration-color: var(--hivis); text-decoration-thickness: 2px; text-underline-offset: 3px;
+}
+/* error boxes placed right after a label (apply page) */
+.field + .fmsg { margin-top: 6px; }
+/* WhatsApp echo when the number's country code is not the chosen country's */
+.echo.warn { color: #b33a00; }
+.echo .echo-hint { display: block; }
+/* POST A MISSION's PRICE and a cleanup's COSTS as the page adds them up (renderSum in upload/upload.js) */
+.echo.wait { color: var(--dim); font-weight: 400; }
+#m-other .hint, #f-other .hint { margin: 0 0 6px; }
+.sum-box { margin-top: 16px; padding-top: 10px; border-top: 2px dashed var(--ink); font-family: var(--font-mono); }
+.sum-h { display: block; font-size: 12px; font-weight: 700; letter-spacing: .5px; }
+.sum-total { display: block; font-family: var(--font-display); font-weight: 400; font-size: 24px; line-height: 1.15; margin-top: 4px; overflow-wrap: anywhere; }
+.sum-total:empty { display: none; }
+.sum-parts { display: block; font-size: 12px; font-weight: 700; color: #1a7a3a; margin-top: 4px; line-height: 1.4; }
+.sum-parts.wait { color: var(--dim); font-weight: 400; }
+/* privacy notice under the consent checkbox */
+.privacy { margin-top: 14px; background: #fff; border: 2px dashed var(--ink); }
+.privacy summary {
+  font-family: var(--font-mono); font-size: 12.5px; font-weight: 700; line-height: 1.4;
+  padding: 11px 12px; min-height: 44px; cursor: pointer;
+}
+.privacy summary:focus-visible { outline: 3px solid var(--hivis); outline-offset: 2px; }
+.privacy ul { list-style: none; padding: 0 12px 12px; }
+/* upload page, POST A MISSION: the safety basics */
+.safety-list { margin: 0 0 10px; padding-left: 20px; }
+.safety-list li { font-size: 14px; line-height: 1.45; margin-top: 6px; }
+.privacy li { font-size: 14px; line-height: 1.45; margin-top: 8px; overflow-wrap: anywhere; }
+.privacy li b { font-family: var(--font-mono); font-size: 12px; letter-spacing: .5px; text-transform: uppercase; }
+/* upload page: the notice sits under the lists, a link under each consent box goes to it */
+.fp-main > .privacy { margin-top: 26px; }
+.pv-link { font-family: var(--font-mono); font-size: 12.5px; font-weight: 700; margin-top: 4px; }
+.pv-link a {
+  display: inline-block; padding: 12px 0; color: var(--ink);
+  text-decoration-color: var(--hivis); text-decoration-thickness: 2px; text-underline-offset: 3px;
+}
+/* IMPRESSUM: the visitor notice is always open, so its list needs room at the top */
+.privacy.pv-open ul { padding-top: 4px; }
+/* THANK YOU gets focus after sending (apply and upload pages) */
+.done-screen .big:focus { outline: none; }
+.done-screen .big:focus-visible { outline: 3px solid var(--hivis); outline-offset: 4px; }
+.hp { position: absolute; left: -10000px; top: auto; width: 1px; height: 1px; overflow: hidden; }
+.btn-row.center { justify-content: center; }
+.done-screen .follow { font-size: 15px; margin: 22px auto 4px; }
+.who a { color: inherit; text-decoration: underline; }
+
+/* upload page: save-your-link card (hazard tape on top) */
+.panel.save-link {
+  padding-top: 26px;
+  background-image: repeating-linear-gradient(-45deg, var(--ink) 0 10px, var(--tape) 10px 20px);
+  background-size: 100% 10px; background-repeat: no-repeat;
+}
+.save-link p { font-size: 15px; line-height: 1.45; margin: 8px 0 0; }
+.save-link .save-tip {
+  font-family: var(--font-mono); font-size: 13px; font-weight: 700; line-height: 1.45;
+  background: #fff; border: 2px dashed var(--ink); padding: 8px 10px; margin-top: 12px;
+}
+.save-link .btn-row { margin-top: 14px; }
+.save-link .btn-row .b { flex: 1 1 auto; text-align: center; }
+.save-again { text-align: center; margin-top: 26px; }
+
+/* upload page: POST A MISSION */
+#mformErr { margin: 0 0 10px; }
+
+/* upload page: the paper with the mission number */
+.paper-hint {
+  display: flex; gap: 14px; align-items: center; margin-top: 14px;
+  font-family: var(--font-mono); font-size: 13px; font-weight: 700; line-height: 1.45;
+}
+.paper-no {
+  flex: 0 0 auto; font-family: var(--font-display); font-size: 22px; line-height: 1; padding: 12px 10px 10px;
+  background: #fff; border: 2px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); transform: rotate(-3deg);
+}
+
+/* upload page: the lists on the crew page (PAST MISSIONS, YOUR CLEANUPS) */
+.mine-list li > span:first-child { min-width: 0; }
+/* a done mission is green like a published cleanup; the cards above say where the others stand */
+.mine-list li[data-status="done"] small { color: #1a7a3a; font-weight: 700; }
+#missionMsg { margin-top: 10px; }
+
+/* upload page: a button that reads like a link (How to save this link, the cleanup without a mission) */
+.text-btn {
+  background: none; border: 0; color: var(--dim); cursor: pointer; min-height: 44px; padding: 10px 12px;
+  font-family: var(--font-mono); font-size: 12.5px; font-weight: 700; text-decoration: underline;
+}
+
+/* upload page: the crew page (#home), its cards, and the screens (docs/upload-flow.md, On the pages). Names that
+   could meet site/styles.css (.mcard, .card, .cards, a scoped .tag) carry the cp- prefix. */
+.view-bar { margin: 0 0 12px; }
+.b-back { font-size: 13px; padding: 10px 12px 9px; }
+/* the H1 gets focus on every screen change, from the script only (tabindex -1, never a Tab stop), so a screen reader
+   says where the crew is. No ring: Chrome carries :focus-visible over from a text field to it, and on this page orange
+   marks a field to fix. */
+.fp-title:focus, .fp-title:focus-visible { outline: none; }
+/* a smaller button that is still 44 px tall: SHARE, WITHDRAW, DELETE, CHANGE */
+.b-row { font-size: 12px; padding: 9px 12px 8px; min-height: 44px; box-shadow: 3px 3px 0 var(--ink); }
+.cp-h { font-family: var(--font-display); font-weight: 400; font-size: 17px; letter-spacing: .5px; margin: 6px 0 10px; }
+.cp-cards { display: grid; gap: 16px; margin: 0 0 18px; }
+.cp-cards:empty { display: none; }
+.cp-card {
+  background: var(--paper); border: 2px solid var(--ink); box-shadow: 5px 5px 0 rgba(28, 24, 19, .9);
+  padding: 14px 14px 16px; overflow-wrap: anywhere;
+}
+.cp-card[data-state="ready"] { background: #c9f0d6; }
+.cp-card.cp-draft { background: #fff; border-style: dashed; box-shadow: none; }
+.cp-kicker { font-family: var(--font-mono); font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
+.cp-title { font-family: var(--font-display); font-weight: 400; font-size: 18px; line-height: 1.2; }
+.cp-tag {
+  display: inline-block; font-family: var(--font-mono); font-size: 11.5px; font-weight: 700; text-transform: uppercase;
+  border: 2px solid var(--ink); background: #fff; padding: 3px 6px 2px; margin-top: 8px;
+}
+.cp-card[data-state="open"] .cp-tag { background: var(--tape); }
+.cp-line { font-size: 15px; line-height: 1.45; margin-top: 8px; }
+.cp-gone { color: #b33a00; font-weight: 700; }
+.cp-card .paper-hint { margin-top: 12px; }
+.cp-acts { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.cp-acts .b { flex: 1 1 auto; text-align: center; }
+.cp-acts .b-go { flex-basis: 100%; }
+.cp-intro p { font-size: 15px; line-height: 1.45; margin-top: 8px; }
+.cp-steps { list-style: decimal; font-weight: 700; padding-left: 22px; margin: 12px 0 14px; }
+.cp-steps li + li { margin-top: 4px; }
+.cp-intro .b { width: 100%; }
+.cp-post, .cp-plain { margin: 0 0 20px; }
+.cp-post .b { width: 100%; }
+.cp-post .hint { margin-top: 8px; }
+.cp-limit { color: var(--ink); font-weight: 700; font-size: 12.5px; }
+.cp-plain { text-align: center; }
+.cp-plain .hint { max-width: 34em; margin: 0 auto; }
+details.cp-removed { margin-top: 6px; border-top: 2px dashed var(--rule); }
+details.cp-removed summary { font-family: var(--font-mono); font-size: 12.5px; font-weight: 700; min-height: 44px; padding: 11px 0; cursor: pointer; }
+details.cp-removed summary:focus-visible { outline: 3px solid var(--hivis); outline-offset: 2px; }
+.mine-list li.cp-dim { opacity: .6; }
+.cp-pub { margin-top: 8px; }
+.cp-pub + .hint { margin-top: 4px; }
+.cp-pub a { font-family: var(--font-mono); font-weight: 700; color: var(--hivis); overflow-wrap: anywhere; }
+/* the cleanup for a mission: its summary, CHANGE, and the question when a cleanup has no mission */
+.cp-mission .cp-line { font-family: var(--font-mono); font-size: 13px; }
+.cp-mission .b-row { margin-top: 12px; }
+.cp-guard p { font-size: 15px; line-height: 1.45; }
+.cp-guard .b { margin-top: 10px; }
+/* chips: one tap writes what the crew used before, never by themselves */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.chips > span { flex: 0 0 100%; font-family: var(--font-mono); font-size: 12px; color: var(--dim); }
+.chip {
+  font-family: var(--font-mono); font-size: 13px; font-weight: 700; color: var(--ink); background: #fff;
+  border: 2px dashed var(--ink); padding: 9px 12px; min-height: 44px; text-align: left; white-space: normal;
+  overflow-wrap: anywhere; cursor: pointer; max-width: 100%;
+}
+.chip:active { transform: translate(1px, 1px); }
+.cp-chiprow { margin-top: 8px; }
+/* where a prefilled number came from, under its field */
+.src { display: block; font-family: var(--font-mono); font-size: 12px; font-weight: 400; color: var(--dim); margin-top: 4px; text-transform: none; letter-spacing: 0; line-height: 1.4; }
+.row2.cp-stack { grid-template-columns: 1fr; }
+.cp-cost { margin: 4px 0 10px; }
+#costPanel .b-row { margin-bottom: 4px; }
+/* numbered steps in both forms: 1. BEFORE THE CLEANUP, 2. AFTER THE CLEANUP, 3. RESULT; 1. THE SPOT NOW to 4. PRICE */
+#form, #mform { counter-reset: step; }
+.step { counter-increment: step; }
+.step > .panel-title::before { content: counter(step) ". "; }
+#beforePanel .paper-hint { font-size: 14px; }
+#beforePanel .paper-no { font-size: 26px; }
+
+/* upload page: YOUR LOGO on the crew page (docs/upload-flow.md, Crew logos). The tile shows the waiting logo with a
+   dashed border, the live one with a solid border, the new square at 60% while it is sent, "…" over the tile while
+   the phone prepares it, and the crew's letters on tape yellow without a logo. The picker is a label (it cannot be
+   [disabled]), so .off dims it while a logo is on its way. */
+.cl-row { display: flex; gap: 14px; align-items: center; margin-top: 10px; }
+.cl-tile { position: relative; flex: 0 0 64px; width: 64px; height: 64px; border: 2px solid var(--ink); background: #fff; overflow: hidden; }
+.cl-tile img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.cl-tile[data-state="review"] { border-style: dashed; }
+.cl-tile[data-state="sending"] img { opacity: .6; }
+.cl-tile[data-state="preparing"]::after {
+  content: "…"; position: absolute; inset: 0; display: grid; place-items: center;
+  background: rgba(253, 250, 241, .7); font-family: var(--font-display); font-size: 22px;
+}
+/* while the square is made, the "…" stands alone: the crew's letters behind it would read as "P…B" */
+.cl-tile[data-state="preparing"] .cl-mono { color: transparent; }
+.cl-mono { display: grid; place-items: center; width: 100%; height: 100%; background: var(--tape); font-family: var(--font-display); font-weight: 400; font-size: 24px; }
+.cl-line { flex: 1; min-width: 0; font-size: 15px; line-height: 1.45; }
+.cl-rules { margin-top: 12px; }
+.cl-pick { position: relative; overflow: hidden; display: block; width: 100%; margin-top: 10px; text-align: center; }
+.cl-pick input[type="file"] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.cl-pick:focus-within { outline: 3px solid var(--hivis); outline-offset: 3px; }
+.cl-pick.off { opacity: .55; cursor: default; }
+.cl-pick.off input[type="file"] { cursor: default; }
+#logoMsg { margin-top: 10px; }
+
+/* upload page: the link to the crew's own post on Instagram or TikTok (docs/upload-flow.md, Post links and thanks). The
+   hint and the rules line sit between the label and the input, like the video fields' hint; the line under it carries
+   the stored link, which has no spaces, so it may break anywhere on a narrow phone. */
+#f-post .hint { margin: 0 0 6px; }
+#f-post .echo { overflow-wrap: anywhere; }
+/* Thanks (docs/upload-flow.md, Thanks): on /p/<slug> the line under the numbers, closer to them than the next panel; on
+   the crew page the total above YOUR CLEANUPS in the green of a published cleanup, and the line under the list on what
+   the button is. */
+.sub.p-thanks { margin: -10px 0 22px; }
+.cp-thanks { color: #1a7a3a; font-weight: 700; margin: 0 0 6px; }
+.cp-tnote { margin-top: 10px; }
+/* /impressum/: the address in Report illegal content, styled like the links of the visitor notice under it */
+#report a { color: var(--ink); overflow-wrap: anywhere; text-decoration-color: var(--hivis); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+/* /impressum/: the links in What this site is and in Replies and corrections, styled the same way */
+#about a, #replies a { color: var(--ink); overflow-wrap: anywhere; text-decoration-color: var(--hivis); text-decoration-thickness: 2px; text-underline-offset: 3px; }
+/* /impressum/: the basic direction in English, then in German, a little apart */
+#direction p + p { margin-top: 8px; }
+
+/* ===== Stories (/stories/): Sapu Reports, one static page per story in English and Indonesian, no script.
+   docs/stories.md says how a story is made. The language switch is two links, styled like the buttons of .lang above. */
+.lang a {
+  font-family: var(--font-mono); font-weight: 700; font-size: 12px; letter-spacing: 1px; text-decoration: none;
+  color: var(--ink); padding: 8px 10px; min-height: 36px; display: inline-flex; align-items: center;
+}
+.lang a[aria-current="page"] { background: var(--ink); color: var(--paper); }
+.story-kicker { font-family: var(--font-mono); font-size: 12px; font-weight: 700; letter-spacing: 1px; color: var(--hivis); margin-bottom: 6px; }
+.story-kicker a { color: inherit; text-decoration-thickness: 2px; text-underline-offset: 3px; }
+.story-lede { font-size: 17px; line-height: 1.45; margin: 12px 0 22px; }
+.story-num { display: grid; gap: 14px; }
+/* Sapu's line is only in the slide's bubble (and its alt text), so on a wider screen the slide is big enough to read it */
+@media (min-width: 700px) { .story-num { grid-template-columns: 300px 1fr; gap: 18px; align-items: start; } }
+.story-slide { width: 100%; height: auto; display: block; border: 2px solid var(--ink); background: var(--page); }
+.story-h { font-size: clamp(28px, 7vw, 38px); line-height: 1.05; margin-bottom: 8px; }
+.story-h mark { background: linear-gradient(0deg, var(--tape) 0 42%, transparent 42%); color: var(--ink); padding: 0 4px; }
+.story-num p, .story-notes p, .story-notes li, .story-card p { font-size: 16px; line-height: 1.5; }
+.story-num p + p, .story-notes p + p { margin-top: 10px; }
+.story-num .story-src { font-size: 12px; margin-top: 12px; overflow-wrap: anywhere; }
+.story-num a, .story-notes a, .story-lede a, .story-card a:not(.btn) {
+  color: var(--ink); overflow-wrap: anywhere; text-decoration-color: var(--hivis); text-decoration-thickness: 2px; text-underline-offset: 3px;
+}
+.story-notes ul { padding-left: 20px; margin-top: 8px; }
+.story-notes li + li { margin-top: 6px; }
+.story-list { list-style: none; display: grid; gap: 20px; }
+.story-card img { width: 100%; height: auto; display: block; border: 2px solid var(--ink); margin-bottom: 12px; }
+.story-card .btn-row { margin-top: 12px; }
