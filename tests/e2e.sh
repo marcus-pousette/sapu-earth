@@ -2378,6 +2378,10 @@ echo "$HPX" | grep -qF '<p class="foot-apply"><a href="/crews">THE CREWS</a><spa
   && echo "$HCB" | grep -qF '<p class="crew-back crew-list">// crews we work with show up at <a href="/crews">sapu.earth/crews</a>, with their missions and receipts.</p>' \
   && ok "the homepage links /crews: THE CREWS first in the footer's link line (THE MISSIONS after it, hidden until /missions lists something), and the crew box line after APPLY AS A CREW and before the line for crews already with us" \
   || bad "homepage links to /crews" "$HCB"
+# The code is public on GitHub: the footer's first line links it, after 100% TRANSPARENT (no-break spaces inside both).
+echo "$HPX" | grep -qF '<p>SAPU = BROOM (INDONESIAN) · 100%&nbsp;TRANSPARENT · <a href="https://github.com/marcus-pousette/sapu-earth" rel="noopener">OPEN&nbsp;SOURCE</a></p>' \
+  && ok "the homepage footer links the public code: OPEN SOURCE after 100% TRANSPARENT, to github.com/marcus-pousette/sapu-earth" \
+  || bad "homepage footer: the OPEN SOURCE link" "$(echo "$HPX" | grep -F 'TRANSPARENT')"
 # The ways on (site/app.js, the ways on; docs/upload-flow.md, Homepage): SEE THE RECEIPTS and SEE THE CREWS stand in one
 # row (.cues) in the homepage's markup, the last of the first screen's bottom boxes, so the pair shows from the start in
 # every state, next to the samples too, without JavaScript and when the data failed to load (Marcus decided on
