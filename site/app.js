@@ -1069,7 +1069,8 @@
     }));
   }
 
-  // A finger tap among receipt dots too close together to tell apart: the receipts nearest first.
+  // A finger tap among receipt dots too close together to tell apart: the receipts nearest first. A tap on a cleaned
+  // spot's slip that stands for several receipts (cleanPin): newest first. Each row shows its receipt's slip.
   const CHOOSE_MAX = 8;
   function openReceiptChooser(list) {
     if (overlay.hidden) lastFocus = document.activeElement;
@@ -1081,8 +1082,8 @@
         <div class="r-head m-head">${list.length} CLEANUPS<span>SAPU EARTH · PICK ONE</span></div>
         <ul class="mch">${rows.map((e, i) => `
           <li><button type="button" data-i="${i}">
-            <i class="rdot" aria-hidden="true"></i>
-            <span><b>${upper(e.location?.name, "TBA")} · ${cc(e)}</b>${dateStr(e)} · ${num(e.result?.kg_estimate)} KG</span>
+            ${slipHtml([e])}
+            <span><b>${upper(e.location?.name, "TBA")} · ${cc(e)}</b>${dateStr(e)}</span>
           </button></li>`).join("")}
         </ul>
         ${more > 0 ? `<p class="mch-more">${more} MORE HERE: ZOOM IN TO SEE THEM</p>` : ""}
@@ -1139,9 +1140,12 @@
   const tagW = (label) => 27 + 7.23 * label.length;
   // A small glyph opens every mission tag: a trash bag where the mess still waits (open), a broom where a
   // crew is booked (funded). It takes the tag's text colour. The legend in index.html has the same two.
+  // A cleaned spot's slip (cleanPin) opens with a checked box instead: safety green with a paper tick, whatever the
+  // colour around it, the same box as the legend's and /missions' (functions/missions/index.js).
   const GLYPH = {
     open: '<svg class="gl" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 7h6c2 1.5 2.6 4.5 1.4 6.6-.5.8-1.2 1.2-2 1.2H5.6c-.8 0-1.5-.4-2-1.2C2.4 11.5 3 8.5 5 7z"/><path d="M6.6 7l.7-2h1.4l.7 2M7.3 5L5.6 3M8.7 5l1.7-2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
     funded: '<svg class="gl" viewBox="0 0 16 16" aria-hidden="true"><g transform="rotate(35 8 8)"><rect x="7.1" y=".6" width="1.8" height="8.2" rx=".9"/><path fill-rule="evenodd" d="M5.4 8.2h5.2l1.8 6.2H3.6zM5.2 9.9h5.6v.9H5.2z"/></g></svg>',
+    cleaned: '<svg class="gl" viewBox="0 0 16 16" aria-hidden="true"><rect width="16" height="16" rx="3" fill="#007a3d"/><path d="M3.9 8.4l2.9 2.9 5.4-6.1" fill="none" stroke="#fdfaf1" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   };
   const glyph = (isFunded) => (isFunded ? GLYPH.funded : GLYPH.open);
   const offKm = (a, b) => {                            // how far east and north b is from a, in km
@@ -1156,21 +1160,23 @@
   const groupLabel = (ms) => { const u = missionsOf(ms); return u.length <= 3 ? u.map((m) => "#" + m.no).join(" ") : `#${u[0].no} +${u.length - 1}`; };
   // Groups for a zoom where one screen px is kmPx km. Any two tags that would touch merge, so a chain
   // of them becomes one tag. Then the merged, wider tags are checked again, until no two touch.
-  // A group seen before is the same object, so globe.gl keeps its tag.
+  // A group seen before is the same object, so globe.gl keeps its tag. The same for missions and for cleaned spots
+  // (cleanGroups), each kind on its own, so a tag always stands on its lead mission's spot and a slip always hangs from
+  // one of its receipts' dots: lead orders a group, width is its tag's width in px, high how far it reaches up or down
+  // from its spot with its pointer, key names it and make builds it. Where a tag and a slip of other places meet, the
+  // tidy pass below keeps one.
   const groupCache = new Map();
-  const missionGroups = (list, kmPx) => {
-    const order = new Map(list.map((m, i) => [m, i]));
-    const lead = (a, b) => funded(b) - funded(a) || order.get(a) - order.get(b);
+  const groupsAt = (list, kmPx, { lead, width, high, key, make }) => {
     let groups = list.map((m) => [m]);
     for (;;) {
       const up = groups.map((_, i) => i);
       const root = (i) => (up[i] === i ? i : (up[i] = root(up[i])));
-      const half = groups.map((ms) => tagW(groupLabel(ms)) / 2);
+      const half = groups.map((ms) => width(ms) / 2);
       let merged = false;
       for (let i = 0; i < groups.length; i++) {
         for (let j = i + 1; j < groups.length; j++) {
           const [dx, dy] = offKm(groups[i][0], groups[j][0]);
-          if (Math.abs(dx) >= (half[i] + half[j] + GAP_X) * kmPx || Math.abs(dy) >= (TAG_H + PTR + GAP_Y) * kmPx) continue;
+          if (Math.abs(dx) >= (half[i] + half[j] + GAP_X) * kmPx || Math.abs(dy) >= (high + GAP_Y) * kmPx) continue;
           const a = root(i), b = root(j);
           if (a !== b) { up[Math.max(a, b)] = Math.min(a, b); merged = true; }
         }
@@ -1181,22 +1187,57 @@
       groups = [...into.values()].map((ms) => ms.sort(lead));
     }
     return groups.map((ms) => {
-      const key = ms.map((m) => m.no + (m.spot ? "." + m.spot : "")).join(" ");
-      if (!groupCache.has(key)) groupCache.set(key, { key, lat: r3(ms[0].lat), lng: r3(ms[0].lng), ms });
-      return groupCache.get(key);
+      const k = key(ms);
+      if (!groupCache.has(k)) groupCache.set(k, make(k, ms));
+      return groupCache.get(k);
     });
   };
+  const missionGroups = (list, kmPx) => {
+    const order = new Map(list.map((m, i) => [m, i]));
+    return groupsAt(list, kmPx, {
+      lead: (a, b) => funded(b) - funded(a) || order.get(a) - order.get(b),
+      width: (ms) => tagW(groupLabel(ms)), high: TAG_H + PTR,
+      key: (ms) => ms.map((m) => m.no + (m.spot ? "." + m.spot : "")).join(" "),
+      make: (key, ms) => ({ key, lat: r3(ms[0].lat), lng: r3(ms[0].lng), ms }),
+    });
+  };
+  // A cleaned spot's receipt is a paper slip that hangs below the spot (cleanPin; .cslip in styles.css: 21 px high, the
+  // checked box a little taller than the words, under its 6 px pointer, with a torn edge of EDGE px below it), where a
+  // mission's tag stands above its spot, so at one place the two never cover each other. Its words: the kilograms its
+  // receipts removed, or their sacks where none gave a weight. Space Mono 700 12px: .612em + .5px a letter, padding,
+  // border, and 17 px for the checked box and its gap.
+  const SLIP_H = 21, EDGE = 4;
+  const slipW = (label) => 31 + 7.84 * label.length;
+  const kgOf = (e) => (typeof e.result?.kg_estimate === "number" && e.result.kg_estimate > 0 ? e.result.kg_estimate : 0);
+  const sacksOf = (e) => (Number.isInteger(e.result?.sacks) && e.result.sacks > 0 ? e.result.sacks : 0);
+  const amount = (list) => {
+    const kg = list.reduce((s, e) => s + kgOf(e), 0), sacks = list.reduce((s, e) => s + sacksOf(e), 0);
+    return kg > 0 ? num(kg) + " KG" : sacks > 0 ? sacks + (sacks === 1 ? " SACK" : " SACKS") : "CLEANED";
+  };
+  // a group's receipts, each once (the spots of one receipt are points of it), newest first
+  const receiptsOf = (rs) => [...new Set(rs.map((p) => p.of))];
+  const slipHtml = (list) => `<i class="cslip">${GLYPH.cleaned}${amount(list)}<i class="cslip-edge"></i></i>`;
+  // slips that would touch share one, with the kilograms of all of them, hanging from the newest one's dot
+  const cleanGroups = (list, kmPx) => groupsAt(list, kmPx, {
+    lead: (a, b) => a.i - b.i,
+    width: (rs) => slipW(amount(receiptsOf(rs))), high: PTR + SLIP_H + EDGE,
+    key: (rs) => "r" + rs.map((p) => p.i).join(" "),
+    make: (key, rs) => ({ key, lat: rs[0].lat, lng: rs[0].lng, rs }),
+  });
 
   // The globe also fires its own click for a receipt dot under the pointer, even when the
   // tap landed on a mission tag above it. Remember the tag tap so only the mission opens.
   let pinTapAt = 0;
   const groupOfTag = new WeakMap();
-  // A faded tag (opacity 0, no taps): see tidy below. The page is touched only when it changes.
+  // A faded tag (opacity 0, no taps): see tidy below. The page is touched only when it changes. A cleaned spot's slip
+  // swings on its pin the first time it shows, once, as if just hung there (styles.css, cslip-in), never under reduced
+  // motion.
   const setOff = (g, off) => {
     if (off === !!g.off) return;
     g.off = off;
     g.pin.classList.toggle("mpin-off", off);
     if (off) g.pin.setAttribute("aria-hidden", "true"); else g.pin.removeAttribute("aria-hidden");
+    if (!off && g.rs && !g.hung) { g.hung = true; if (!reduceMotion) g.pin.firstChild.classList.add("cslip-in"); }
   };
   // globe.gl asks for a tag each time a group comes on the globe. It starts faded, and the tidy pass
   // shows it once it has room, so a tag never lands on another one.
@@ -1227,12 +1268,47 @@
       if (pressOn === false) return;                   // a tap that starts on a box beside it is the box's (pressOn)
       pinTapAt = performance.now();
       // The tap areas of two tags side by side can overlap. Every shown tag under the finger
-      // counts, so a tap between them lists both. A tag faded out near the rim (tidy) does not.
+      // counts, so a tap between them lists both. A tag faded out near the rim (tidy) does not, nor a cleaned spot's slip.
       const under = ev.clientX || ev.clientY
-        ? document.elementsFromPoint(ev.clientX, ev.clientY).map((x) => groupOfTag.get(x)).filter((y) => y && !y.off) : [];
+        ? document.elementsFromPoint(ev.clientX, ev.clientY).map((x) => groupOfTag.get(x)).filter((y) => y?.ms && !y.off) : [];
       const gs = new Set([g, ...under]);
       const list = missions.filter((x) => [...gs].some((y) => y.ms.some((z) => baseOf(z) === x)));
       if (list.length === 1) openMission(list[0]); else openChooser(list);
+    });
+    g.pin = pin;
+    setOff(g, true);
+    return pin;
+  }
+  // The same for a cleaned spot: its receipt, a slip with a checked box and the kilograms (cleanGroups), hanging from its
+  // dot. --hang is how far the dot reaches below the spot on screen (satDraw), so the slip's pointer starts just under it.
+  // One receipt: its place, its day and its photos, and a tap opens it; several: each once, and a tap lists them.
+  function cleanPin(g) {
+    if (g.pin) { g.pin.style.display = ""; setOff(g, true); return g.pin; }
+    const list = receiptsOf(g.rs), e = list[0], mis = missionOf(e);
+    const pin = document.createElement("div");
+    pin.className = "mpin cpin";
+    pin.style.setProperty("--hang", hangPx + "px");
+    const tip = list.length === 1
+      ? `<b>${e.demo ? "SAMPLE " : ""}CLEANED${mis ? " · MISSION #" + mis.no : ""}</b><br>${upper(e.location?.name, "TBA")} · ${dateStr(e)}` +
+        tipMedia(e) + "<span>TAP FOR THE RECEIPT</span>"
+      : `<b>${list.length} CLEANUPS HERE</b>` +
+        list.slice(0, 4).map((x) => `<br>${upper(x.location?.name, "TBA")} · ${amount([x])}`).join("") +
+        (list.length > 4 ? "<br>..." : "") + "<span>TAP TO CHOOSE</span>";
+    pin.innerHTML = slipHtml(list) + `<div class="tip mtip ctip">${tip}</div>`;
+    const tag = pin.firstChild;
+    groupOfTag.set(tag, g);
+    tag.addEventListener("pointerup", () => (pinTapAt = performance.now()));
+    // a mouse that comes onto it swings it once more (styles.css, cslip-swing)
+    tag.addEventListener("pointerenter", (ev) => { if (ev.pointerType === "mouse") tag.classList.add("cslip-swing"); });
+    tag.addEventListener("animationend", () => tag.classList.remove("cslip-in", "cslip-swing"));
+    tag.addEventListener("click", (ev) => {
+      if (pressOn === false) return;                   // a tap that starts on a box beside it is the box's (pressOn)
+      pinTapAt = performance.now();
+      const under = ev.clientX || ev.clientY
+        ? document.elementsFromPoint(ev.clientX, ev.clientY).map((x) => groupOfTag.get(x)).filter((y) => y?.rs && !y.off) : [];
+      const gs = [g, ...under];
+      const all = events.filter((x) => gs.some((y) => y.rs.some((p) => p.of === x)));
+      if (all.length === 1) openPost(all[0]); else openReceiptChooser(all);
     });
     g.pin = pin;
     setOff(g, true);
@@ -1332,15 +1408,16 @@
   const DOT_ALT = 0.006;                               // receipt dots stand this high (flat, like a sticker)
   // A cleaned spot is a safety green dot on a white rim, the colours of a "safe condition" sign, so it
   // reads as done next to the yellow (open) and ink (funded) mission tags, and the rim keeps it apart
-  // from the green land. The rim is a second point under each dot, wider and a little lower. Dot and rim
+  // from the green land. Its receipt hangs from it as a slip with the kilograms (cleanPin): the dot is the pin it
+  // hangs on, and still takes taps of its own. The rim is a second point under each dot, wider and a little lower. Dot and rim
   // carry their receipt in `of`, so a hover or a click on either acts on that receipt. They are points of
   // their own, not the receipts: globe.gl keeps each layer's 3D object on the data (__threeObj), and the
   // pulse rings use the receipts, so a shared object would send the dots' updates to the rings. Both stand
   // above the land (0.001) and the pulse rings (0.0015). The pulse is a darker green that fades slowly, so
   // its thin ring stays visible on the pale ocean, and it stays off for visitors who ask for less motion.
   const CLEAN = "#007a3d", PULSE_RGB = "0, 77, 38", RIM = "#ffffff", DOT_R = 0.72, RIM_R = 0.98;
-  // Around the white rim goes a dark ring, a third point under the two, wider and lower again: the dot as the
-  // legend draws it (.lg-dot) and the outline everything of Sapu's has. It also keeps the white rim apart from
+  // Around the white rim goes a dark ring, a third point under the two, wider and lower again: the outline
+  // everything of Sapu's has. It also keeps the white rim apart from
   // the pale ocean. The ring stands only a little lower than the rim (dotAlt), so that seen from the side, away
   // from the middle of the screen, it stays an even ring and does not slide out into a crescent.
   const INK = "#1c1813", INK_R = 1.16;
@@ -1349,8 +1426,9 @@
   let pressType = "", pressOn = null;                  // the last press: mouse, touch or pen, and whether on the globe
   // A dot grows with the zoom only up to its size on the satellite map, then keeps that size on screen
   // (dotSize). As the map comes in, dots come down to the ground (dotLow), and so do the mission tags (tagAlt),
-  // so they stay on their spot over the map.
-  let dotSize = 1, dotLow = 1, tagAlt = TAG_ALT;
+  // so they stay on their spot over the map. hangPx: how far below its spot a dot, or its mark on the map, reaches on
+  // screen, where a cleaned spot's slip hangs from it (cleanPin, satDraw).
+  let dotSize = 1, dotLow = 1, tagAlt = TAG_ALT, hangPx = 7;
   const dotAlt = (d) => (d.ink ? DOT_ALT - 0.0022 : d.rim ? DOT_ALT - 0.0015 : DOT_ALT) * dotLow;
   const dotRadius = (d) => (d.ink ? INK_R : d.rim ? RIM_R : DOT_R) * dotSize;
   const globe = Globe({ animateIn: !reduceMotion })(el)
@@ -1381,14 +1459,18 @@
       pointTapAt = performance.now(); if (pointTapAt - pinTapAt > 400) openPost(receiptOf(d));
     });
 
-  // missions are "#12" tags (yellow = open, ink = funded), cleanups are green dots on a white rim.
-  // A handful of DOM tags; globe.gl hides the ones behind the planet.
+  // missions are "#12" tags (yellow = open, ink = funded), cleanups are green dots on a white rim with their
+  // receipt hanging below as a slip with the kilograms. A handful of DOM tags; globe.gl hides the ones behind the planet.
   // The missions' points: each mission at its place, or a mission with several spots at each spot (docs/missions.md,
   // Spots), as a copy of it with that spot's place, day and point, base the mission itself (baseOf). Spots a few km apart
   // share the mission's tag, which then reads #2 once; zoomed in, each spot has its own.
   const mgeo = missions.flatMap((m) => (spotsM(m).length
     ? spotsM(m).map((s) => ({ ...m, place_name: s.name, date: s.date, lat: s.lat, lng: s.lng, spot: s.no, base: m })) : [m]))
     .filter((m) => Number.isFinite(m.lat) && Number.isFinite(m.lng));
+  // The cleaned spots' points for their slips, one at each dot (geo), in the receipts' order, newest first: slips that
+  // would touch share one with the kilograms of all of them, hanging from the newest one's dot (cleanGroups).
+  const cgeo = geo.map((p, i) => ({ of: p.of, lat: r3(p.location.lat), lng: r3(p.location.lng), i }));
+  const tagged = mgeo.length + cgeo.length > 0;
   // km per screen px where the camera looks. The globe's radius is 100 units (6371 km), the camera
   // is 100 * (1 + altitude) from its centre, and the tags ride on a sphere 1 + tagAlt times as big.
   const kmPerPx = (alt) => (2 * Math.tan((globe.camera().fov * Math.PI) / 360) * 6371 * (alt - tagAlt)) /
@@ -1399,12 +1481,13 @@
   const STEP = Math.log(1.15);
   let level = NaN, shown = "";
   const relayout = (alt) => {
-    if (!mgeo.length) return;
+    if (!tagged) return;
     try { // this runs inside globe.gl's frame: a throw here would stop the globe for good
       const x = Math.log(kmPerPx(alt)) / STEP;
       if (x > level - 0.1 && x < level + 1.1) return;
       level = Math.floor(x);
-      const groups = missionGroups(mgeo, Math.exp((level + 1) * STEP));
+      const kp = Math.exp((level + 1) * STEP);
+      const groups = [...missionGroups(mgeo, kp), ...cleanGroups(cgeo, kp)];
       const keys = groups.map((g) => g.key).join("|");
       if (keys !== shown) { shown = keys; globe.htmlElementsData(groups); tidySoon(); }
     } catch (e) {
@@ -1414,8 +1497,10 @@
 
   // Grouping keeps tags apart where the globe faces the camera. Near the rim the globe squeezes
   // distances, so two tags can still touch while it spins. This pass reads where the tags really
-  // are, at most every 100 ms, and walks them in order: a tag with a funded mission first, then the
-  // NEXT UP order of its lead. A tag that touches one already kept, or would by the next pass the
+  // are, at most every 100 ms, and walks them in order: a cleaned spot's slip first (the proof, newest first), then a
+  // tag with a funded mission, then the NEXT UP order of its lead. A slip hangs below its spot and a mission's tag stands
+  // above its own, so the two meet only where the slip's spot is a tag's height or so above the tag's. A slip's place is
+  // taken from its pin, so its swing does not move it here. A tag that touches one already kept, or would by the next pass the
   // way the two are moving, fades out. It comes back as soon as it has room. A tag under the pointer
   // or with focus always stays. Tags that globe.gl hides behind the planet do not count; they fade
   // too, so one that comes back over the rim only shows once it has room. The tap hint's strip of paper counts as a
@@ -1434,7 +1519,7 @@
   };
   const AHEAD = 120;                                   // ms, about the time to the next pass
   let tidyReq = 0, tidyAt = -1e9, onScreen = true;
-  const tidySoon = () => { if (mgeo.length && !tidyReq) tidyReq = requestAnimationFrame(tidyFrame); };
+  const tidySoon = () => { if (tagged && !tidyReq) tidyReq = requestAnimationFrame(tidyFrame); };
   const tidyFrame = (now) => {
     tidyReq = 0;
     if (now - tidyAt < 100) { tidySoon(); return; }
@@ -1451,16 +1536,20 @@
       const pin = g.pin;
       if (pin?.style.display === "none") { setOff(g, true); continue; } // behind the planet
       if (!pin?.isConnected) { again = true; continue; }   // not drawn yet
-      const tag = pin.firstChild, r = tag.getBoundingClientRect();
-      // the centre from where it is drawn, on the page, the size without the hover scale or the tilt
-      const x = r.left + scrollX + r.width / 2, y = r.top + scrollY + r.height / 2;
+      const tag = pin.firstChild, r = (g.rs ? pin : tag).getBoundingClientRect();
+      // the centre from where it is drawn, on the page, the size without the hover scale or the tilt; a slip's from its
+      // pin (the spot): its pointer starts hangPx below it, its edge ends EDGE px below the slip
+      const h = tag.offsetHeight + PTR + (g.rs ? EDGE : 0);
+      const x = r.left + scrollX + r.width / 2, y = r.top + scrollY + (g.rs ? hangPx + 1 + h / 2 : r.height / 2);
       const dt = g.seen && now - g.seen.t < 300 ? now - g.seen.t : 0;
-      live.push({ g, x, y, w: tag.offsetWidth, h: tag.offsetHeight + PTR, held: pin.matches(":hover, :focus-within"),
+      live.push({ g, x, y, w: tag.offsetWidth, h, held: pin.matches(":hover, :focus-within"),
         nx: dt ? x + ((x - g.seen.x) * AHEAD) / dt : x, ny: dt ? y + ((y - g.seen.y) * AHEAD) / dt : y });
       g.seen = { x, y, t: now };
     }
     const lead = (t) => t.g.ms[0];
-    live.sort((a, b) => b.held - a.held || funded(lead(b)) - funded(lead(a)) || nextUpAt.get(baseOf(lead(a))) - nextUpAt.get(baseOf(lead(b))));
+    const rank = (t) => (t.g.rs ? 0 : funded(lead(t)) ? 1 : 2);
+    live.sort((a, b) => b.held - a.held || rank(a) - rank(b) ||
+      (a.g.rs ? a.g.rs[0].i - b.g.rs[0].i : nextUpAt.get(baseOf(lead(a))) - nextUpAt.get(baseOf(lead(b)))));
     const touch = (k, t, dx, dy) => Math.abs(dx) < (k.w + t.w) / 2 + GAP_X && Math.abs(dy) < (k.h + t.h) / 2 + GAP_Y;
     const kept = [];
     const hb = hintStrip && !hintStrip.closest(".map-on") ? hintStrip.getBoundingClientRect() : null; // none while it fades for the map
@@ -1477,18 +1566,18 @@
     if (again && onScreen) tidySoon();
   }
 
-  if (mgeo.length) {
+  if (tagged) {
     globe
       .htmlLat((g) => g.lat)
       .htmlLng((g) => g.lng)
       .htmlAltitude(TAG_ALT)
       .htmlTransitionDuration(0)
-      .htmlElement(missionPin);
+      .htmlElement((g) => (g.rs ? cleanPin(g) : missionPin(g)));
   }
   // globe.gl calls this on every camera move, inside its frame (satFrame is the satellite map, below)
   globe.onZoom((pov) => { relayout(pov.altitude); tidySoon(); satFrame(pov); });
   // The legend says what the markers on the globe are, the kinds that are there and no others
-  $("#lgDot").hidden = !geo.length;
+  $("#lgCleaned").hidden = !geo.length;
   $("#lgFunded").hidden = !mgeo.some(funded);
   $("#lgOpen").hidden = !mgeo.some((m) => !funded(m));
   $("#legend").hidden = !geo.length && !mgeo.length;
@@ -2049,7 +2138,15 @@
       (size === 1 && dotSize !== 1) || (low === 1 && dotLow !== 1)) {
       dotSize = size; dotLow = low;
       globe.pointsTransitionDuration(0).pointAltitude(dotAlt).pointRadius(dotRadius);
-      if (mgeo.length) { tagAlt = TAG_ALT * low; globe.htmlAltitude(tagAlt); }
+      if (tagged) { tagAlt = TAG_ALT * low; globe.htmlAltitude(tagAlt); }
+    }
+    // How far a dot reaches below its spot on screen where the camera looks: its dark ring, or on the map its mark (the
+    // dot, or the area once that is bigger, with the white rim and the outline). A cleaned spot's slip hangs just under
+    // it (cleanPin), in half px steps; only the slips are touched.
+    const hang = Math.round(2 * Math.max((rDot * INK_R) / DOT_R, m > 0 ? Math.max(rDot, AREA_M / mppAt(a)) + 4 : 0)) / 2;
+    if (hang !== hangPx) {
+      hangPx = hang;
+      for (const g of globe.htmlElementsData()) if (g.rs && g.pin) g.pin.style.setProperty("--hang", hang + "px");
     }
     // a few km up the camera would cut off the tags at its near plane (0.1 units, 6 km)
     const near = Math.min(0.1, Math.max(1e-4, a * 50));

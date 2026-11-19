@@ -223,15 +223,15 @@ input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-
    44 px tall. A card the address points at (#m-12, from a post's ALL MISSIONS) is outlined. */
 .mx-title { display: flex; align-items: center; gap: 10px; font-size: 19px; line-height: 1.15; margin: 4px 0 12px; }
 .mx-title small { font-family: var(--font-mono); font-size: 13px; color: var(--dim); }
-.mx-title .mpin-tag, .mx-title .lg-dot { flex: none; }
+.mx-title .mpin-tag, .mx-title .cslip { flex: none; }
 .mx-head { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-height: 44px; color: var(--ink); text-decoration: none; }
 .mx-head .mpin-tag { font-size: 12px; padding: 4px 6px 3px; }
 .mx-head .cx-name b { text-decoration: underline; text-decoration-color: var(--hivis); text-decoration-thickness: 2px; text-underline-offset: 4px; }
 .mx-head .cx-name small.mx-money { color: var(--ink); }
 .mx-title .mpin-funded, .mx-head .mpin-funded { border-color: var(--ink); }
-.mx-done { background: var(--paper); }
-/* the green dot in a cleaned card's tag: its rings reach up to 5 px past it, so it stands clear of "#" and the border */
-.mx-done .lg-dot { display: inline-block; width: 8px; height: 8px; margin: 0 9px 0 4px; vertical-align: 1px; }
+/* the cleaned slip (site/styles.css, .cslip): its torn edge reaches 4 px below it, so in a title it keeps that room, and
+   on a card it hangs into the 8 px gap under it */
+.mx-title .cslip { margin-bottom: 4px; }
 .mx-by { display: flex; gap: 8px; align-items: center; min-height: 44px; }
 .mx-by b { flex: none; }
 .mx-more { margin: -6px 0 22px; font-family: var(--font-mono); font-size: 12px; font-weight: 700; text-transform: uppercase; }

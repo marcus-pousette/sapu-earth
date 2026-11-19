@@ -501,7 +501,8 @@ html:has(.hero), html:has(.hero) body { overscroll-behavior-y: contain; }
 }
 
 /* ===== mission pins + legend ===== */
-/* open = hazard yellow tag, funded = ink tag with a paper rim, cleaned = safety green dot on a white rim */
+/* open = hazard yellow tag, funded = ink tag with a paper rim, cleaned = safety green dot on a white rim with its
+   receipt hanging below it (.cslip) */
 /* site/app.js (TAG_H, PTR, tagW) assumes this box and its 6px pointer. Keep them in sync. */
 .mpin-tag {
   font-family: var(--font-mono); font-size: 11px; font-weight: 700; font-style: normal;
@@ -569,6 +570,66 @@ html:has(.hero), html:has(.hero) body { overscroll-behavior-y: contain; }
 @media (hover: hover) {
   .mpin .mpin-tag:hover { transform: translateX(-50%) rotate(0) scale(1.12); }
   .mpin-tag:hover + .mtip { display: block; }
+  .cslip:hover + .mtip { display: block; }
+}
+
+/* A cleaned spot (site/app.js, cleanPin): its receipt, a paper slip with a checked box and the kilograms, hangs below the
+   spot from its dot on a little ink pointer, where a mission's tag stands above its spot on its own, so at one place the
+   two never cover each other. Bigger words than a tag's: it is what got done. The same slip, smaller, is the legend's
+   CLEANED, a row's mark in the pick-one list and on /missions. site/app.js (SLIP_H, EDGE, slipW) assumes this box and
+   its edge. Keep them in sync. */
+.cslip {
+  position: relative; display: inline-block;
+  font-family: var(--font-mono); font-size: 12px; font-weight: 700; font-style: normal;
+  line-height: 1; letter-spacing: .5px; white-space: nowrap;
+  padding: 4px 6px 2px 4px; color: var(--ink); background: var(--paper);
+  border: 2px solid var(--ink); border-bottom: 0; box-shadow: 2px 2px 0 var(--ink);
+}
+.cslip .gl { display: inline-block; width: 1.1em; height: 1.1em; vertical-align: -.22em; margin-right: 4px; }
+/* the torn edge of a receipt: a row of teeth, each outlined in ink, as many whole ones as fit the slip's width */
+.cslip-edge {
+  position: absolute; left: -2px; right: -2px; top: 100%; height: 4px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='4' viewBox='0 0 8 4'%3E%3Cpath d='M0 .65L4 3.35L8 .65' fill='%23fdfaf1' stroke='%231c1813' stroke-width='1.3'/%3E%3C/svg%3E") 0 0 / 8px 4px;
+  background-repeat: round no-repeat;
+}
+/* On the globe it hangs from the spot: --hang is how far the spot's dot reaches below it on screen (site/app.js, satDraw),
+   and the pointer starts 1 px under that. It turns about the spot, so its swing keeps the pointer on the dot. */
+.mpin .cslip {
+  position: absolute; left: 0; top: calc(var(--hang, 7px) + 7px);
+  transform: translateX(-50%) rotate(-2deg); transform-origin: 50% calc(-7px - var(--hang, 7px));
+  pointer-events: auto; cursor: pointer;
+  transition: opacity .15s ease;
+}
+.mpin .cslip::after {
+  content: ""; position: absolute; left: 50%; bottom: calc(100% + 2px); margin-left: -5px;
+  border: 5px solid transparent; border-bottom: 6px solid var(--ink); border-top: 0;
+}
+/* the tap target, as a tag's: at least 44 by 44 px, centred on the slip, as wide as the slip */
+.mpin .cslip::before {
+  content: ""; position: absolute; left: 50%; top: 50%;
+  width: max(44px, calc(100% + 1px)); height: 44px; transform: translate(-50%, -50%);
+}
+.mpin.mpin-off .cslip { opacity: 0; pointer-events: none; }
+/* its preview hangs under it */
+.ctip { bottom: auto; top: calc(var(--hang, 7px) + 36px); }
+/* The first time a slip shows it swings on its pin and settles, as if just hung there; a mouse that comes onto it swings
+   it once more (site/app.js sets the class and takes it off at animationend). Not for a visitor who asked for less
+   motion (below). */
+.mpin .cslip.cslip-in { animation: cslip-in 1.3s ease-in-out; }
+.mpin .cslip.cslip-swing { animation: cslip-swing .8s ease-in-out; }
+@keyframes cslip-in {
+  0% { transform: translateX(-50%) rotate(-28deg); }
+  28% { transform: translateX(-50%) rotate(13deg); }
+  52% { transform: translateX(-50%) rotate(-9deg); }
+  72% { transform: translateX(-50%) rotate(3deg); }
+  88% { transform: translateX(-50%) rotate(-4deg); }
+  100% { transform: translateX(-50%) rotate(-2deg); }
+}
+@keyframes cslip-swing {
+  0%, 100% { transform: translateX(-50%) rotate(-2deg); }
+  30% { transform: translateX(-50%) rotate(7deg); }
+  60% { transform: translateX(-50%) rotate(-6deg); }
+  85% { transform: translateX(-50%) rotate(1deg); }
 }
 
 .legend {
@@ -582,10 +643,10 @@ html:has(.hero), html:has(.hero) body { overscroll-behavior-y: contain; }
 .legend span[hidden] { display: none; }
 .legend .mpin-tag { font-size: 9px; padding: 2px 4px 1px; box-shadow: 1px 1px 0 var(--ink); }
 .legend .mpin-funded { border-color: var(--ink); }
-.lg-dot {
-  width: 12px; height: 12px; border-radius: 50%; margin: 0 4px;
-  background: var(--clean); box-shadow: 0 0 0 2px #fff, 0 0 0 3.5px var(--ink), 1.5px 1.5px 0 3.5px var(--ink);
-}
+/* CLEANED: the slip, small, its torn edge inside the legend's line */
+.legend .cslip { font-size: 9px; padding: 2px 4px 1px 2px; box-shadow: 1px 1px 0 var(--ink); margin-bottom: 3px; }
+.legend .cslip .gl { margin-right: 3px; }
+.legend .cslip-edge { height: 3px; background-size: 6px 3px; }
 
 /* ===== post lightbox ===== */
 body.post-open { overflow: hidden; }
@@ -692,8 +753,9 @@ body.post-open { overflow: hidden; }
 .mch button:hover b, .mch button:focus-visible b { text-decoration: underline; text-decoration-color: var(--hivis); text-decoration-thickness: 2px; }
 .mch .mpin-tag { flex: none; min-width: 36px; text-align: center; }
 .mch .mpin-funded { border-color: var(--ink); }
-/* the same list for receipt dots that sit too close together for a finger */
-.mch .rdot { flex: none; width: 14px; height: 14px; margin: 0 11px; border-radius: 50%; background: var(--clean); box-shadow: 0 0 0 2px #fff, 0 0 0 3.5px var(--ink), 1.5px 1.5px 0 3.5px var(--ink); }
+/* the same list for receipts: dots that sit too close together for a finger, or a slip that stands for several; each row
+   with its receipt's slip */
+.mch .cslip { flex: none; min-width: 36px; margin-bottom: 4px; }
 .mch-more { padding: 0 16px 14px; font-size: 10px; font-weight: 700; letter-spacing: 1px; color: var(--dim); }
 .post-task { font-size: 12px; line-height: 1.45; padding: 8px 14px 0; overflow-wrap: anywhere; white-space: pre-wrap; }
 .post-task span { display: block; font-size: 10px; font-weight: 700; letter-spacing: 2px; color: var(--dim); }
@@ -813,6 +875,7 @@ body.post-open { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
   .ticker-track { animation: none; }
   html { scroll-behavior: auto; }
-  .mpin .mpin-tag, .wheel-hint, .sat-tile, .sat-btn, .crew-link, .tag-demo, .pitch, .tap-hint, .legend, .stats, .scroll-cue { transition: none; }
+  .mpin .mpin-tag, .mpin .cslip, .wheel-hint, .sat-tile, .sat-btn, .crew-link, .tag-demo, .pitch, .tap-hint, .legend, .stats, .scroll-cue { transition: none; }
   .mpin .mpin-tag.mpin-sweep { animation: none; }
+  .mpin .cslip.cslip-in, .mpin .cslip.cslip-swing { animation: none; }
 }

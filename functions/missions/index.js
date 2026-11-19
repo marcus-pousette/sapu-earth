@@ -24,10 +24,11 @@ const DESC = "The cleanup missions on Sapu Earth: the spots local crews want to 
 const EMPTY_DESC = "The cleanup missions on Sapu Earth. No mission is listed yet."; // also what a link preview says
 const ALL_CLEANED = 6; // cleaned missions on the page with every state; ?status=cleaned shows them all (up to CLEANED_CAP)
 
-// The globe's two glyphs, exactly GLYPH in site/app.js and the legend in index.html: change the three together.
+// The globe's glyphs, exactly GLYPH in site/app.js and the legend in index.html: change the three together.
 const GLYPH = {
   open: '<svg class="gl" viewBox="0 0 16 16" aria-hidden="true"><path d="M5 7h6c2 1.5 2.6 4.5 1.4 6.6-.5.8-1.2 1.2-2 1.2H5.6c-.8 0-1.5-.4-2-1.2C2.4 11.5 3 8.5 5 7z"/><path d="M6.6 7l.7-2h1.4l.7 2M7.3 5L5.6 3M8.7 5l1.7-2" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>',
   funded: '<svg class="gl" viewBox="0 0 16 16" aria-hidden="true"><g transform="rotate(35 8 8)"><rect x="7.1" y=".6" width="1.8" height="8.2" rx=".9"/><path fill-rule="evenodd" d="M5.4 8.2h5.2l1.8 6.2H3.6zM5.2 9.9h5.6v.9H5.2z"/></g></svg>',
+  cleaned: '<svg class="gl" viewBox="0 0 16 16" aria-hidden="true"><rect width="16" height="16" rx="3" fill="#007a3d"/><path d="M3.9 8.4l2.9 2.9 5.4-6.1" fill="none" stroke="#fdfaf1" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
 };
 // The three states in the order a mission goes: the chip's word and the section's title.
 const STATES = [
@@ -36,11 +37,13 @@ const STATES = [
   { key: "cleaned", chip: "CLEANED", title: "CLEANED · WITH ITS RECEIPT" },
 ];
 // A state's mark as in the legend under the globe, next to its title: the yellow tag with a trash bag (open), the ink tag
-// with a broom (funded), the green dot on a white rim (cleaned). Decorative, the title says it.
-const legendMark = (key) => (key === "cleaned" ? `<i class="lg-dot" aria-hidden="true"></i>`
+// with a broom (funded), the receipt's slip with a checked box (cleaned). Decorative, the title says it.
+const slip = (words, attrs = "") => `<i class="cslip"${attrs}>${GLYPH.cleaned}${words}<i class="cslip-edge"></i></i>`;
+const legendMark = (key) => (key === "cleaned" ? slip("KG", ' aria-hidden="true"')
   : `<i class="mpin-tag${key === "funded" ? " mpin-funded" : ""}" aria-hidden="true">${GLYPH[key]}#</i>`);
-// A mission's own tag on its card, as on the globe: #12 with its glyph, or once cleaned the green dot.
-const tag = (key, no) => (key === "cleaned" ? `<i class="mpin-tag mx-done"><i class="lg-dot" aria-hidden="true"></i>#${esc(no)}</i>`
+// A mission's own tag on its card, as on the globe: #12 with its glyph, or once cleaned the slip with #12, where the globe's
+// slip says the kilograms (the card's facts say them).
+const tag = (key, no) => (key === "cleaned" ? slip("#" + esc(no))
   : `<i class="mpin-tag${key === "funded" ? " mpin-funded" : ""}">${GLYPH[key]}#${esc(no)}</i>`);
 
 // Each line says only what the code keeps: what shows (published or funded, never in review), the crew's pay is inside

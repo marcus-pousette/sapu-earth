@@ -2040,18 +2040,19 @@ cmp -s <(curl -s $B/missions) <(curl -s $B/missions/) || MXH="$MXH [/missions/ i
   || bad "/missions page and headers" "$MXH"
 grep -qF '.mx-head { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-height: 44px;' site/forms.css \
   && grep -qF '.mx-card:target { outline: 3px solid var(--hivis); outline-offset: 3px; }' site/forms.css \
-  && grep -qF '.mx-done .lg-dot { display: inline-block; width: 8px; height: 8px; margin: 0 9px 0 4px; vertical-align: 1px; }' site/forms.css \
-  && ok "forms.css: a card's head on /missions is one link at least 44 px tall, the card a post's ALL MISSIONS points at (#m-<no>) is outlined, and a cleaned card's green dot keeps its rings clear of \"#\" and the tag's border" \
+  && grep -qF '.mx-title .mpin-tag, .mx-title .cslip { flex: none; }' site/forms.css && grep -qF '.mx-title .cslip { margin-bottom: 4px; }' site/forms.css \
+  && ! grep -qF 'lg-dot' site/forms.css && ! grep -qF 'lg-dot' functions/missions/index.js \
+  && ok "forms.css: a card's head on /missions is one link at least 44 px tall, the card a post's ALL MISSIONS points at (#m-<no>) is outlined, and the cleaned slip keeps room for its torn edge in a section's title" \
   || bad "forms.css: the /missions card rules" ""
 GLY=$(python3 - site/app.js functions/missions/index.js <<'PY'
 import re, sys
 app, fn = (open(p, encoding="utf-8").read() for p in sys.argv[1:3])
-got = {k: re.findall(r"^ +%s: ('<svg class=\"gl\"[^']*</svg>'),$" % k, app, re.M) for k in ("open", "funded")}
+got = {k: re.findall(r"^ +%s: ('<svg class=\"gl\"[^']*</svg>'),$" % k, app, re.M) for k in ("open", "funded", "cleaned")}
 same = all(len(v) == 1 and re.search(r"^  %s: %s,$" % (k, re.escape(v[0])), fn, re.M) for k, v in got.items())
 print("ok" if same else "wrong: %s" % {k: len(v) for k, v in got.items()})
 PY
 )
-check "the tags on /missions carry the globe's two glyphs exactly as GLYPH in site/app.js has them (the trash bag, the broom)" "$GLY" ok
+check "the tags on /missions carry the globe's glyphs exactly as GLYPH in site/app.js has them (the trash bag, the broom, the checked box)" "$GLY" ok
 
 # A, from an application (its contact details, area and about must never show): two cleanups approved, one with EUR 95
 # and the newest without an amount (PAYMENT PENDING, adds nothing to what was paid), and a third one pending.
@@ -2290,8 +2291,8 @@ check "/missions, NB2's card (funded): its tag with the broom, its day and crew 
 NB5F=$(jget "[' '.join(['{:,.1f}'.format(float(e['result']['kg_estimate'])).rstrip('0').rstrip('.'), str(e['result']['sacks']), str(e['crew']['size'])]) for e in d if e['id'] == '$CXBS5'][0]" < "$T/mx-ev.json")
 read -r NB5KG NB5SACKS NB5CREW <<< "$NB5F"
 [ "$NB5SACKS" = 1 ] && NB5S="1&nbsp;sack" || NB5S="$NB5SACKS&nbsp;sacks"
-check "/missions, NB5's card (cleaned): the green dot, the mission's place, the receipt's day, kilograms, sacks and crew (from /api/events) and €30 paid, linking its receipt /r/<id>; BY Crew B linking its page" \
-  "$(mxq "('<a class=\"mx-head\" href=\"/r/$CXBS5\"><i class=\"mpin-tag mx-done\"><i class=\"lg-dot\" aria-hidden=\"true\"></i>#$NB5</i><span class=\"cx-name\"><b>Muara B5 $CXRUN</b><small>Indonesia&nbsp;· cleaned&nbsp;$(ddnb "$TODAY")&nbsp;· $NB5KG&nbsp;kg&nbsp;· $NB5S&nbsp;· crew&nbsp;of&nbsp;$NB5CREW</small><small class=\"mx-money\">€30&nbsp;paid</small></span></a>' in card($NB5)['html'], '<p class=\"cx-last\"><a href=\"/p/$CXBS\"><b>BY</b><span>Crew B $CXRUN</span></a></p>' in card($NB5)['html'])")" "(True, True)"
+check "/missions, NB5's card (cleaned): the receipt's slip with the checked box and #<no>, the mission's place, the receipt's day, kilograms, sacks and crew (from /api/events) and €30 paid, linking its receipt /r/<id>; BY Crew B linking its page" \
+  "$(mxq "('<a class=\"mx-head\" href=\"/r/$CXBS5\"><i class=\"cslip\"><svg class=\"gl\"' in card($NB5)['html'], '#$NB5<i class=\"cslip-edge\"></i></i><span class=\"cx-name\"><b>Muara B5 $CXRUN</b><small>Indonesia&nbsp;· cleaned&nbsp;$(ddnb "$TODAY")&nbsp;· $NB5KG&nbsp;kg&nbsp;· $NB5S&nbsp;· crew&nbsp;of&nbsp;$NB5CREW</small><small class=\"mx-money\">€30&nbsp;paid</small></span></a>' in card($NB5)['html'], '<p class=\"cx-last\"><a href=\"/p/$CXBS\"><b>BY</b><span>Crew B $CXRUN</span></a></p>' in card($NB5)['html'])")" "(True, True, True)"
 MXC=$(python3 - "$T/mx-all.html" "$T/mx-open.html" "$T/mx-funded.html" "$EVN" <<'PY'
 import re, sys
 pages = [open(p, encoding="utf-8").read() for p in sys.argv[1:4]]
@@ -2992,7 +2993,7 @@ if min(nar) < 0 or nar != sorted(nar):
 # so a scroll is no move toward the strip
 if opener(html, "p", "tap-hint", "tapHint") != 1:
     bad.append("index.html: the tap hint is not #tapHint")
-if js.count('  const hintStrip = $("#tapHint");\n') != 1 or js.count("""      const x = r.left + scrollX + r.width / 2, y = r.top + scrollY + r.height / 2;
+if js.count('  const hintStrip = $("#tapHint");\n') != 1 or js.count("""      const x = r.left + scrollX + r.width / 2, y = r.top + scrollY + (g.rs ? hangPx + 1 + h / 2 : r.height / 2);
 """) != 1 or js.count("""    const kept = [];
     const hb = hintStrip && !hintStrip.closest(".map-on") ? hintStrip.getBoundingClientRect() : null; // none while it fades for the map
     const strip = hb?.width ? { x: hb.left + scrollX + hb.width / 2, y: hb.top + scrollY + hb.height / 2, w: hb.width, h: hb.height } : null;
@@ -3006,7 +3007,7 @@ for t in ["""      const soon = !t.held && !hit && kept.some((k) => touch(k, t, 
       if (soon) again = true;                          // once they stop moving, the guess goes away
       if (!hit && !soon) kept.push(t);
       setOff(t.g, hit || soon);
-""", """      live.push({ g, x, y, w: tag.offsetWidth, h: tag.offsetHeight + PTR, held: pin.matches(":hover, :focus-within"),
+""", """      live.push({ g, x, y, w: tag.offsetWidth, h, held: pin.matches(":hover, :focus-within"),
         nx: dt ? x + ((x - g.seen.x) * AHEAD) / dt : x, ny: dt ? y + ((y - g.seen.y) * AHEAD) / dt : y });
       g.seen = { x, y, t: now };
 """, '  el.addEventListener("pointerdown", byTouch, true);\n  el.addEventListener("pointermove", byTouch, true);\n']:
@@ -4814,15 +4815,16 @@ echo "$SJ" | grep -qF 'const home = busiest();' && echo "$SJ" | grep -qF 'globe.
   && echo "$SJ" | grep -qF 'const SWAY = innerWidth < 600 ? 12 : 20, SWAY_S = 40;' && echo "$SJ" | grep -qF 'el.addEventListener("pointerdown", stopSway, { once: true });' \
   && echo "$SJ" | grep -qF 'if (!swaying || !onScreen) return;' && echo "$SJ" | grep -qF 'globe.resumeAnimation(); tidySoon(); swayOn();' \
   && ok "the globe starts at the busiest group of markers and sways around it until touched, with no frames while scrolled away" || bad "site/app.js start view and sway" ""
-curl -s $B/ | grep -q 'id="lgDot"' && echo "$SJ" | grep -qF '$("#legend").hidden = !geo.length && !mgeo.length;' && echo "$SC" | grep -qF '.legend span[hidden] { display: none; }' \
+curl -s $B/ | grep -q 'id="lgCleaned"' && echo "$SJ" | grep -qF '$("#legend").hidden = !geo.length && !mgeo.length;' && echo "$SC" | grep -qF '.legend span[hidden] { display: none; }' \
+  && echo "$SJ" | grep -qF '$("#lgCleaned").hidden = !geo.length;' \
   && ok "the legend shows whenever there are markers, with only the kinds that are there" || bad "legend" ""
 LG=$(curl -s $B/ | grep -o 'id="lg[A-Za-z]*"' | tr '\n' ' ')
-[ "$LG" = 'id="lgOpen" id="lgFunded" id="lgDot" ' ] && echo "$SJ" | grep -qF 'const CLEAN = "#007a3d", PULSE_RGB = "0, 77, 38", RIM = "#ffffff", DOT_R = 0.72, RIM_R = 0.98;' \
+[ "$LG" = 'id="lgOpen" id="lgFunded" id="lgCleaned" ' ] && echo "$SJ" | grep -qF 'const CLEAN = "#007a3d", PULSE_RGB = "0, 77, 38", RIM = "#ffffff", DOT_R = 0.72, RIM_R = 0.98;' \
   && echo "$SJ" | grep -qF '.pointColor((d) => (d.ink ? INK : d.rim ? RIM : CLEAN))' && echo "$SJ" | grep -qF 'const INK = "#1c1813", INK_R = 1.16;' \
   && echo "$SJ" | grep -qF 'rgba(${PULSE_RGB}, ${Math.sqrt(1 - t)})' \
   && echo "$SJ" | grep -qF 'openPost(receiptOf(d))' && echo "$SJ" | grep -qF '.ringsData(reduceMotion ? [] : geo)' && ! echo "$SJ" | grep -qF '#ff5f00' \
-  && echo "$SC" | grep -qF -- '--clean: #007a3d;' && [ "$(echo "$SC" | grep -cF 'background: var(--clean); box-shadow: 0 0 0 2px #fff, 0 0 0 3.5px var(--ink), 1.5px 1.5px 0 3.5px var(--ink);')" = 2 ] \
-  && ok "the legend reads OPEN, FUNDED, CLEANED; cleanups are safety green dots on a white rim (globe, pulse, legend, pick-one list), on the globe with a dark ring around the rim as in the legend, no orange on the globe, no pulse under reduced motion" || bad "cleaned colour and legend order" "$LG"
+  && echo "$SC" | grep -qF -- '--clean: #007a3d;' && ! echo "$SC" | grep -qE 'lg-dot|rdot' && ! echo "$SJ" | grep -qE 'lg-dot|rdot' \
+  && ok "the legend reads OPEN, FUNDED, CLEANED; cleanups are safety green dots on a white rim with a dark ring around it (globe, pulse), no orange on the globe, no pulse under reduced motion, and the old legend dot is gone" || bad "cleaned colour and legend order" "$LG"
 # The drawn globe looks like Sapu: one even white light so nothing is shaded, no glow, the land painted on the ball's
 # own picture in one green (no hexagon dots and no shapes to draw), a dark outline ball around it, and once the
 # satellite map is whole the outline stops drawing with the planet and the dots.
@@ -4835,8 +4837,96 @@ echo "$SJ" | grep -qF 'globe.lights([new (globe.lights()[0].constructor)(0xfffff
   && ok "the drawn globe is flat and outlined like Sapu: one even light, no glow, the land painted on the ball in one green, a dark outline ball, and all of it stops drawing under the whole satellite map" \
   || bad "site/app.js flat and outlined globe" ""
 echo "$SJ" | grep -qF '${glyph(ms.some(funded))}${groupLabel(ms)}' && echo "$SJ" | grep -qF '${glyph(funded(m))}#${m.no}' \
-  && [ "$(curl -s $B/ | grep -c 'class="gl"')" = 2 ] && echo "$SC" | grep -qF '.mpin-tag .gl {' \
+  && [ "$(curl -s $B/ | grep -c 'class="gl"')" = 3 ] && echo "$SC" | grep -qF '.mpin-tag .gl {' \
   && ok "mission tags carry a trash bag (open) or a broom (funded), in the globe, the pick-one list and the legend" || bad "tag glyphs" ""
+curl -s "$B/site/app.js" > "$T/slip-app.js"
+# A cleaned spot (site/app.js cleanGroups and cleanPin, Marcus asked on 2026-11-19 for cleaned spots that read as
+# something that happened): its receipt hangs below the spot as a paper slip with a checked box and the kilograms, where
+# a mission's tag stands above its own spot. In node: the slip's words (kilograms of its receipts each once, else their
+# sacks), slips close together on screen share one at the newest one's dot and split when zoomed in, a tap on a slip
+# opens its receipt or lists its receipts newest first (with any other slip under the finger, never a mission's tag),
+# a tap whose press started on a box beside it opens nothing, and a mission tag's tap never lists a slip's receipts.
+SLIPJS=$(node -e '
+const s = require("fs").readFileSync(process.argv[1], "utf8");
+const bad = [], eq = (n, got, want) => { if (JSON.stringify(got) !== JSON.stringify(want)) bad.push(n + ": " + JSON.stringify(got)); };
+const cut = (a, b) => { const i = s.indexOf(a), j = s.indexOf(b, i); if (i < 0 || j < 0) throw new Error("missing " + a); return s.slice(i, j); };
+const fn = (name) => { const i = s.indexOf("  function " + name + "(g) {\n"), j = s.indexOf("\n  }\n", i); if (i < 0 || j < 0) throw new Error("missing " + name); return s.slice(i, j + 4); };
+let X;
+try {
+  X = new Function("funded", "r3", "hangPx",
+    s.slice(s.indexOf("  const num = (v) =>"), s.indexOf("\n", s.indexOf("  const num = (v) =>"))) + "\n" +
+    cut("  const TAG_ALT = 0.012;", "  // The globe also fires its own click for a receipt dot") +
+    "\nreturn { amount, slipW, receiptsOf, slipHtml, cleanGroups, missionGroups, GLYPH, SLIP_H, EDGE };")(
+    (m) => m.status === "funded", (v) => Math.round(v * 1000) / 1000, 7);
+} catch (err) { console.log("wrong: " + err.message); process.exit(0); }
+const ev = (kg, sacks, extra) => Object.assign({ result: { kg_estimate: kg, sacks } }, extra);
+eq("the words", [X.amount([ev(200), ev(500)]), X.amount([ev(12400)]), X.amount([ev(12.5)]), X.amount([ev(null, 14)]), X.amount([ev(0, 1)]),
+  X.amount([ev(340), ev(null, 14)]), X.amount([ev(null, null)]), X.amount([ev(-3, 0)])],
+  ["700 KG", "12,400 KG", "12.5 KG", "14 SACKS", "1 SACK", "340 KG", "CLEANED", "CLEANED"]);
+eq("the slip and the legend size it as drawn", [X.SLIP_H, X.EDGE, Math.round(X.slipW("700 KG")), Math.round(X.slipW("12,400 KG"))], [21, 4, 78, 102]);
+const A = ev(200, null, { id: "a" }), B = ev(500, null, { id: "b" }), C = ev(12400, null, { id: "c" });
+const pts = [{ of: A, lat: -0.811, lng: 100.316, i: 0 }, { of: B, lat: -0.775, lng: 100.297, i: 1 }, { of: B, lat: -0.776, lng: 100.298, i: 2 }, { of: C, lat: 10.336, lng: 123.947, i: 3 }];
+const far = X.cleanGroups(pts, 19), near = X.cleanGroups(pts, 0.02);
+eq("far out: two cleanups 4 km apart share one slip at the newest one dot, each receipt once", far.map((g) => [g.key, g.lat, g.lng, X.amount(X.receiptsOf(g.rs))]),
+  [["r0 1 2", -0.811, 100.316, "700 KG"], ["r3", 10.336, 123.947, "12,400 KG"]]);
+eq("zoomed in: a slip for each spot", near.map((g) => g.key), ["r0", "r1 2", "r3"]);
+eq("a group seen before is the same object", X.cleanGroups(pts, 19)[0] === far[0], true);
+eq("the slip markup", X.slipHtml([A, B]), "<i class=\"cslip\">" + X.GLYPH.cleaned + "700 KG<i class=\"cslip-edge\"></i></i>");
+// a tap on a slip, and on a mission tag, with what is under the finger
+const made = [];
+const mkPin = () => { const tag = { on: {}, addEventListener(t, f) { (this.on[t] = this.on[t] || []).push(f); }, classList: { add() {}, remove() {} } };
+  const pin = { firstChild: tag, classList: { toggle() {} }, setAttribute() {}, removeAttribute() {}, style: { setProperty() {} }, set innerHTML(v) { pin.html = v; } };
+  made.push(pin); return pin; };
+let under = [], opened = [];
+const groupOfTag = new Map(), M4 = { no: 4 };
+const doc = { createElement: mkPin, elementsFromPoint: () => under };
+let P;
+try {
+  P = new Function("document", "receiptsOf", "missionOf", "hangPx", "upper", "dateStr", "tipMedia", "amount", "slipHtml", "groupOfTag", "setOff", "events",
+    "openPost", "openReceiptChooser", "performance", "missionsOf", "funded", "glyph", "groupLabel", "missions", "baseOf", "openMission", "openChooser",
+    "let pinTapAt = 0, pressOn = null;\n" + fn("missionPin") + fn("cleanPin") + "\nreturn { missionPin, cleanPin, press: (v) => { pressOn = v; } };")(
+    doc, X.receiptsOf, () => null, 7, (v, d) => String(v || d), () => "19 NOV", () => "", X.amount, X.slipHtml, groupOfTag, () => {}, [A, B, C],
+    (e) => opened.push(e.id), (l) => opened.push("list " + l.map((e) => e.id).join(" ")), { now: () => 1 },
+    (ms) => ms, () => false, () => "", () => "#4", [M4], (z) => z, (m) => opened.push("#" + m.no), () => opened.push("missions"));
+} catch (err) { console.log("wrong: the pins: " + err.message); process.exit(0); }
+const one = { rs: [pts[3]] }, two = { rs: [pts[0], pts[1], pts[2]] }, mis = { ms: [M4] };
+for (const g of [one, two, mis]) { g.pin = g.rs ? P.cleanPin(g) : P.missionPin(g); groupOfTag.set(g.pin.firstChild, g); }
+const tap = (g, at, press = true) => { opened = []; under = at.map((x) => x.pin.firstChild); P.press(press); g.pin.firstChild.on.click.forEach((f) => f({ clientX: 5, clientY: 5 })); return opened.join(); };
+eq("taps", [tap(one, [one]), tap(two, [two]), tap(two, [two, one]), tap(two, [two, mis]), tap(mis, [mis, two]), tap(one, [one], false), tap(two, [two], null)],
+  ["c", "list a b", "list a b c", "list a b", "#4", "", "list a b"]);
+eq("its preview under it", [made[0].html, made[1].html.slice(made[1].html.indexOf("<div"))], [X.slipHtml([C]) + "<div class=\"tip mtip ctip\"><b>CLEANED</b><br>TBA · 19 NOV<span>TAP FOR THE RECEIPT</span></div>",
+  "<div class=\"tip mtip ctip\"><b>2 CLEANUPS HERE</b><br>TBA · 200 KG<br>TBA · 500 KG<span>TAP TO CHOOSE</span></div>"]);
+console.log(bad.length ? "wrong: " + bad.join("; ") : "ok");
+' "$T/slip-app.js" 2>&1)
+check "a cleaned spot's slip (site/app.js in node): the kilograms of its receipts each once, or their sacks; slips that would touch share one at the newest one's dot and split zoomed in; a tap opens its receipt or lists its receipts newest first (with another slip under the finger, never a mission's tag), not when the press began on a box; a mission tag's tap never lists receipts" "$SLIPJS" ok
+# How it hangs and moves (site/styles.css, site/app.js): from the spot's dot (--hang, set in satDraw), on the same
+# layer, groups and tidy pass as the mission tags (cleaned slips kept first there), at least 44 by 44 px for a finger,
+# faded like a tag, a swing the first time it shows and under a mouse but none under reduced motion; the legend's
+# CLEANED, the pick-one list and /missions show the same slip with the same checked box.
+SLP=""
+echo "$SJ" | grep -qF '.htmlElement((g) => (g.rs ? cleanPin(g) : missionPin(g)));' || SLP="$SLP layer"
+echo "$SJ" | grep -qF 'const groups = [...missionGroups(mgeo, kp), ...cleanGroups(cgeo, kp)];' || SLP="$SLP groups"
+echo "$SJ" | grep -qF 'const cgeo = geo.map((p, i) => ({ of: p.of, lat: r3(p.location.lat), lng: r3(p.location.lng), i }));' || SLP="$SLP points"
+echo "$SJ" | grep -qF 'const rank = (t) => (t.g.rs ? 0 : funded(lead(t)) ? 1 : 2);' || SLP="$SLP tidy-order"
+echo "$SJ" | grep -qF 'const tag = pin.firstChild, r = (g.rs ? pin : tag).getBoundingClientRect();' || SLP="$SLP tidy-place"
+echo "$SJ" | grep -qF 'const hang = Math.round(2 * Math.max((rDot * INK_R) / DOT_R, m > 0 ? Math.max(rDot, AREA_M / mppAt(a)) + 4 : 0)) / 2;' || SLP="$SLP hang"
+echo "$SJ" | grep -qF 'for (const g of globe.htmlElementsData()) if (g.rs && g.pin) g.pin.style.setProperty("--hang", hang + "px");' || SLP="$SLP hang-set"
+echo "$SJ" | grep -qF 'if (!off && g.rs && !g.hung) { g.hung = true; if (!reduceMotion) g.pin.firstChild.classList.add("cslip-in"); }' || SLP="$SLP swing-in"
+echo "$SJ" | grep -qF 'tag.addEventListener("animationend", () => tag.classList.remove("cslip-in", "cslip-swing"));' || SLP="$SLP swing-end"
+echo "$SJ" | grep -qF '${slipHtml([e])}' || SLP="$SLP chooser-row"
+tr '\n' ' ' < <(echo "$SC") | grep -qF '.mpin .cslip {   position: absolute; left: 0; top: calc(var(--hang, 7px) + 7px);   transform: translateX(-50%) rotate(-2deg); transform-origin: 50% calc(-7px - var(--hang, 7px));' || SLP="$SLP css-hang"
+tr '\n' ' ' < <(echo "$SC") | grep -qF '.mpin .cslip::before {   content: ""; position: absolute; left: 50%; top: 50%;   width: max(44px, calc(100% + 1px)); height: 44px; transform: translate(-50%, -50%); }' || SLP="$SLP css-44"
+echo "$SC" | grep -qF '.mpin.mpin-off .cslip { opacity: 0; pointer-events: none; }' || SLP="$SLP css-off"
+tr '\n' ' ' < <(echo "$SC") | grep -qE '@media \(prefers-reduced-motion: reduce\) \{[^@]*\.mpin \.cslip\.cslip-in, \.mpin \.cslip\.cslip-swing \{ animation: none; \}' || SLP="$SLP css-less-motion"
+python3 - site/app.js index.html functions/missions/index.js <<'PY' || SLP="$SLP glyph"
+import re, sys
+app, page, fn = (open(p, encoding="utf-8").read() for p in sys.argv[1:4])
+g = re.findall(r"^    cleaned: '(<svg class=\"gl\"[^']*</svg>)',$", app, re.M)
+lg = re.search(r'<span id="lgCleaned"><i class="cslip">(<svg class="gl"[^>]*>.*?</svg>)KG<i class="cslip-edge"></i></i>CLEANED</span>', page)
+sys.exit(0 if len(g) == 1 and lg and lg.group(1) == g[0] and fn.count(g[0]) == 1 else 1)
+PY
+[ -z "$SLP" ] && ok "a cleaned spot's slip hangs from its dot by --hang (satDraw), shares the mission tags' layer, grouping and tidy pass (kept first), takes taps on at least 44 by 44 px, fades like a tag, swings once when it shows and under a mouse but not under reduced motion; the legend, the pick-one list and /missions show the same slip and checked box" \
+  || bad "the cleaned slip" "$SLP"
 # Sample missions and sample pictures for an empty site (data/README.md)
 SM=$(curl -s $B/site/samples/missions.json)
 echo "$SM" | python3 -c "import json,sys;d=json.load(sys.stdin);s=[m['status'] for m in d];assert s.count('open')==2 and s.count('funded')==1 and all(m.get('now') and isinstance(m.get('in_days'),int) and not m.get('partner',{}).get('slug') for m in d)" 2>/dev/null \
