@@ -651,14 +651,23 @@ html:has(.hero), html:has(.hero) body { overscroll-behavior-y: contain; }
 /* ===== post lightbox ===== */
 body.post-open { overflow: hidden; }
 .post-overlay[hidden] { display: none; }
+/* The paper is never taller than the screen as it shows, and never starts above it. 100vh is the height with the
+   browser's bars hidden, so where they show (Safari on an iPhone, Chrome on Android) the paper stood taller than the
+   backdrop, and center put half of the extra above the screen's top, where no scroll reaches: the ✕ at the paper's top
+   went under the browser's bar and took no tap (Mobile Safari on an iPhone 17 Pro, 2026-11-20: with Safari's address
+   bar at the top, 152 px too tall and the ✕ at -51 to -17 px; on its side, 38 px and 4 px of the ✕ in view). 100dvh is
+   the height on show (a browser without it keeps 100vh), and safe center starts a paper that is still too tall at the
+   backdrop's top, the rest below it to scroll (a browser without safe keeps center). The wide post's frame takes
+   100dvh too (.post-frame). */
 .post-overlay {
   position: fixed; inset: 0; z-index: 1000;
   background: rgba(28, 24, 19, .72);
-  display: grid; place-items: center; padding: 18px;
+  display: grid; place-items: center; place-items: safe center; padding: 18px;
   overflow-y: auto;
 }
 .post-paper {
-  position: relative; width: min(420px, 100%); max-height: calc(100vh - 36px); overflow-y: auto;
+  position: relative; width: min(420px, 100%); overflow-y: auto;
+  max-height: calc(100vh - 36px); max-height: calc(100dvh - 36px);
   background: var(--paper); color: var(--ink); font-family: var(--font-mono);
   box-shadow: 8px 8px 0 rgba(0, 0, 0, .85); transform: rotate(-.4deg);
   padding-bottom: 4px;

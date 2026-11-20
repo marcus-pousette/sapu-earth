@@ -7760,6 +7760,18 @@ done
 [ "$(echo "$SC" | grep -cE 'pm-more|pm-show')" = 2 ] || FOC="$FOC [another rule names the button]"
 [ -z "$FOC" ] && ok "styles.css: SHOW ALL in a box of its own between the dashed rules (one above each box on show, folded or not), the post's yellow button 44 px tall, hidden boxes take no room" \
   || bad "styles.css, the folded stage" "$FOC"
+# The one-column post is never taller than the screen as it shows (site/styles.css .post-paper): 100dvh after the 100vh
+# fallback, in that order. With 100vh alone the paper stood 38 px taller than an iPhone 17 Pro on its side, the overlay
+# scrolled, and only 4 px of the ✕ at the paper's top was in view (Mobile Safari, iOS Simulator, 2026-11-20).
+PPR=$(echo "$SC" | awk '/^\.post-paper [{]/ { p = 1 } p && /max-height/ { print; exit } p && /^[}]/ { exit }')
+check "styles.css: a phone's post is at most as high as the screen as it shows (100dvh after the 100vh fallback), so its ✕ stays on screen while the browser's bars show" \
+  "$PPR" "  max-height: calc(100vh - 36px); max-height: calc(100dvh - 36px);"
+# ... and never starts above the screen (.post-overlay): safe center after the center fallback, in that order. With
+# center alone a paper taller than the backdrop put half of the extra above the top, where no scroll reaches: with
+# Safari's address bar at the top the ✕ sat at -51 to -17 px, under the bar, and took no tap (iOS Simulator, 2026-11-20).
+POV=$(echo "$SC" | awk '/^\.post-overlay [{]/ { p = 1 } p && /place-items/ { print; exit } p && /^[}]/ { exit }')
+check "styles.css: a post taller than the backdrop starts at its top and scrolls (safe center after the center fallback), so its ✕ never sits above the screen" \
+  "$POV" "  display: grid; place-items: center; place-items: safe center; padding: 18px;"
 # Tab and Shift+Tab stay in every open post and chooser (site/app.js): the handler itself, run in node with four controls
 # (the last one hidden, so it has no client rects) and a stand-in for the focus. Tab on the last shown control goes to the
 # first, Shift+Tab on the first to the last, Tab or Shift+Tab from outside the dialog to the first or last, each with the
