@@ -499,7 +499,9 @@
     // every video of the cleanup in the order of the day, each with its tag (videosIn, in the wide post's slides); a stage
     // of more than 3 shows its first 2, then SHOW ALL 30 BEFORE VIDEOS for the rest (foldVideos, showRest)
     const videos = foldVideos(videosIn(e)).map((v) => (v.more ? `<div class="pm pm-more"><button type="button" class="post-link pm-show">${escapeHTML(v.more)}</button></div>` : videoBox(v.src, v.tag, true, v.hid))).join("");
-    // a cleanup that finished a mission also shows the spot as the crew posted it, its video too
+    // a cleanup that finished a mission also shows the spot as the crew posted it, its video too, tagged WHEN POSTED:
+    // NOW, as on the mission's own post, read as the spot today on a receipt, where it is the oldest picture, older
+    // than BEFORE (Marcus, 2026-11-20)
     const mis = missionOf(e);
     const misNow = nowOf(mis)[0];
     const misVideo = nowVideoOf(mis);
@@ -516,7 +518,7 @@
         <button class="post-close" aria-label="Close">✕</button>
         ${wide ? "" : stamp}
         <div class="r-head">SAPU EARTH<span>CLEANUP RECEIPT · ${dateStr(e)}</span></div>
-        ${wide ? "" : `<div class="post-media">${misNow ? phOr(misNow, "NOW · MISSION #" + mis.no, "pm") : ""}${misVideo ? videoBox(misVideo, "NOW · MISSION #" + mis.no + " · VIDEO", true) : ""}${spotPairs(e) || phOr(e.media?.before?.[0], "BEFORE", "pm") + phOr(e.media?.after?.[0], "AFTER", "pm")}${videos}</div>`}
+        ${wide ? "" : `<div class="post-media">${misNow ? phOr(misNow, "WHEN POSTED · MISSION #" + mis.no, "pm") : ""}${misVideo ? videoBox(misVideo, "WHEN POSTED · MISSION #" + mis.no + " · VIDEO", true) : ""}${spotPairs(e) || phOr(e.media?.before?.[0], "BEFORE", "pm") + phOr(e.media?.after?.[0], "AFTER", "pm")}${videos}</div>`}
         ${thanksRow(e)}
         <dl class="r-rows">
           ${spotRows(spotsE(e), cc(e)) || `<div><dt>LOC</dt><dd>${upper(e.location?.name, "TBA")} · ${cc(e)}</dd></div>`}
@@ -827,8 +829,9 @@
     return out;
   };
   // A cleanup: its first before and first after side by side (PHOTO SOON for a missing one), then every photo and video
-  // alone in the order of the day: the spot as the crew posted its mission, before, the videos before, after, the videos
-  // after, and any videos sent without a stage (videosIn: placed by their stage, never by their tag, which is numbered).
+  // alone in the order of the day: the spot as the crew posted its mission (WHEN POSTED, never NOW, as it is older than
+  // BEFORE), before, the videos before, after, the videos after, and any videos sent without a stage (videosIn: placed by
+  // their stage, never by their tag, which is numbered).
   // The receipt of a mission with several spots (spotsE) names each photo's spot and counts it in that spot: BEFORE 1/2 ·
   // SPOT 2.
   // photosOf: a receipt's photos of media[kind] with their tags, [{ src, tag }], unsafe links left out.
@@ -845,8 +848,8 @@
     const vids = videosIn(e);
     const out = [[before[0] || { src: null, tag: n ? "BEFORE · SPOT 1" : "BEFORE" }, after[0] || { src: null, tag: n ? "AFTER · SPOT 1" : "AFTER" }]];
     const mis = missionOf(e), now = nowOf(mis);
-    now.forEach((u, i) => out.push([{ src: u, tag: nth("NOW", i, now.length) + " · MISSION #" + mis.no }]));
-    if (nowVideoOf(mis)) out.push([{ src: nowVideoOf(mis), tag: "NOW · MISSION #" + mis.no + " · VIDEO", video: true }]);
+    now.forEach((u, i) => out.push([{ src: u, tag: nth("WHEN POSTED", i, now.length) + " · MISSION #" + mis.no }]));
+    if (nowVideoOf(mis)) out.push([{ src: nowVideoOf(mis), tag: "WHEN POSTED · MISSION #" + mis.no + " · VIDEO", video: true }]);
     before.forEach((it) => out.push([it]));
     vids.filter((v) => v.stage === "before").forEach((v) => out.push([v]));
     after.forEach((it) => out.push([it]));

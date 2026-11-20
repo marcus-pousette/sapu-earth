@@ -7084,7 +7084,8 @@ echo "$TYC" | grep -qF '.thanks-btn { display: block; width: 100%; min-height: 4
   || bad "the thank-you button (app.js, styles.css)" "$TYX"
 # The wide post (site/app.js, the wide post's slides; styles.css, the wide post; docs/upload-flow.md, Homepage: the post on
 # a wide screen). Its slides in node with site/app.js's own helpers: a cleanup starts with its first before and first after
-# side by side (PHOTO SOON for a missing one), then every photo and video alone in the order of the day; a mission NOW 1/3
+# side by side (PHOTO SOON for a missing one), then every photo and video alone in the order of the day, the mission's own
+# photos and video tagged WHEN POSTED (never NOW: on a receipt they are older than BEFORE); a mission NOW 1/3
 # to 3/3, then NOW · VIDEO; unsafe links and odd stages dropped or plain VIDEO; the dialog's markup (the paper first, one
 # slide shown, videos preload none, photos lazy, the arrows only with two slides or more, the post's own links in the bar
 # after the arrows, and no box for them when there are none).
@@ -7103,7 +7104,7 @@ const bad = [], eq = (n, got, want) => { if (JSON.stringify(got) !== JSON.string
 const M = (k) => "/media/" + k.repeat(32).slice(0, 32);
 const full = { id: "r1", fromApi: true, media: { before: [M("a"), M("b"), M("c")], after: [M("d"), M("e")], videos: [M("f"), M("1"), M("2")], video_stages: ["before", "after", null] },
   mission: { no: 8, now: [M("3"), M("4")], now_video: M("5") } };
-eq("a full receipt", tags(X.receiptSlides(full)), ["BEFORE 1/3 | AFTER 1/2", "NOW 1/2 · MISSION #8", "NOW 2/2 · MISSION #8", "NOW · MISSION #8 · VIDEO [v]", "BEFORE 1/3", "BEFORE 2/3", "BEFORE 3/3", "BEFORE · VIDEO [v]", "AFTER 1/2", "AFTER 2/2", "AFTER · VIDEO [v]", "VIDEO [v]"]);
+eq("a full receipt", tags(X.receiptSlides(full)), ["BEFORE 1/3 | AFTER 1/2", "WHEN POSTED 1/2 · MISSION #8", "WHEN POSTED 2/2 · MISSION #8", "WHEN POSTED · MISSION #8 · VIDEO [v]", "BEFORE 1/3", "BEFORE 2/3", "BEFORE 3/3", "BEFORE · VIDEO [v]", "AFTER 1/2", "AFTER 2/2", "AFTER · VIDEO [v]", "VIDEO [v]"]);
 eq("its first pair", X.receiptSlides(full)[0].map((it) => it.src), [M("a"), M("d")]);
 eq("one before, one after", tags(X.receiptSlides({ media: { before: [M("a")], after: [M("d")] } })), ["BEFORE | AFTER", "BEFORE", "AFTER"]);
 eq("no before", tags(X.receiptSlides({ media: { before: [], after: [M("d")] } })), ["BEFORE [soon] | AFTER", "AFTER"]);
@@ -7205,7 +7206,7 @@ if (!r.includes("\n        <div class=\"barcode\" aria-hidden=\"true\"></div>\n 
   || !actsR({ share() {} }, e).startsWith("<div class=\"post-actions\"><button class=\"post-link post-copy\">COPY LINK</button><button class=\"post-link post-share\">SHARE</button></div>")
   || !actsM({ share() {} }, m).startsWith("<div class=\"post-actions\"><button class=\"post-link post-share\">SHARE</button><button class=\"post-link post-copy\">COPY LINK</button></div>")
   || actsR({}, { id: "d", demo: true }).includes("post-all") || actsM({}, { no: 3, demo: true }) !== "") bad.push("the links: in the paper below WIDE as before, under the photos on a wide screen");
-if (!r.startsWith("\n      <div class=\"post-paper\" role=\"dialog\" aria-modal=\"true\" aria-label=\"Cleanup receipt\">\n        <button class=\"post-close\" aria-label=\"Close\">✕</button>\n        <div class=\"stamp stamp-ok post-stamp\">VERIFIED</div>\n        <div class=\"r-head\">SAPU EARTH<span>CLEANUP RECEIPT · [dateStr({\"id\":\"r1\"") || !r.includes("\n        <div class=\"post-media\">[phOr(\"/media/n\",\"NOW · MISSION #8\",\"pm\")][phOr(\"/media/a\",\"BEFORE\",\"pm\")][phOr(\"/media/b\",\"AFTER\",\"pm\")]</div>\n        [thanksRow(")) bad.push("receipt, one column");
+if (!r.startsWith("\n      <div class=\"post-paper\" role=\"dialog\" aria-modal=\"true\" aria-label=\"Cleanup receipt\">\n        <button class=\"post-close\" aria-label=\"Close\">✕</button>\n        <div class=\"stamp stamp-ok post-stamp\">VERIFIED</div>\n        <div class=\"r-head\">SAPU EARTH<span>CLEANUP RECEIPT · [dateStr({\"id\":\"r1\"") || !r.includes("\n        <div class=\"post-media\">[phOr(\"/media/n\",\"WHEN POSTED · MISSION #8\",\"pm\")][phOr(\"/media/a\",\"BEFORE\",\"pm\")][phOr(\"/media/b\",\"AFTER\",\"pm\")]</div>\n        [thanksRow(")) bad.push("receipt, one column");
 if (/role=|post-stamp|post-media/.test(rw) || !rw.startsWith("\n      <div class=\"post-paper\">\n        <button class=\"post-close\" aria-label=\"Close\">✕</button>")) bad.push("receipt, wide");
 if (!p.startsWith("\n      <div class=\"post-paper mpost mpost-funded\" role=\"dialog\" aria-modal=\"true\" aria-label=\"Mission #7\">\n        <button class=\"post-close\" aria-label=\"Close\">✕</button>\n        [mStamp(") || !p.includes("<div class=\"post-media\">[shots][videoBox(\"/media/v\",\"NOW · VIDEO\")]</div>")) bad.push("mission, one column");
 if (/role=|mStamp|post-media/.test(pw)) bad.push("mission, wide");
@@ -7554,7 +7555,7 @@ console.log(bad.length ? "wrong: " + bad.join("; ") : "ok");
 OPR2=$(echo "$SJ" | sed -n '/^  function openPost(e) {/,/^  }$/p')
 [ "$LZV" = ok ] && echo "$OPR2" | grep -qxF '    lazyVideos(); // the one column'"'"'s videos (a wide post has none in its paper)' \
   && [ "$(echo "$SJ" | sed -n '/^  function closePost() {/,/^  }$/p' | sed -n 3p)" = '    lazyStop();' ] \
-  && echo "$OPR2" | grep -qF '${misVideo ? videoBox(misVideo, "NOW · MISSION #" + mis.no + " · VIDEO", true) : ""}' \
+  && echo "$OPR2" | grep -qF '${misVideo ? videoBox(misVideo, "WHEN POSTED · MISSION #" + mis.no + " · VIDEO", true) : ""}' \
   && ok "a receipt's videos in the one-column post load their first frame only after 250 ms near the paper's view, each once and one every second at most, never once gone or after the post closed, and not without IntersectionObserver (node); every receipt post starts the watch, closePost ends it" \
   || bad "site/app.js lazyVideos" "$LZV"
 # A long stage on a phone (site/app.js foldVideos and showRest, styles.css; Marcus on 2026-11-19: "Yes, shorten them", the
