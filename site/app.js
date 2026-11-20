@@ -296,8 +296,9 @@
   const videosOf = (e) => (Array.isArray(e.media?.videos) ? e.media.videos.map(safeSrc).filter(Boolean) : []);
   // A video in a post, with its tag above the player, never on it: Safari puts fullscreen and picture in
   // picture at the top left of the video, and every browser its timeline at the bottom. The tag also names the player.
-  // lazy: a receipt's videos in the one-column post, which load nothing until they come into view (lazyVideos).
-  const videoBox = (src, tag, lazy) => `<div class="pm pm-video"><span class="tag">${escapeHTML(tag)}</span><video controls playsinline preload="${lazy ? "none" : "metadata"}" src="${escapeHTML(src)}" aria-label="${escapeHTML(tag.toLowerCase())}"></video></div>`;
+  // lazy: a receipt's videos in the one-column post, which load nothing until they come into view (lazyVideos). hid: one
+  // that a long stage keeps out of view until its SHOW ALL is pressed (foldVideos, showRest).
+  const videoBox = (src, tag, lazy, hid) => `<div class="pm pm-video"${hid ? " hidden" : ""}><span class="tag">${escapeHTML(tag)}</span><video controls playsinline preload="${lazy ? "none" : "metadata"}" src="${escapeHTML(src)}" aria-label="${escapeHTML(tag.toLowerCase())}"></video></div>`;
   // A mission's short video of the spot as the crew posted it, or null.
   const nowVideoOf = (m) => safeSrc(m?.now_video);
   // a receipt that finished a mission carries { no, url, now, now_video, funded_eur, currency, price_local, crew_local,
@@ -495,15 +496,17 @@
     stage = null;
     const clips = (Array.isArray(e.media?.clips) ? e.media.clips : []).map(safeSrc).filter(Boolean)
       .map((c, i) => `<a href="${escapeHTML(c)}" rel="noopener" target="_blank">CLIP ${String(i + 1).padStart(2, "0")} ↗</a>`).join("");
-    // every video of the cleanup in the order of the day, each with its tag (videosIn, in the wide post's slides)
-    const videos = videosIn(e).map((v) => videoBox(v.src, v.tag, true)).join("");
+    // every video of the cleanup in the order of the day, each with its tag (videosIn, in the wide post's slides); a stage
+    // of more than 3 shows its first 2, then SHOW ALL 30 BEFORE VIDEOS for the rest (foldVideos, showRest)
+    const videos = foldVideos(videosIn(e)).map((v) => (v.more ? `<div class="pm pm-more"><button type="button" class="post-link pm-show">${escapeHTML(v.more)}</button></div>` : videoBox(v.src, v.tag, true, v.hid))).join("");
     // a cleanup that finished a mission also shows the spot as the crew posted it, its video too
     const mis = missionOf(e);
     const misNow = nowOf(mis)[0];
     const misVideo = nowVideoOf(mis);
     // On a wide screen the paper goes without its photos and stamp and without its own links (acts: COPY LINK, SHARE, ALL
     // CLEANED MISSIONS), which the stage left of it shows under the photos, and the frame around both is the dialog
-    // (wideHtml). Below WIDE the post is exactly as before.
+    // (wideHtml). Below WIDE the post is the one column, a stage of more than 3 videos folded after its first 2
+    // (foldVideos).
     const wide = WIDE.matches, slides = wide ? receiptSlides(e) : null;
     const stamp = `<div class="stamp${e.demo ? "" : " stamp-ok"} post-stamp">${e.demo ? "SAMPLE" : "VERIFIED"}</div>`;
     const acts = `<div class="post-actions"><button class="post-link post-copy">COPY LINK</button>${navigator.share ? '<button class="post-link post-share">SHARE</button>' : ""}</div>
@@ -552,6 +555,24 @@
     });
     satButtons();
     overlay.querySelector(".thanks-btn")?.addEventListener("click", (ev) => sayThanks(e, ev.currentTarget));
+    overlay.querySelectorAll(".pm-show").forEach((b) => b.addEventListener("click", () => showRest(b.parentElement)));
+  }
+  // SHOW ALL 30 BEFORE VIDEOS in the one-column post (foldVideos): the rest of its stage, hidden right after the button's
+  // box, shows in place under the first 2, in order, the button goes, and the focus moves to the first video it showed,
+  // with no scroll, so a keyboard or a screen reader goes on there. The paper's scroll is put back as it was: with the
+  // top of the view in the button's box, Chrome's scroll anchoring held the next stage's first video in place instead,
+  // and the 28 videos shown and the focus landed 15,500 px above the reader (WebKit has no scroll anchoring). The
+  // second click of a double click on the button does nothing (the post's own guard, openedAt), so it plays no video.
+  // lazyVideos has watched them since the post opened (hidden, they were never near the view): once shown they load as
+  // the others do. Nothing is kept: the post drawn again (reopen, Back and Forward) starts folded.
+  function showRest(box) {
+    const paper = box.closest(".post-paper"), top = paper.scrollTop, rest = [];
+    for (let el = box.nextElementSibling; el?.hidden; el = el.nextElementSibling) rest.push(el);
+    box.remove();
+    rest.forEach((el) => { el.hidden = false; });
+    paper.scrollTop = top;
+    rest[0]?.querySelector("video")?.focus({ preventScroll: true });
+    openedAt = performance.now(); openX = pressX; openY = pressY;
   }
   // One thank you from a receipt post. No automatic retry: a tap that did not get through says so, and the next tap is
   // the visitor's. A sample only stamps the button.
@@ -596,8 +617,8 @@
     const money = rows.querySelector(".r-total");
     if (money) money.insertAdjacentHTML("beforebegin", html); else rows.insertAdjacentHTML("beforeend", html);
   }
-  // When the post or the chooser opened, and where the press that opened it was. There is none when it
-  // opened from the link, by Enter or Space, or with no press since the last close.
+  // When the post or the chooser opened, or a SHOW ALL showed its videos (showRest), and where the press that did it
+  // was. There is none when it opened from the link, by Enter or Space, or with no press since the last close.
   let openedAt = 0, openX = NaN, openY = NaN, pressX = NaN, pressY = NaN;
   const forgetPress = () => { pressX = pressY = NaN; };
   addEventListener("pointerdown", (ev) => { pressX = ev.clientX; pressY = ev.clientY; }, true);
@@ -648,9 +669,10 @@
   // 10 s, and megabytes of data. A video loads its first frame (metadata) once it has been within 300 px of the paper's
   // view for a quarter of a second, and one at most every second (also when the next one comes near only after the last
   // started), those that came near first first, so a quick scroll past loads nothing and a long scroll down 60 of them
-  // stays near 50 requests in 10 s (Chrome asks 3 to 5 ranges of a phone's video). Without IntersectionObserver they load
-  // only when played. lazyStop ends the watch of the post before (a new post, closePost); the wide post has its own
-  // (startStage).
+  // stays near 50 requests in 10 s (Chrome asks 3 to 5 ranges of a phone's video). The videos a long stage keeps hidden
+  // until its SHOW ALL (foldVideos) are watched from the start too: hidden, they are never near the view, and once shown
+  // (showRest) they load as the others do. Without IntersectionObserver they load only when played. lazyStop ends the
+  // watch of the post before (a new post, closePost); the wide post has its own (startStage).
   let lazyStop = () => {};
   function lazyVideos() {
     lazyStop();
@@ -697,10 +719,10 @@
     setTimeout(() => { if (!stepped()) history.scrollRestoration = "auto"; }, 0); // the page, once the step back is over
   });
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") history.scrollRestoration = "auto"; });
-  // The second click of the double click (or double tap) that opened the post or the chooser lands where
-  // the first one did, on whatever opened under it: a row, a link, the backdrop. A click there in the
-  // first 500 ms does nothing. Any other click, ✕ for one, works at once, and so does Enter or Space
-  // (their click has detail 0).
+  // The second click of the double click (or double tap) that opened the post or the chooser, or pressed a
+  // SHOW ALL, lands where the first one did, on whatever opened under it: a row, a link, the backdrop, the
+  // first video shown. A click there in the first 500 ms does nothing. Any other click, ✕ for one, works at
+  // once, and so does Enter or Space (their click has detail 0).
   overlay.addEventListener("click", (ev) => {
     if (ev.detail && performance.now() - openedAt < 500 && Math.hypot(ev.clientX - openX, ev.clientY - openY) < 40) {
       ev.stopImmediatePropagation(); ev.preventDefault();
@@ -785,6 +807,19 @@
       return same.map((v, i) => ({ src: v.src, stage: k, tag: nth(vtag(k), i, same.length), video: true }));
     });
   };
+  // On a phone (openPost's one column) a stage of more than 3 videos shows its first 2, then a button for the rest of the
+  // stage, which stays out of view and loads nothing until the button is pressed (showRest): SHOW ALL 30 BEFORE VIDEOS,
+  // SHOW ALL 30 AFTER VIDEOS, or SHOW ALL 12 VIDEOS for those sent without a stage, with the stage's own count (Marcus,
+  // 2026-11-19: "Yes, shorten them", keeping every original, each a tap away). A stage of 1, 2 or 3 shows whole, and so
+  // does the wide post, one slide at a time. foldVideos takes videosIn's list and gives back the same videos in the same
+  // order with the same tags, the 3rd and later of a folded stage with hid, and the button's words as { more } right
+  // before them.
+  const foldVideos = (vids) => vids.flatMap((v) => {
+    const same = vids.filter((x) => x.stage === v.stage), i = same.indexOf(v);
+    if (same.length <= 3 || i < 2) return [{ ...v, hid: false }];
+    if (i > 2) return [{ ...v, hid: true }];
+    return [{ more: `SHOW ALL ${same.length} ${v.stage === "before" ? "BEFORE " : v.stage === "after" ? "AFTER " : ""}VIDEOS` }, { ...v, hid: true }];
+  });
   // A mission: NOW 1/3 to NOW 3/3 (NOW for one photo, NOW with PHOTO SOON for none), then NOW · VIDEO.
   const missionSlides = (m) => {
     const now = nowOf(m), out = (now.length ? now : [null]).map((u, i) => [{ src: u, tag: nth("NOW", i, now.length) }]);

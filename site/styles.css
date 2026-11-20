@@ -693,6 +693,12 @@ body.post-open { overflow: hidden; }
 .post-media .pm-video video { width: 100%; height: 520px; display: block; background: #000; }
 /* a video's tag is a caption above the player, so it never covers the player's controls (site/app.js videoBox) */
 .post-media .pm-video .tag { position: static; display: inline-block; margin: 8px 10px 6px; }
+/* SHOW ALL 30 BEFORE VIDEOS under the first 2 videos of a long stage (site/app.js foldVideos, showRest): the post's yellow
+   button, 44 px tall, in a box of its own between the dashed rules. The rest of the stage waits hidden right after it,
+   so a rule stands between each two boxes on show, folded or not, and none is doubled. */
+.post-media .pm[hidden] { display: none; }
+.post-media .pm-more { padding: 12px 14px 16px; text-align: center; }
+.post-media .pm-show { min-height: 44px; }
 .post-notes { font-size: 12px; line-height: 1.45; padding: 8px 14px 0; overflow-wrap: anywhere; white-space: pre-wrap; }
 .vid-tag {
   position: absolute; top: 60px; right: 8px; z-index: 2;

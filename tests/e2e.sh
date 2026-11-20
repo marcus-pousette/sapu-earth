@@ -6263,12 +6263,12 @@ grep -qF '.media-vgrid { display: grid; grid-template-columns: repeat(auto-fill,
 echo "$SJ" | grep -qF 'e.media?.video_stages' && echo "$SJ" | grep -qF '"BEFORE · VIDEO"' && echo "$SJ" | grep -qF '"AFTER · VIDEO"' \
   && echo "$SJ" | grep -qF '"NOW · VIDEO"' && echo "$SJ" | grep -qF 'const nowVideoOf = (m) => safeSrc(m?.now_video);' \
   && echo "$SJ" | grep -qF '${nowVideoOf(m) ? '"'"'<div class="vid-tag">▶ VIDEO</div>'"'"' : ""}' \
-  && echo "$SJ" | grep -qF '<div class="pm pm-video"><span class="tag">${escapeHTML(tag)}</span><video controls' \
+  && echo "$SJ" | grep -qF '<div class="pm pm-video"${hid ? " hidden" : ""}><span class="tag">${escapeHTML(tag)}</span><video controls' \
   && echo "$SC" | grep -qF '.post-media .pm-video .tag { position: static; display: inline-block; margin: 8px 10px 6px; }' && echo "$SC" | grep -qF '.mcard .vid-tag { top: 70px; }' \
   && echo "$SC" | grep -qxF '.post-media .pm-video video { width: 100%; height: 520px; display: block; background: #000; }' && ! echo "$SC" | grep -qF 'max-height: 520px' \
-  && echo "$SJ" | grep -qF 'const videos = videosIn(e).map((v) => videoBox(v.src, v.tag, true)).join("");' && ! echo "$SJ" | grep -qF 'v.tag === "' \
-  && [ "$(echo "$SJ" | grep -cF 'videosIn(e)')" = 2 ] \
-  && ok "homepage: receipt videos tagged BEFORE · VIDEO and AFTER · VIDEO above the player (never on its controls), numbered when a stage has several (videosIn, in both posts, never placed by their tag), each player 520 px tall whatever its clip (no jump when a lazy one loads, WebKit has no scroll anchoring), a mission's video in its post (NOW · VIDEO) and a ▶ VIDEO badge on its NEXT UP card" \
+  && echo "$SJ" | grep -qxF '    const videos = foldVideos(videosIn(e)).map((v) => (v.more ? `<div class="pm pm-more"><button type="button" class="post-link pm-show">${escapeHTML(v.more)}</button></div>` : videoBox(v.src, v.tag, true, v.hid))).join("");' \
+  && ! echo "$SJ" | grep -qF 'v.tag === "' && [ "$(echo "$SJ" | grep -cF 'videosIn(e)')" = 2 ] \
+  && ok "homepage: receipt videos tagged BEFORE · VIDEO and AFTER · VIDEO above the player (never on its controls), numbered when a stage has several (videosIn, in both posts, never placed by their tag; a long stage folded on a phone, foldVideos), each player 520 px tall whatever its clip (no jump when a lazy one loads, WebKit has no scroll anchoring), a mission's video in its post (NOW · VIDEO) and a ▶ VIDEO badge on its NEXT UP card" \
   || bad "site/app.js videos" ""
 # A mission's video always goes with its photos: the delete, the sweep of leftovers and the expiry never filter on kind.
 KG=$(sed -n -e '/^async function dropPhotos/,/^}$/p' -e '/^export async function sweepRemovedPhotos/,/^}$/p' -e '/^export async function expireMissions/,/^}$/p' functions/_lib/missions.js)
@@ -7557,6 +7557,209 @@ OPR2=$(echo "$SJ" | sed -n '/^  function openPost(e) {/,/^  }$/p')
   && echo "$OPR2" | grep -qF '${misVideo ? videoBox(misVideo, "NOW · MISSION #" + mis.no + " · VIDEO", true) : ""}' \
   && ok "a receipt's videos in the one-column post load their first frame only after 250 ms near the paper's view, each once and one every second at most, never once gone or after the post closed, and not without IntersectionObserver (node); every receipt post starts the watch, closePost ends it" \
   || bad "site/app.js lazyVideos" "$LZV"
+# A long stage on a phone (site/app.js foldVideos and showRest, styles.css; Marcus on 2026-11-19: "Yes, shorten them", the
+# originals kept): in the one-column post a stage of more than 3 videos shows its first 2, then SHOW ALL 30 BEFORE VIDEOS
+# (SHOW ALL 30 AFTER VIDEOS, SHOW ALL 12 VIDEOS for those without a stage), and the rest of the stage waits hidden right
+# after the button's box, loading nothing. foldVideos and the post's own markup (openPost's line, videoBox) in node:
+# stages of 1, 2, 3, 4 and 30 and one without a stage, the words and counts, an unsafe link left out before the count,
+# videosIn's videos in its order with its tags and numbers, every box of the strip a .pm (one dashed rule above each box
+# but the first, folded or shown), the hidden ones with the hidden attribute and every player with preload none.
+FLD=$(node -e '
+const s = require("fs").readFileSync(process.argv[1], "utf8");
+const line = (re) => { const m = s.match(re); if (!m) throw new Error("missing " + re); return m[0]; };
+const a = s.indexOf("  // ---------- the wide post\x27s slides (pure; tests/e2e.sh runs this block in node) ----------");
+const b = s.indexOf("  // ---------- end of the wide post\x27s slides ----------");
+if (a < 0 || b < a) throw new Error("the block is missing");
+const k = s.indexOf("  const safeSrc = (u) =>"), safe = s.slice(k, s.indexOf("\n", s.indexOf("\n", k) + 1));
+const helpers = [/^  const ESC = .*$/m, /^  const escapeHTML = .*$/m, /^  const isNo = .*$/m, /^  const missionOf = .*$/m, /^  const nowOf = .*$/m, /^  const nowVideoOf = .*$/m, /^  const videoBox = .*$/m].map(line).join("\n");
+const sp = s.slice(s.indexOf("  // ---------- spots (pure; tests/e2e.sh runs this block in node) ----------"), s.indexOf("  // ---------- end of the spots ----------"));
+const X = new Function(helpers + "\n" + safe + "\n" + sp + "\n" + s.slice(a, b) + "\nconst phone = (e) => {\n" + line(/^    const videos = foldVideos\(.*$/m) + "\n  return videos;\n};\nreturn { foldVideos, videosIn, phone };")();
+const bad = [], eq = (n, got, want) => { if (JSON.stringify(got) !== JSON.stringify(want)) bad.push(n + ": " + JSON.stringify(got)); };
+const K = (i) => "/media/" + i.toString(16).padStart(32, "0");
+const rec = (stages) => ({ media: { videos: stages.map((_, i) => K(i)), video_stages: stages } });
+const n = (k, st) => Array(k).fill(st);
+// what the one column lists: each video by its tag, [h] when it waits hidden, and a button by its words in brackets
+const col = (e) => X.foldVideos(X.videosIn(e)).map((v) => (v.more ? "[" + v.more + "]" : v.tag + (v.hid ? " [h]" : "")));
+eq("a stage of 1, 2 or 3 shows whole", [col(rec(n(1, "before"))), col(rec(n(2, "after"))), col(rec(n(3, "before")))],
+  [["BEFORE · VIDEO"], ["AFTER · VIDEO 1/2", "AFTER · VIDEO 2/2"], ["BEFORE · VIDEO 1/3", "BEFORE · VIDEO 2/3", "BEFORE · VIDEO 3/3"]]);
+eq("a stage of 4: 2, the button, 2 hidden", col(rec(n(4, "before"))), ["BEFORE · VIDEO 1/4", "BEFORE · VIDEO 2/4", "[SHOW ALL 4 BEFORE VIDEOS]", "BEFORE · VIDEO 3/4 [h]", "BEFORE · VIDEO 4/4 [h]"]);
+eq("3 before, 4 after and 12 without a stage", col(rec([...n(3, "before"), ...n(4, "after"), ...n(12, null)])).filter((t) => !t.endsWith(" [h]")),
+  ["BEFORE · VIDEO 1/3", "BEFORE · VIDEO 2/3", "BEFORE · VIDEO 3/3", "AFTER · VIDEO 1/4", "AFTER · VIDEO 2/4", "[SHOW ALL 4 AFTER VIDEOS]", "VIDEO 1/12", "VIDEO 2/12", "[SHOW ALL 12 VIDEOS]"]);
+eq("an unsafe link left out before the count: 3 of 4 show whole", col({ media: { videos: [K(0), "javascript:alert(1)", K(1), K(2)], video_stages: n(4, "after") } }),
+  ["AFTER · VIDEO 1/3", "AFTER · VIDEO 2/3", "AFTER · VIDEO 3/3"]);
+// 30 before and 30 after, sent in turns: each stage 2 shown, its button, 28 hidden; the videos those of videosIn, in
+// its order, with its tags, numbers and stages
+const big = rec(Array.from({ length: 60 }, (_, i) => (i % 2 ? "after" : "before"))), f = X.foldVideos(X.videosIn(big)), vi = X.videosIn(big);
+eq("30 before and 30 after", [f.length, f.map((v, i) => (v.more ? i + " " + v.more : "")).filter(Boolean), f.filter((v) => !v.more && !v.hid).map((v) => v.tag + " " + v.src.slice(-2))],
+  [62, ["2 SHOW ALL 30 BEFORE VIDEOS", "33 SHOW ALL 30 AFTER VIDEOS"], ["BEFORE · VIDEO 1/30 00", "BEFORE · VIDEO 2/30 02", "AFTER · VIDEO 1/30 01", "AFTER · VIDEO 2/30 03"]]);
+eq("the same videos in the same order, tags, numbers and stages unchanged", f.filter((v) => !v.more).map((v) => [v.src, v.tag, v.stage, v.video]), vi.map((v) => [v.src, v.tag, v.stage, v.video]));
+eq("hidden: the 3rd to the 30th of each stage, each right after its button", [f.filter((v) => v.hid).map((v) => v.tag).join(), f[3].tag, f[34].tag],
+  [[...Array(28)].map((_, i) => "BEFORE · VIDEO " + (i + 3) + "/30").concat([...Array(28)].map((_, i) => "AFTER · VIDEO " + (i + 3) + "/30")).join(), "BEFORE · VIDEO 3/30", "AFTER · VIDEO 3/30"]);
+eq("no video, and the words: plain capitals and digits, no dash", [X.foldVideos(X.videosIn({})), f.filter((v) => v.more).every((v) => /^SHOW ALL \d+ (BEFORE |AFTER )?VIDEOS$/.test(v.more))], [[], true]);
+// the markup of the one column, from the line in openPost and videoBox: the button in a box of its own right after the 2nd
+// video, every box of the strip a .pm (one dashed rule above each but the first, folded or not), the 56 hidden with the
+// hidden attribute, and all 60 players loading nothing (preload none) until lazyVideos
+const h = X.phone(big), boxes = h.match(/<div class="pm [^"]*"( hidden)?>/g) || [];
+eq("the markup", [boxes.length, boxes.filter((x) => x.endsWith(" hidden>")).length, h.split("<div").length - 1, (h.match(/<video controls playsinline preload="none" src="/g) || []).length, (h.match(/<video /g) || []).length,
+  h.includes("<div class=\"pm pm-video\"><span class=\"tag\">BEFORE · VIDEO 2/30</span><video controls playsinline preload=\"none\" src=\"" + K(2) + "\" aria-label=\"before · video 2/30\"></video></div><div class=\"pm pm-more\"><button type=\"button\" class=\"post-link pm-show\">SHOW ALL 30 BEFORE VIDEOS</button></div><div class=\"pm pm-video\" hidden><span class=\"tag\">BEFORE · VIDEO 3/30</span><video controls playsinline preload=\"none\" src=\"" + K(4) + "\" aria-label=\"before · video 3/30\"></video></div>"),
+  h.endsWith("<div class=\"pm pm-video\" hidden><span class=\"tag\">AFTER · VIDEO 30/30</span><video controls playsinline preload=\"none\" src=\"" + K(59) + "\" aria-label=\"after · video 30/30\"></video></div>")],
+  [62, 56, 62, 60, 60, true, true]);
+eq("a stage of 3 in the markup: no button, nothing hidden", [X.phone(rec(n(3, "after"))).includes("pm-more"), X.phone(rec(n(3, "after"))).includes(" hidden")], [false, false]);
+console.log(bad.length ? "wrong: " + bad.join("; ") : "ok 10");
+' "$T/pl-app.js" 2>&1)
+check "a long stage on a phone (site/app.js foldVideos, node): a stage of 1, 2 or 3 videos whole, one of 4 or 30 its first 2, then SHOW ALL 4 (30) BEFORE VIDEOS, SHOW ALL 30 AFTER VIDEOS or SHOW ALL 12 VIDEOS without a stage, then the rest hidden; the videos, order, tags and numbers of videosIn unchanged; in the markup the button in a .pm box of its own, 56 of 60 boxes hidden and all 60 players preload none" "$FLD" "ok 10"
+# The press (showRest, run in node on a stand-in for the strip read from that markup): SHOW ALL 30 BEFORE VIDEOS goes, the
+# 28 others of its stage show under the first 2 in order, the after stage stays folded until its own button, the focus
+# goes to the first video shown once it shows, with no scroll (preventScroll), the paper keeps its scroll (the stand-in
+# moves it as Chrome's scroll anchoring did with the top of the view in the button's box, unless showRest sets it back),
+# and the post's double-click guard is armed at the press. openPost wires each button to it once the post is drawn,
+# nothing else calls it, and it calls no scroll.
+FRV=$(node -e '
+const s = require("fs").readFileSync(process.argv[1], "utf8");
+const line = (re) => { const m = s.match(re); if (!m) throw new Error("missing " + re); return m[0]; };
+const a = s.indexOf("  // ---------- the wide post\x27s slides (pure; tests/e2e.sh runs this block in node) ----------");
+const b = s.indexOf("  // ---------- end of the wide post\x27s slides ----------");
+if (a < 0 || b < a) throw new Error("the block is missing");
+const k = s.indexOf("  const safeSrc = (u) =>"), safe = s.slice(k, s.indexOf("\n", s.indexOf("\n", k) + 1));
+const helpers = [/^  const ESC = .*$/m, /^  const escapeHTML = .*$/m, /^  const isNo = .*$/m, /^  const missionOf = .*$/m, /^  const nowOf = .*$/m, /^  const nowVideoOf = .*$/m, /^  const videoBox = .*$/m].map(line).join("\n");
+const sp = s.slice(s.indexOf("  // ---------- spots (pure; tests/e2e.sh runs this block in node) ----------"), s.indexOf("  // ---------- end of the spots ----------"));
+const X = new Function(helpers + "\n" + safe + "\n" + sp + "\n" + s.slice(a, b) + "\nconst phone = (e) => {\n" + line(/^    const videos = foldVideos\(.*$/m) + "\n  return videos;\n};\nreturn { videosIn, phone };")();
+const fa = s.indexOf("  function showRest(box) {"), fb = s.indexOf("\n  }\n", fa);
+if (fa < 0 || fb < 0) throw new Error("showRest is missing");
+// showRest with the double-click guard of the post around it (openedAt, openX, openY), the press at 120, 340
+const G = new Function("performance", "let openedAt = 0, openX = NaN, openY = NaN, pressX = 120, pressY = 340;\n" + s.slice(fa, fb + 4)
+  + "\nreturn { showRest, guard: () => [openedAt, openX, openY] };")({ now: () => 4242 }), showRest = G.showRest;
+// a stand-in for the strip of the post: its boxes in order, read from the markup of the one column; a box knows its next
+// sibling, can be removed, and gives its player and its paper; a player takes the focus and says with what, and whether
+// its box was still hidden then. The paper as Chrome lays it out with the top of its view in the button box: each box
+// shown moves the scroll down by its height at the next layout (a read or a write of scrollTop), as the scroll anchoring
+// of Chrome held the first video of the next stage in place; a write sets the scroll after that layout.
+const focus = [];
+const paper = { at: 1690, moved: 0, get scrollTop() { this.at += this.moved; this.moved = 0; return this.at; }, set scrollTop(y) { this.moved = 0; this.at = y; } };
+const strip = (html) => {
+  const kids = [];
+  for (const m of html.matchAll(/<div class="pm (pm-[a-z]+)"( hidden)?>(.*?)<\/div>/g)) {
+    const v = m[3].match(/^<span class="tag">([^<]*)<\/span><video controls playsinline preload="(\w+)" src="([^"]*)"/);
+    let hid = !!m[2];
+    const box = { cls: m[1], words: v ? null : m[3].replace(/<[^>]*>/g, ""),
+      get hidden() { return hid; }, set hidden(x) { if (hid && !x) paper.moved += 562; hid = !!x; },
+      video: v ? { tag: v[1], preload: v[2], isConnected: true, focus(o) { focus.push((hid ? "while hidden: " : "") + v[1] + " " + JSON.stringify(o)); } } : null,
+      get nextElementSibling() { const i = kids.indexOf(this); return i < 0 ? null : kids[i + 1] || null; },
+      remove() { const i = kids.indexOf(this); if (i >= 0) kids.splice(i, 1); },
+      closest(q) { return q === ".post-paper" ? paper : null; },
+      querySelector(q) { return q === "video" ? this.video : null; } };
+    kids.push(box);
+  }
+  return kids;
+};
+const K = (i) => "/media/" + i.toString(16).padStart(32, "0");
+const big = { media: { videos: Array.from({ length: 61 }, (_, i) => K(i)), video_stages: Array.from({ length: 61 }, (_, i) => (i === 60 ? null : i < 30 ? "before" : "after")) } };
+const all = X.videosIn(big).map((v) => v.tag);
+const bad = [], eq = (n, got, want) => { if (JSON.stringify(got) !== JSON.stringify(want)) bad.push(n + ": " + JSON.stringify(got)); };
+const kids = strip(X.phone(big));
+const shown = () => kids.filter((x) => !x.hidden).map((x) => (x.video ? x.video.tag : "[" + x.words + "]"));
+eq("folded", shown(), ["BEFORE · VIDEO 1/30", "BEFORE · VIDEO 2/30", "[SHOW ALL 30 BEFORE VIDEOS]", "AFTER · VIDEO 1/30", "AFTER · VIDEO 2/30", "[SHOW ALL 30 AFTER VIDEOS]", "VIDEO"]);
+showRest(kids.find((x) => x.words === "SHOW ALL 30 BEFORE VIDEOS"));
+eq("SHOW ALL 30 BEFORE VIDEOS: its button gone, the 28 others of its stage shown under the first 2 in order, the after stage still folded, the focus on BEFORE · VIDEO 3/30 once shown, with no scroll, the paper where it was and the double-click guard armed at the press",
+  [kids.length, shown(), focus, paper.scrollTop, G.guard()], [62, [...all.slice(0, 32), "[SHOW ALL 30 AFTER VIDEOS]", "VIDEO"], ["BEFORE · VIDEO 3/30 {\"preventScroll\":true}"], 1690, [4242, 120, 340]]);
+paper.scrollTop = 18000;
+showRest(kids.find((x) => x.words === "SHOW ALL 30 AFTER VIDEOS"));
+eq("then SHOW ALL 30 AFTER VIDEOS: every video in the order of videosIn, no button left, the focus on AFTER · VIDEO 3/30, the paper where it was",
+  [kids.length, shown(), kids.every((x) => x.video && !x.hidden && x.video.preload === "none"), focus.slice(1), paper.scrollTop], [61, all, true, ["AFTER · VIDEO 3/30 {\"preventScroll\":true}"], 18000]);
+console.log(bad.length ? "wrong: " + bad.join("; ") : "ok 3");
+' "$T/pl-app.js" 2>&1)
+[ "$FRV" = "ok 3" ] && echo "$OPR2" | grep -qxF '    overlay.querySelectorAll(".pm-show").forEach((b) => b.addEventListener("click", () => showRest(b.parentElement)));' \
+  && [ "$(echo "$OPR2" | grep -nF '    overlay.innerHTML = ' | cut -d: -f1)" -lt "$(echo "$OPR2" | grep -nF '    overlay.querySelectorAll(".pm-show")' | cut -d: -f1)" ] \
+  && [ "$(echo "$SJ" | grep -cF 'showRest(')" = 2 ] && ! echo "$SJ" | sed -n '/^  function showRest(box) {/,/^  }$/p' | grep -qE 'scrollIntoView|scrollTo\(|scrollBy\(' \
+  && ok "SHOW ALL 30 BEFORE VIDEOS pressed (site/app.js showRest, node): its button goes, the 28 others of its stage show under the first 2 in order, the other stage stays folded, the focus moves to the first video shown once it shows, with no scroll, the paper keeps its scroll where Chrome's scroll anchoring moved it, and the second click of a double click there does nothing (the post's guard); openPost wires every such button once the post is drawn, and showRest calls no scroll" \
+  || bad "site/app.js showRest" "$FRV"
+# lazyVideos and showRest together in node, with a stand-in layout and IntersectionObserver that never finds a hidden box
+# near: the post of 30 before and 30 after watches all 60 videos from the start, the 56 hidden too; nothing hidden loads
+# while it waits, read down to its button or not; once SHOW ALL is pressed the video shown where the button was loads 250
+# ms later and the next one near it a second after, and reading on loads the rest one by one, as for any video.
+FLZ=$(node -e '
+const s = require("fs").readFileSync(process.argv[1], "utf8");
+const line = (re) => { const m = s.match(re); if (!m) throw new Error("missing " + re); return m[0]; };
+const a = s.indexOf("  // ---------- the wide post\x27s slides (pure; tests/e2e.sh runs this block in node) ----------");
+const b = s.indexOf("  // ---------- end of the wide post\x27s slides ----------");
+if (a < 0 || b < a) throw new Error("the block is missing");
+const k = s.indexOf("  const safeSrc = (u) =>"), safe = s.slice(k, s.indexOf("\n", s.indexOf("\n", k) + 1));
+const helpers = [/^  const ESC = .*$/m, /^  const escapeHTML = .*$/m, /^  const isNo = .*$/m, /^  const missionOf = .*$/m, /^  const nowOf = .*$/m, /^  const nowVideoOf = .*$/m, /^  const videoBox = .*$/m].map(line).join("\n");
+const sp = s.slice(s.indexOf("  // ---------- spots (pure; tests/e2e.sh runs this block in node) ----------"), s.indexOf("  // ---------- end of the spots ----------"));
+const X = new Function(helpers + "\n" + safe + "\n" + sp + "\n" + s.slice(a, b) + "\nconst phone = (e) => {\n" + line(/^    const videos = foldVideos\(.*$/m) + "\n  return videos;\n};\nreturn { phone };")();
+const fa = s.indexOf("  function showRest(box) {"), fb = s.indexOf("\n  }\n", fa);
+if (fa < 0 || fb < 0) throw new Error("showRest is missing");
+const showRest = new Function("performance", "let openedAt = 0, openX = NaN, openY = NaN, pressX = NaN, pressY = NaN;\n" + s.slice(fa, fb + 4) + "\nreturn showRest;")({ now: () => 0 });
+const la = s.indexOf("  let lazyStop = () => {};"), lb = s.indexOf("\n  }\n", s.indexOf("  function lazyVideos(", la));
+if (la < 0 || lb < 0) throw new Error("lazyVideos is missing");
+// the strip of the post as in the reveal check: its boxes in order, from the markup of the one column, and their paper
+const strip = (html) => {
+  const kids = [];
+  for (const m of html.matchAll(/<div class="pm (pm-[a-z]+)"( hidden)?>(.*?)<\/div>/g)) {
+    const v = m[3].match(/^<span class="tag">([^<]*)<\/span><video controls playsinline preload="(\w+)" src="([^"]*)"/);
+    kids.push({ hidden: !!m[2], words: v ? null : m[3].replace(/<[^>]*>/g, ""), video: v ? { tag: v[1], preload: v[2], isConnected: true, focus() {} } : null,
+      get nextElementSibling() { const i = kids.indexOf(this); return i < 0 ? null : kids[i + 1] || null; },
+      remove() { const i = kids.indexOf(this); if (i >= 0) kids.splice(i, 1); },
+      closest(q) { return q === ".post-paper" ? paper : null; },
+      querySelector(q) { return q === "video" ? this.video : null; } });
+  }
+  return kids;
+};
+const K = (i) => "/media/" + i.toString(16).padStart(32, "0");
+const kids = strip(X.phone({ media: { videos: Array.from({ length: 60 }, (_, i) => K(i)), video_stages: Array.from({ length: 60 }, (_, i) => (i < 30 ? "before" : "after")) } }));
+// A stand-in layout and IntersectionObserver, as a browser runs them: the photos take the first 600 px of the paper, a
+// video box 562 and the button box 72, a hidden box none; the paper shows 776 px. On each layout (look) the observer
+// tells of every watched video whose state changed, near being within 300 px above or below the view, never while its
+// box is hidden; the first look tells of every one.
+const paper = { scrollTop: 0, clientHeight: 776 };
+const top = (box) => { let y = 600; for (const x of kids) { if (x === box) return y; if (!x.hidden) y += x.video ? 562 : 72; } return null; };
+const near = (v) => { const box = kids.find((x) => x.video === v), y = box && !box.hidden ? top(box) : null;
+  return y !== null && y < paper.scrollTop + paper.clientHeight + 300 && y + 562 > paper.scrollTop - 300; };
+let now = 0, timers = [], io = null;
+const setTimeout = (f, ms) => { timers.push({ f, at: now + ms }); return timers.length; };
+const clearTimeout = (id) => { if (id && timers[id - 1]) timers[id - 1].f = null; };
+const run = (to) => { for (;;) { const t = timers.filter((x) => x.f && x.at <= to).sort((x, y) => x.at - y.at)[0]; if (!t) break; now = t.at; const f = t.f; t.f = null; f(); } now = to; };
+const performance = { now: () => now };
+class IO { constructor(cb, opt) { io = this; this.cb = cb; this.opt = opt; this.seen = new Map(); }
+  observe(v) { this.seen.set(v, null); } unobserve(v) { this.seen.delete(v); } disconnect() { this.seen.clear(); }
+  look() { const list = []; for (const [v, was] of this.seen) { const on = near(v); if (on !== was) { this.seen.set(v, on); list.push({ target: v, isIntersecting: on }); } } if (list.length) this.cb(list); } }
+const overlay = { querySelector: (q) => (q === ".post-paper" ? paper : null),
+  querySelectorAll: (q) => (q === ".post-media video[preload=\"none\"]" ? kids.filter((x) => x.video && x.video.preload === "none").map((x) => x.video) : []) };
+const L = new Function("overlay", "setTimeout", "clearTimeout", "IO", "performance", s.slice(la, lb + 4).replace("typeof IntersectionObserver", "typeof IO").replace("new IntersectionObserver(", "new IO(")
+  + "\nreturn { lazyVideos };")(overlay, setTimeout, clearTimeout, IO, performance);
+const bad = [], eq = (n, got, want) => { if (JSON.stringify(got) !== JSON.stringify(want)) bad.push(n + ": " + JSON.stringify(got)); };
+// the 60 players in the order of the strip, m for metadata (loaded) and n for none
+const pre = () => kids.filter((x) => x.video).map((x) => x.video.preload[0]).join("");
+const m = (i) => "m".repeat(i), n = (i) => "n".repeat(i);
+const scrollTo = (y, ms) => { paper.scrollTop = y; io.look(); run(now + ms); };
+L.lazyVideos();
+if (!io) { console.log("wrong: no watch at all"); process.exit(0); }
+const watched = io.seen.size;
+io.look(); run(5000);
+eq("open: all 60 watched, the 56 hidden too, and at the top only BEFORE · VIDEO 1/30 loads", [watched, pre()], [60, m(1) + n(59)]);
+const more = kids.find((x) => x.words === "SHOW ALL 30 BEFORE VIDEOS");
+scrollTo(top(more) - 500, 5000);
+eq("at SHOW ALL 30 BEFORE VIDEOS: its 2nd video and AFTER · VIDEO 1/30 under it load, none of the 28 hidden", pre(), m(2) + n(28) + m(1) + n(29));
+showRest(more); io.look(); run(now + 500);
+const b3 = pre(); run(now + 1000);
+eq("pressed: BEFORE · VIDEO 3/30, shown where the button was, loads 250 ms later and 4/30, near under it, a second after", [b3, pre()], [m(3) + n(27) + m(1) + n(29), m(4) + n(26) + m(1) + n(29)]);
+for (let y = paper.scrollTop; y < top(kids.find((x) => x.words === "SHOW ALL 30 AFTER VIDEOS")) - 500; y += 562) scrollTo(y, 1500);
+scrollTo(top(kids.find((x) => x.words === "SHOW ALL 30 AFTER VIDEOS")) - 500, 5000);
+eq("read down to SHOW ALL 30 AFTER VIDEOS: all 30 before load one by one, and AFTER · VIDEO 2/30, none of the 28 still hidden", pre(), m(32) + n(28));
+showRest(kids.find((x) => x.words === "SHOW ALL 30 AFTER VIDEOS")); io.look(); run(now + 500);
+const a3 = pre(); run(now + 1000);
+eq("pressed: AFTER · VIDEO 3/30 loads, then 4/30", [a3, pre()], [m(33) + n(27), m(34) + n(26)]);
+console.log(bad.length ? "wrong: " + bad.join("; ") : "ok 5");
+' "$T/pl-app.js" 2>&1)
+check "the hidden videos of a long stage load nothing (preload none) until SHOW ALL, and lazyVideos, which watched them from the start, loads them once shown and near, one a second (site/app.js, node)" "$FLZ" "ok 5"
+FOC=""
+for t in '.post-media .pm[hidden] { display: none; }' '.post-media .pm-more { padding: 12px 14px 16px; text-align: center; }' '.post-media .pm-show { min-height: 44px; }' \
+         '.post-media .pm + .pm { border-top: 2px dashed var(--rule); }'; do
+  echo "$SC" | grep -qxF -- "$t" || FOC="$FOC [$t]"
+done
+[ "$(echo "$SC" | grep -cE 'pm-more|pm-show')" = 2 ] || FOC="$FOC [another rule names the button]"
+[ -z "$FOC" ] && ok "styles.css: SHOW ALL in a box of its own between the dashed rules (one above each box on show, folded or not), the post's yellow button 44 px tall, hidden boxes take no room" \
+  || bad "styles.css, the folded stage" "$FOC"
 # Tab and Shift+Tab stay in every open post and chooser (site/app.js): the handler itself, run in node with four controls
 # (the last one hidden, so it has no client rects) and a stand-in for the focus. Tab on the last shown control goes to the
 # first, Shift+Tab on the first to the last, Tab or Shift+Tab from outside the dialog to the first or last, each with the
