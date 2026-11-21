@@ -7773,6 +7773,10 @@ check "styles.css: a phone's post is at most as high as the screen as it shows (
 POV=$(echo "$SC" | awk '/^\.post-overlay [{]/ { p = 1 } p && /place-items/ { print; exit } p && /^[}]/ { exit }')
 check "styles.css: a post taller than the backdrop starts at its top and scrolls (safe center after the center fallback), so its ✕ never sits above the screen" \
   "$POV" "  display: grid; place-items: center; place-items: safe center; padding: 18px;"
+# A double tap on the globe's + or - (or BACK TO THE GLOBE) is two presses, not the browser's double-tap zoom, which in
+# iPhone Safari zoomed the whole page (2026-11-21): touch-action manipulation on those buttons.
+check "styles.css: a double tap on + or - or BACK TO THE GLOBE is two presses, never the page's zoom (touch-action: manipulation)" \
+  "$(echo "$SC" | grep -cxF '.zoomctl button, .sat-btn { touch-action: manipulation; }')" "1"
 # Tab and Shift+Tab stay in every open post and chooser (site/app.js): the handler itself, run in node with four controls
 # (the last one hidden, so it has no client rects) and a stand-in for the focus. Tab on the last shown control goes to the
 # first, Shift+Tab on the first to the last, Tab or Shift+Tab from outside the dialog to the first or last, each with the

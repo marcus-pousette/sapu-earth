@@ -407,6 +407,9 @@ footer .foot-apply:has(#footMissions:not([hidden])) a { white-space: nowrap; }
    longer gave a finger in the gap or just beside a button to the button (Chrome, 2026-11-18). */
 .zoomctl button, .sat-btn { position: relative; }
 .zoomctl button::after, .sat-btn::after { content: ""; position: absolute; inset: -6px; }
+/* A double tap on + or - (or BACK TO THE GLOBE) is two presses, never the browser's double-tap zoom: on an iPhone two
+   quick taps on + zoomed the whole page instead of the globe (Marcus, 2026-11-21). A pinch there still zooms the page. */
+.zoomctl button, .sat-btn { touch-action: manipulation; }
 .zoomctl button:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
 /* "ctrl + scroll to zoom" (⌘ on a Mac): shows for a moment when a plain wheel scrolls the page over the globe */
 .wheel-hint {
