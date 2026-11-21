@@ -7282,6 +7282,18 @@ console.log(bad.length ? "wrong: " + bad.join("; ") : "ok " + want.length);
 ' "$T/pl-app.js" 2>&1)
 check "the money rows (site/app.js mMoney and localRows, node): ASKING or FUNDED and ASKED first, CREW PAY as 15 × IDR 100,000 (IDR 100,000 FOR 15 PPL when it does not split evenly, IN ALL without a crew size, NONE for 0), OTHER COSTS, a receipt's own costs as SPENT, CREW PAY and OTHER COSTS, and no rows for a currency the page cannot show" \
   "$LMR $(grep -cE 'CREW ASKED|OF WHICH TO CREW|CREW, LOCAL MONEY' "$T/pl-app.js")" "ok 12 0"
+# A receipt's euros (site/app.js eur, run in node with app.js's own helpers): cents always with two digits, as /crews and
+# /missions write them (eurText), so a receipt paid EUR 82.50 says PAID €82.50, not €82.5; whole euros stay without (€75).
+EUR=$(node -e '
+const s = require("fs").readFileSync(process.argv[1], "utf8");
+const line = (re) => { const m = s.match(re); if (!m) throw new Error("missing " + re); return m[0]; };
+const eur = new Function([/^  const ESC = .*$/m, /^  const escapeHTML = .*$/m, /^  const eur = .*$/m].map(line).join("\n") + "\nreturn eur;")();
+const want = [[82.5, "€82.50"], [8.4, "€8.40"], [3.6, "€3.60"], [12.25, "€12.25"], [82.499999, "€82.50"], [75, "€75"], [150, "€150"],
+  [74.999999, "€75"], [null, "?"], [undefined, "?"]];
+const bad = want.filter(([v, w]) => eur(v) !== w).map(([v]) => v + ": " + eur(v));
+console.log(bad.length ? "wrong: " + bad.join("; ") : "ok " + want.length);
+' "$T/pl-app.js" 2>&1)
+check "a receipt's euros keep two digits for cents (site/app.js eur, node): €82.50, €8.40 and €12.25, whole euros as €75 and €150, ? for none" "$EUR" "ok 10"
 # /admin/ says a price as it adds up (payText, run in node with admin.js's own helpers): the mission card's Price with the
 # crew's share, an orange note when the crew pay does not split evenly (sent as one total, like mission #2), the FUND hint,
 # Asked on PENDING and APPROVED, a cleanup's own costs without a pay for each person, and the hint under the crew size of

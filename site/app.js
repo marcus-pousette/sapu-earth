@@ -291,7 +291,8 @@
   };
   const rid = (e) => String(e.id || "").toUpperCase().replace(/[^A-Z0-9]+/g, "-");
   const num = (v) => (typeof v === "number" && Number.isFinite(v) ? Number(v.toFixed(1)).toLocaleString("en") : "?");
-  const eur = (v) => (v ?? null) === null ? "?" : "€" + escapeHTML(typeof v === "number" ? Number(v.toFixed(2)) : v);
+  // Euros as /crews and /missions write them (eurText): cents always with two digits (€82.50), whole euros without (€75).
+  const eur = (v) => (v ?? null) === null ? "?" : "€" + escapeHTML(typeof v === "number" ? (Math.round(v * 100) % 100 ? v.toFixed(2) : String(Math.round(v))) : v);
   const upper = (v, dflt) => escapeHTML(String(v || dflt).toUpperCase());
   const videosOf = (e) => (Array.isArray(e.media?.videos) ? e.media.videos.map(safeSrc).filter(Boolean) : []);
   // A video in a post, with its tag above the player, never on it: Safari puts fullscreen and picture in
