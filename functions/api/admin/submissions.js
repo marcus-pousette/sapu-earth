@@ -27,10 +27,15 @@
 // spot 1 first ([{no, place_name, lat, lng, date}], spotList in _lib/spots.js), [] otherwise; each before and after
 // photo has its spot (1 to 4); its mission has its planned spots the same way. A mission with several spots is never in
 // partner_missions: a cleanup sent without a mission has no photos for its other spots.
+// same_files: the cleanup's before photos and videos that are the same file (sameFile in _lib/util.js) as the photo or
+// video of the spot of ANOTHER mission of its crew, [{no, kind: 'photo' | 'video'}], once for each mission and kind,
+// for the red line on its card; [] otherwise, and before migration 0004. A crew that sends a cleanup for the wrong
+// mission shows up here: the cleanup of #4 was sent as #2's on 2026-11-19 with #4's photo and video as its before, and
+// nothing said so. The cleanup's own mission never counts (a crew may send its photo again as the before).
 // contact: on a pending cleanup, {contact_name, whatsapp, email, lang} from the crew's application, for the reply that
 // REJECT opens (the reasons, in English or Indonesian). null on the other lists, for a crew made with NEW PARTNER
 // (no application), once DEACTIVATE wiped it, and before migration 0003.
-import { err, handle, json, mediaFor, signedMediaUrl } from "../../_lib/util.js";
+import { err, handle, json, mediaFor, sameFile, signedMediaUrl } from "../../_lib/util.js";
 import { noApplicationsTable } from "../../_lib/applications.js";
 import { noMissionsTable, nowMediaFor, nowParts } from "../../_lib/missions.js";
 import { round3 } from "../../_lib/events.js";
@@ -127,6 +132,44 @@ async function linkableFor(env, partnerIds) {
   return out;
 }
 
+// same_files for these cleanups (see the top of this file): {submissionId: [{no, kind}]}. Never fails: before migration
+// 0004, or on any other error, every cleanup gets [].
+async function sameFilesFor(env, subs, media) {
+  const out = {};
+  for (const s of subs) out[s.id] = [];
+  const partners = [...new Set(subs.filter((s) => s.status !== "rejected").map((s) => s.partner_id))];
+  if (!partners.length) return out;
+  try {
+    const now = [];
+    for (let i = 0; i < partners.length; i += 90) {
+      const chunk = partners.slice(i, i + 90);
+      const { results } = await env.DB.prepare(
+        `SELECT u.key, u.kind, u.content_type, u.size, u.mission_id, m.no, m.partner_id FROM uploads u
+         JOIN missions m ON m.id = u.mission_id
+         WHERE u.submission_id IS NULL AND m.partner_id IN (${marks(chunk)}) ORDER BY m.no, u.created_at`
+      ).bind(...chunk).all();
+      now.push(...results);
+    }
+    const same = sameFile(env);
+    for (const s of subs) {
+      const m = media[s.id];
+      if (!m || s.status === "rejected") continue;
+      const before = { photo: m.before, video: m.videos.filter((v) => v.stage === "before") };
+      const found = new Set();
+      for (const n of now) {
+        const kind = n.kind === "video" ? "video" : "photo";
+        if (n.partner_id !== s.partner_id || n.mission_id === s.mission_id || found.has(n.no + kind)) continue;
+        for (const b of before[kind]) {
+          if (await same(n, b)) { found.add(n.no + kind); out[s.id].push({ no: n.no, kind }); break; }
+        }
+      }
+    }
+  } catch (e) {
+    if (!noMissionsTable(e)) console.error("same files", e);
+  }
+  return out;
+}
+
 export const onRequestGet = handle(async ({ request, env }) => {
   const status = new URL(request.url).searchParams.get("status") || "pending";
   if (!["pending", "approved", "rejected"].includes(status)) return err(400, "Unknown status.");
@@ -145,6 +188,7 @@ export const onRequestGet = handle(async ({ request, env }) => {
   const unlinked = (s) => !s.mission_id && s.status !== "rejected";
   const linkable = await linkableFor(env, [...new Set(results.filter(unlinked).map((r) => r.partner_id))]);
   const contacts = status === "pending" ? await contactsFor(env, [...new Set(results.map((r) => r.partner_id))]) : {};
+  const sameFiles = await sameFilesFor(env, results, media);
   const pick = (rows) => Promise.all(rows.map(async (r) => ({
     key: r.key, url: await signedMediaUrl(env, r.key), content_type: r.content_type,
   })));
@@ -165,6 +209,7 @@ export const onRequestGet = handle(async ({ request, env }) => {
       media: { before: await pickPhotos(m.before, n), after: await pickPhotos(m.after, n), videos: await pickVideos(m.videos) },
       mission: (s.mission_id && missions[s.mission_id]) || null,
       partner_missions: (unlinked(s) && linkable[s.partner_id]) || [],
+      same_files: sameFiles[s.id] || [],
       post_links: social ? (social[s.id]?.post_links || { crew: null, sapu: null }) : null,
       thanks: social && s.status === "approved" ? (social[s.id]?.thanks ?? 0) : null,
       contact: contacts[s.partner_id] || null,

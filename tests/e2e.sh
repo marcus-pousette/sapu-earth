@@ -876,7 +876,10 @@ OPJ=$(newp "Other Mission Crew $MRUN" PH "$OSLUG"); OT=$(echo "$OPJ" | jget "d['
 
 # upk <token> <before|after>: uploads before.jpg or after.jpg as that kind, prints the key.
 upk()   { curl -s -X POST "$B/api/upload?k=$1&kind=$2" -H 'content-type: image/jpeg' --data-binary @$F/$2.jpg | jget "d['key']"; }
-N1A=$(upk $MT before); N1B=$(upk $MT before); N2=$(upk $MT before); N3=$(upk $MT before)
+# Mission 1's two photos are after.jpg, not the before.jpg its cleanup sends as before (CB), so its receipt keeps them
+# in the mission block; a photo the cleanup sends again is left out there (the video crew's mission, further down).
+upkf() { curl -s -X POST "$B/api/upload?k=$1&kind=$2" -H 'content-type: image/jpeg' --data-binary @$3 | jget "d['key']"; }
+N1A=$(upkf $MT before $F/after.jpg); N1B=$(upkf $MT before $F/after.jpg); N2=$(upk $MT before); N3=$(upk $MT before)
 N4=$(upk $MT before); N5=$(upk $MT before); N6=$(upk $MT before)
 CB=$(upk $MT before); CA=$(upk $MT after); CB2=$(upk $MT before); CA2=$(upk $MT after)
 K2A=$(upk $OT before)
@@ -1080,7 +1083,7 @@ while read -r u; do
   [ -n "$u" ] || continue
   n=$((n+1))
   check "mission 1 now photo $n: signed link -> 200 image/jpeg" "$(curl -s -o $T/mp.jpg -w '%{http_code} %{content_type}' "$B$u")" "200 image/jpeg"
-  cmp -s $T/mp.jpg $F/before.jpg && ok "mission 1 now photo $n is byte-exact" || bad "mission 1 now photo $n bytes differ" "$u"
+  cmp -s $T/mp.jpg $F/after.jpg && ok "mission 1 now photo $n is byte-exact" || bad "mission 1 now photo $n bytes differ" "$u"
 done <<< "$MNOW"
 check "mission 1 has 2 signed now photo links" "$n" 2
 S2=$(echo "$ML" | mq "$M2" "m['now'][0]['url']"); S3=$(echo "$ML" | mq "$M3" "m['now'][0]['url']")
@@ -1125,7 +1128,7 @@ echo "$MG" | grep -q '<b>Canggu' && bad "/m contains raw HTML from the place nam
 echo "$MG" | grep -q 'MISSION-PRIVATE-789' && bad "/m leaks the private note" "" || ok "/m has no private note"
 echo "$MG" | grep -q 'og:video' && bad "/m of a mission without a video names one" "$(echo "$MG" | grep og:video)" || ok "/m of a mission without a video has no og:video"
 H=$(curl -s -D - -o $T/mn.jpg $B/media/$N1A)
-echo "$H" | head -1 | grep -q 200 && echo "$H" | grep -qi 'cache-control: public, max-age=3600' && ! echo "$H" | grep -qi immutable && cmp -s $T/mn.jpg $F/before.jpg \
+echo "$H" | head -1 | grep -q 200 && echo "$H" | grep -qi 'cache-control: public, max-age=3600' && ! echo "$H" | grep -qi immutable && cmp -s $T/mn.jpg $F/after.jpg \
   && ok "now photo of an open mission is public (cached 1 hour, not immutable), byte-exact" || bad "open mission photo" "$H"
 
 check "fund with a revision that is not the mission's -> 409 (changed)" \
@@ -1478,7 +1481,7 @@ fi
 # while the cleanup has no mission yet. Then DEACTIVATE removes the crew's other, funded mission.
 LSLUG="mission-link-$MRUN"
 LPJ=$(newp "Link Mission Crew $MRUN" ID "$LSLUG"); LT=$(echo "$LPJ" | jget "d['token']"); LPID=$(echo "$LPJ" | jget "d['id']")
-LN1=$(upk $LT before); LN2=$(upk $LT before); LB=$(upk $LT before); LA=$(upk $LT after)
+LN1=$(upkf $LT before $F/after.jpg); LN2=$(upk $LT before); LB=$(upk $LT before); LA=$(upk $LT after)
 st=$(mpost $LT "place_name=Linked later $MRUN" "media=$LN1"); MA=$(mj "d['id']"); NOA=$(mj "d['no']")
 st="$st $(mpost $LT "place_name=Funded, then deactivated $MRUN" "media=$LN2")"; MB=$(mj "d['id']"); NOB=$(mj "d['no']")
 check "crew 3 posts two missions -> 201 201" "$st" "201 201"
@@ -1487,6 +1490,10 @@ st=$(msub $LT - "$LB,$LA"); SP=$(mj "d['id']")
 [[ $st = 200 && $SP =~ ^[a-z2-7]{10}$ ]] && ok "crew 3 sends a cleanup without a mission -> 200 ($SP)" || bad "cleanup without a mission" "$st $(cat "$T/m.json")"
 check "admin pending list: it has no mission" \
   "$(curl -s "$B/api/admin/submissions?status=pending" -H "$A" | jget "[s.get('mission_id') for s in d['submissions'] if s['id']=='$SP']")" "[None]"
+# Its before photo LB is before.jpg, the same file as mission B's photo LN2 (upk sends the same file each time), so its
+# card says so (same_files); mission A's photo LN1 is after.jpg, the same file as its AFTER photo, which never counts.
+check "admin pending list: its before photo is the same file as mission B's photo, so same_files names mission B (and A's photo, the same file as its after photo, does not count)" \
+  "$(curl -s "$B/api/admin/submissions?status=pending" -H "$A" | jget "[s.get('same_files') for s in d['submissions'] if s['id']=='$SP']")" "[[{'no': $NOB, 'kind': 'photo'}]]"
 check "admin pending list: its Link to mission choices carry each mission's point, rounded to 3 decimals" \
   "$(curl -s "$B/api/admin/submissions?status=pending" -H "$A" | jget "[(m.get('no'), m.get('lat'), m.get('lng')) for s in d['submissions'] if s['id']=='$SP' for m in s.get('partner_missions', [])]")" "[($NOA, -8.659, 115.13)]"
 # lapp <mission id>: APPROVE crew 3's cleanup linked to that mission. Status out, body in $T/m.json.
@@ -1619,17 +1626,41 @@ st=$(msub $VT "$MV" "$VCB,$VCA,$VCVA,$VCVB"); SVV=$(mj "d.get('id')")
 check "its cleanup with a video after and a video before -> 200" "$st" 200
 PV=$(curl -s "$B/api/admin/submissions?status=pending" -H "$A")
 VMS=$(echo "$PV" | jget "[s['mission']['now_video']['url'] for s in d['submissions'] if s['id']=='$SVV'][0]")
+check "PENDING: a cleanup whose before photo and video are its own mission's again names no other mission (same_files [])" \
+  "$(echo "$PV" | jget "[s.get('same_files') for s in d['submissions'] if s['id']=='$SVV']")" "[[]]"
 check "PENDING: the mission's video (signed link -> 200), and the cleanup's two videos labelled, the one before first" \
   "$(code "$B${VMS:-/media/none}") $(echo "$PV" | jget "[[v['stage'] for v in s['media']['videos']] for s in d['submissions'] if s['id']=='$SVV']")" "200 [['before', 'after']]"
 check "approve the cleanup" "$(sdec "{\"id\":\"$SVV\",\"action\":\"approve\",\"paid_eur\":20}")" approved
-check "/api/events: the mission block has the photo and the video, the receipt its two videos labelled" \
-  "$(curl -s $B/api/events | jget "[(e['mission']['now'], e['mission']['now_video'], e['media']['video_stages']) for e in d if e['id']=='$SVV']")" \
-  "[(['/media/$VN'], '/media/$VV3', ['before', 'after'])]"
+# The cleanup sent the mission's photo and video again as its before (upk and upv send the same files: VCB is VN's
+# before.jpg, VCVB VV3's tiny.mp4), so the receipt shows each once, as BEFORE (dropRepeats in functions/_lib/events.js:
+# the same size and type, then the same R2 etag). Mission 1 and the linked mission A, whose photos differ from their
+# cleanup's before, keep theirs in the block (above).
+check "/api/events: the mission's photo and video, sent again as the cleanup's before, show once, as before: the mission block keeps neither, the receipt its before photo and its two videos labelled" \
+  "$(curl -s $B/api/events | jget "[(e['mission']['now'], e['mission']['now_video'], e['media']['before'], e['media']['video_stages']) for e in d if e['id']=='$SVV']")" \
+  "[([], None, ['/media/$VCB'], ['before', 'after'])]"
 # APPROVED's download row: downloads() from admin.js, run in node on the real list, then each link asked for its file
 # name. The row follows the card: the mission's photo of the spot before the cleanup's photos, its video before the
 # cleanup's videos, each saved as sapu-earth-<receipt id>-<label>.<ext>. dlnode '<code>' [args]: runs code with
 # downloads() loaded.
 curl -s $B/admin/admin.js > "$T/admin.js"
+# The red line for same_files on a cleanup's card (admin.js sameFilesLine), in node: one mission with a photo and a video,
+# a photo alone, a video alone, two missions, and nothing to say for an empty or odd list.
+SFL=$(ADMIN_JS="$T/admin.js" node -e '
+const src = require("fs").readFileSync(process.env.ADMIN_JS, "utf8");
+const m = src.match(/^  const missionNo = .*$/m), a = src.indexOf("  function sameFilesLine("), b = src.indexOf("\n  }\n", a);
+if (!m || a < 0 || b < 0) { console.log("missing"); process.exit(); }
+eval(m[0] + "\n" + src.slice(a, b + 4) + "\nglobalThis.sameFilesLine = sameFilesLine;");
+const want = [
+  [[{ no: 4, kind: "photo" }, { no: 4, kind: "video" }], "Its before photo and video are the same files as mission #4\u0027s. Is this the cleanup for mission #4?"],
+  [[{ no: 4, kind: "photo" }], "Its before photo is the same file as mission #4\u0027s. Is this the cleanup for mission #4?"],
+  [[{ no: 7, kind: "video" }], "Its before video is the same file as mission #7\u0027s. Is this the cleanup for mission #7?"],
+  [[{ no: 4, kind: "photo" }, { no: 5, kind: "photo" }], "Its before photos are the same files as those of missions #4 and #5. Which mission is this cleanup for?"],
+  [[], ""], [null, ""], [[{ no: 0, kind: "photo" }, { no: 3, kind: "logo" }, { kind: "photo" }], ""],
+];
+const bad = want.map(([list, line]) => [sameFilesLine(list), line]).filter(([got, line]) => got !== line).map(([got]) => JSON.stringify(got));
+console.log(bad.length ? "wrong: " + bad.join("; ") : "ok");
+' 2>&1)
+check "admin.js: a cleanup's card says in one red line which other mission's photo or video its before is (sameFilesLine, node)" "$SFL" ok
 cat > "$T/dlpre.js" <<'JS'
 const src = require("fs").readFileSync(process.env.ADMIN_JS, "utf8");
 const line = (re) => { const m = src.match(re); if (!m) throw new Error("missing " + re); return m[0]; };
@@ -7773,6 +7804,34 @@ check "styles.css: a phone's post is at most as high as the screen as it shows (
 POV=$(echo "$SC" | awk '/^\.post-overlay [{]/ { p = 1 } p && /place-items/ { print; exit } p && /^[}]/ { exit }')
 check "styles.css: a post taller than the backdrop starts at its top and scrolls (safe center after the center fallback), so its ✕ never sits above the screen" \
   "$POV" "  display: grid; place-items: center; place-items: safe center; padding: 18px;"
+# A video that has no picture half a second after its metadata came in, paused at its start, seeks to its first
+# millisecond (site/app.js): Mobile Safari paints nothing before that, so a receipt's players stood black (iOS Simulator,
+# 2026-11-21: readyState 1, then 4 with the picture). The listener itself, run in node with stand-in videos: only a video
+# still connected, paused, at 0 and below HAVE_CURRENT_DATA moves, and nothing happens for other elements.
+echo "$SJ" > "$T/vf-app.js"
+VFF=$(node -e '
+const src = require("fs").readFileSync(process.argv[1], "utf8");
+const a = src.indexOf("  document.addEventListener(\"loadedmetadata\""), b = src.indexOf("  }, true);\n", a);
+if (a < 0 || b < 0) { console.log("missing"); process.exit(); }
+let handler = null; const timers = [];
+const document = { addEventListener: (type, fn, capture) => { if (type === "loadedmetadata" && capture === true) handler = fn; } };
+class HTMLVideoElement {}
+const setTimeout = (fn, ms) => timers.push([fn, ms]);
+eval(src.slice(a, b + 12));
+if (!handler) { console.log("no capture listener"); process.exit(); }
+const vid = (o) => Object.assign(new HTMLVideoElement(), { isConnected: true, paused: true, currentTime: 0, readyState: 1 }, o);
+const bad = [];
+for (const [name, v, want] of [["no picture", vid({}), 0.001], ["a picture", vid({ readyState: 2 }), 0], ["playing", vid({ paused: false }), 0],
+    ["moved on", vid({ currentTime: 3 }), 3], ["gone", vid({ isConnected: false }), 0]]) {
+  timers.length = 0; handler({ target: v });
+  if (timers.length !== 1 || timers[0][1] !== 500) { bad.push(name + ": no 500 ms wait"); continue; }
+  timers[0][0]();
+  if (v.currentTime !== want) bad.push(name + ": " + v.currentTime);
+}
+timers.length = 0; handler({ target: {} }); if (timers.length) bad.push("not a video: a wait");
+console.log(bad.length ? "wrong: " + bad.join("; ") : "ok");
+' "$T/vf-app.js" 2>&1)
+check "app.js: a video with no picture half a second after its metadata, paused at its start, seeks to 0.001 s (its first picture in Mobile Safari), and no other (node)" "$VFF" ok
 # A double tap on the globe's + or - (or BACK TO THE GLOBE) is two presses, not the browser's double-tap zoom, which in
 # iPhone Safari zoomed the whole page (2026-11-21): touch-action manipulation on those buttons.
 check "styles.css: a double tap on + or - or BACK TO THE GLOBE is two presses, never the page's zoom (touch-action: manipulation)" \

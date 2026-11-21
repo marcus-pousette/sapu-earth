@@ -321,13 +321,38 @@
         ${s.review_note ? `<dt>Review note</dt><dd>${esc(s.review_note)}</dd>` : ""}
       </dl>`;
   }
+  // same_files (the cleanup's before photos and videos that are another mission's photo or video of the spot, the same
+  // files, api/admin/submissions.js) as one red line: "Its before photo and video are the same files as mission #4's. Is
+  // this the cleanup for mission #4?", or for several missions "... as those of missions #4 and #5. Which mission is this
+  // cleanup for?". "" without any.
+  function sameFilesLine(list) {
+    const by = new Map();
+    for (const f of Array.isArray(list) ? list : []) {
+      const no = missionNo(f);
+      if (!no || !(f.kind === "photo" || f.kind === "video")) continue;
+      if (!by.has(no)) by.set(no, new Set());
+      by.get(no).add(f.kind);
+    }
+    if (!by.size) return "";
+    const kinds = new Set([...by.values()].flatMap((k) => [...k]));
+    const both = kinds.size === 2;
+    const what = both ? "photo and video are the same files" : `${[...kinds][0]} is the same file`;
+    if (by.size === 1) {
+      const [no] = by.keys();
+      return `Its before ${what} as mission #${no}'s. Is this the cleanup for mission #${no}?`;
+    }
+    const nos = [...by.keys()].map((no) => "#" + no);
+    return `Its before ${both ? "photos and videos are" : kinds.has("video") ? "videos are" : "photos are"} the same files as those of missions ${nos.slice(0, -1).join(", ")} and ${nos[nos.length - 1]}. Which mission is this cleanup for?`;
+  }
   function head(s, mis) {
     const dupes = Array.isArray(s.possible_duplicates) ? s.possible_duplicates : [];
+    const same = sameFilesLine(s.same_files);
     const no = missionNo(mis);
     const badge = no ? `<span class="am-badge">MISSION #${esc(no)}</span>` : s.mission_id ? '<span class="am-badge">MISSION</span>' : "";
     return `${badge}<h3>${esc(s.place_name)}</h3>
       <div class="sub-meta">${esc(s.partner_name)} · cleanup ${esc(s.cleanup_date)} · sent ${esc((s.created_at || "").slice(0, 16).replace("T", " "))} · ${esc(s.id.toUpperCase())}</div>
-      ${dupes.length ? `<p class="msg err">Possible duplicate of ${dupes.map((d) => esc(String(d).toUpperCase())).join(", ")} (same partner, date and place).</p>` : ""}`;
+      ${dupes.length ? `<p class="msg err">Possible duplicate of ${dupes.map((d) => esc(String(d).toUpperCase())).join(", ")} (same partner, date and place).</p>` : ""}
+      ${same ? `<p class="msg err">${esc(same)}</p>` : ""}`;
   }
 
   // A cleanup sent for a mission carries mission_id. Its mission comes with the submission (s.mission)

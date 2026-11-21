@@ -411,7 +411,7 @@ export async function mediaFor(env, ids) {
   for (let i = 0; i < ids.length; i += 90) {
     const chunk = ids.slice(i, i + 90);
     const { results } = await withSpots((p) => withStage((s) => env.DB.prepare(
-      `SELECT key, kind, content_type, submission_id, public${s ? ", stage" : ""}${p ? ", spot" : ""} FROM uploads WHERE submission_id IN (${chunk.map(() => "?").join(",")}) ORDER BY created_at, key`
+      `SELECT key, kind, content_type, size, submission_id, public${s ? ", stage" : ""}${p ? ", spot" : ""} FROM uploads WHERE submission_id IN (${chunk.map(() => "?").join(",")}) ORDER BY created_at, key`
     ).bind(...chunk).all()));
     for (const r of results) {
       const g = out[r.submission_id];
@@ -428,4 +428,23 @@ export async function mediaFor(env, ids) {
     g.after.sort((a, b) => spot(a) - spot(b));
   }
   return out;
+}
+
+// Two uploads are the same file when they have the same size and type and the same R2 etag, which for these one-piece
+// uploads (api/upload.js streams each file into a single put) is the MD5 of the bytes. sameFile(env) gives that check for
+// upload rows ({key, size, content_type}): only rows of the same size and type are looked up in R2 (env.MEDIA, where every
+// upload stays; approving only copies it to the public bucket), each key at most once, and a lookup that fails counts as
+// not the same. For a mission photo or video that its cleanup sent again as its before (dropRepeats in events.js), and
+// for a cleanup carrying another mission's (same_files in api/admin/submissions.js).
+export function sameFile(env) {
+  const etags = new Map();
+  const etag = (key) => {
+    if (!etags.has(key)) etags.set(key, Promise.resolve().then(() => env.MEDIA.head(key)).then((o) => o?.etag || null, () => null));
+    return etags.get(key);
+  };
+  return async (a, b) => {
+    if (!env.MEDIA || !Number.isFinite(a?.size) || a.size !== b?.size || a.content_type !== b.content_type) return false;
+    const [x, y] = await Promise.all([etag(a.key), etag(b.key)]);
+    return x !== null && x === y;
+  };
 }

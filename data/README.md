@@ -102,8 +102,8 @@ A cleanup that a crew sent for a funded mission (see [docs/missions.md](../docs/
 
 - `no`: the short public mission number (`#12`), never reused.
 - `url`: the mission's share link. Once the mission is done, `/m/12` shows the receipt's preview and opens `/#ev-<id>`.
-- `now`: the photos of the place before the mission, as the crew posted them. Same URL rules as `media` (`/media/<key>` or the public bucket address).
-- `now_video`: the crew's short video of the place before the mission, the same way, or `null` when it sent none.
+- `now`: the photos of the place before the mission, as the crew posted them. Same URL rules as `media` (`/media/<key>` or the public bucket address). A photo the crew sent again as one of the cleanup's before photos (the same file) is left out here, so the receipt shows it once, in `media.before`.
+- `now_video`: the crew's short video of the place before the mission, the same way, or `null` when it sent none, or sent the same file again as a before video (then it is only in `media.videos`).
 - `funded_eur`: what Sapu Earth agreed to pay for the mission. The money actually paid is in `money` as for every receipt.
 - `currency`, `price_local`, `crew_local`, `crew_size`: what the crew asked when it posted the mission, in local money: `price_local` the whole price, `crew_local` the pay of all crew members together, inside `price_local`, and `crew_size` the crew it was added up for. The pay for each person is `crew_local / crew_size` and the other costs `price_local - crew_local`. The receipt shows them as ASKED, CREW PAY (15 × IDR 100,000, or with its head count when it does not split evenly) and OTHER COSTS when the cleanup itself has no costs of its own (`local_money`).
 

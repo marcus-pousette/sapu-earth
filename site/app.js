@@ -699,6 +699,16 @@
     vids.forEach((v) => io.observe(v));
     lazyStop = () => { io.disconnect(); clearTimeout(timer); near.clear(); lazyStop = () => {}; };
   }
+  // A video shows its first picture before it plays. Mobile Safari (every iPhone browser) loads a video's metadata and
+  // then paints nothing until it plays or seeks, so a receipt's players stood black there (Marcus, 2026-11-21). A video
+  // that still has no picture half a second after its metadata came in (readyState below HAVE_CURRENT_DATA), paused at
+  // its start, seeks to its first millisecond, and that paints the picture (iOS Simulator: readyState 1, then 4). Chrome
+  // shows the first picture by itself, so it is left alone and its requests stay as lazyVideos counts them.
+  document.addEventListener("loadedmetadata", (ev) => {
+    const v = ev.target;
+    if (!(v instanceof HTMLVideoElement)) return;
+    setTimeout(() => { if (v.isConnected && v.paused && v.currentTime === 0 && v.readyState < 2) v.currentTime = 0.001; }, 500);
+  }, true);
   // ✕, the backdrop, Escape and SEE THE SPOT: shut, then go back over the step the tap took, or drop the post's address.
   // then runs once the post is shut, after the step back: going back puts the page's scroll where it was at the tap
   // (after popstate), so a flight to the spot (seeSpot) starts after that, never under it. Once shut it goes back no more:

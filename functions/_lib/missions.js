@@ -109,7 +109,7 @@ export async function nowMediaFor(env, ids) {
   for (let i = 0; i < ids.length; i += 90) {
     const chunk = ids.slice(i, i + 90);
     const { results } = await env.DB.prepare(
-      `SELECT key, kind, content_type, public, mission_id FROM uploads
+      `SELECT key, kind, content_type, size, public, mission_id FROM uploads
        WHERE submission_id IS NULL AND mission_id IN (${chunk.map(() => "?").join(",")}) ORDER BY created_at, key`
     ).bind(...chunk).all();
     for (const r of results) out[r.mission_id]?.push(r);

@@ -1,6 +1,6 @@
 // Maps approved submissions to the public site event schema (see data/README.md), and missions to
 // the public mission shape of GET /api/missions.
-import { SITE, VIDEO_STAGES, mediaFor, publicMediaUrl } from "./util.js";
+import { SITE, VIDEO_STAGES, mediaFor, publicMediaUrl, sameFile } from "./util.js";
 import { missionShareUrl, noMissionsTable, nowMediaFor, nowParts } from "./missions.js";
 import { logoUrl, withLogos } from "./logos.js";
 import { socialPick, withSocial } from "./social.js";
@@ -34,7 +34,29 @@ export async function approvedEvents(env, { partnerId = null, id = null, limit =
     const m = s.mission_id ? missions[s.mission_id] : undefined;
     return m && m.submission_id === s.id ? m : undefined;
   };
+  const same = sameFile(env);
+  for (const s of results) {
+    const block = blockOf(s);
+    if (block) await dropRepeats(block, media[s.id], same);
+  }
   return results.map((s) => toEvent(env, s, media[s.id], blockOf(s)));
+}
+
+// A crew may send its mission's photo or video of the spot again as the cleanup's before. The receipt then shows that
+// file once, as BEFORE: a mission photo is left out of the block when a before photo of the cleanup is the same file,
+// and the mission's video when a before video is (on #3's and #4's receipts the same photo and video stood twice,
+// Marcus, 2026-11-21). The same file: sameFile in util.js (the same size and type, then the same R2 etag), so a receipt
+// without a pair of the same size costs no R2 call, and a lookup that fails keeps both.
+async function dropRepeats(block, media, same) {
+  if (!media) return;
+  const sentAgain = async (row, pool) => {
+    for (const b of pool) if (await same(row, b)) return true;
+    return false;
+  };
+  const kept = [];
+  for (const r of block.now) if (!(await sentAgain(r, media.before))) kept.push(r);
+  block.now = kept;
+  if (block.now_video && (await sentAgain(block.now_video, media.videos.filter((v) => v.stage === "before")))) block.now_video = null;
 }
 
 // The done missions behind these receipts, {missionId: {no, funded_eur, currency, price_local,
